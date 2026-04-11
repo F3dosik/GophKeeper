@@ -1,0 +1,38 @@
+# Бинарники
+dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Тесты
+*.test
+*.out
+coverage.out
+
+# Переменные окружения
+.env
+.env.local
+.env.*.local
+
+# TLS сертификаты
+certs/*.pem
+certs/*.key
+certs/*.crt
+
+# Go
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/

@@ -1,0 +1,40 @@
+edition = "2023";
+
+package auth;
+
+option go_package = "github.com/F3dosik/GophKeeper/proto/gen";
+
+message Credentials {
+    string login = 1;
+    string master_key = 2;
+}
+
+message CreateUserRequest {
+    Credentials credentials = 1;
+    string salt = 2;
+}
+
+message CreateUserResponse {}
+
+message GetSaltRequest {
+    string login = 1;
+}
+
+message GetSaltResponse {
+    string salt = 1;
+}
+
+
+message LoginRequest {
+    Credentials credentials = 1;
+}
+
+message LoginResponse {
+    string token = 1;
+}
+
+service Auth {
+    rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+    rpc GetSalt(GetSaltRequest) returns (GetSaltResponse);
+    rpc Login(LoginRequest) returns (LoginResponse);
+}
