@@ -54,3 +54,9 @@ func isUniqueViolation(err error) bool {
 func isNoRows(err error) bool {
 	return errors.Is(err, pgx.ErrNoRows)
 }
+
+// isForeignKeyViolation проверяет, является ли ошибка нарушением внешнего ключа.
+func isForeignKeyViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ForeignKeyViolation
+}

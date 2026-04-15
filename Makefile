@@ -5,8 +5,8 @@ generate:
 	mkdir -p proto/gen
 	protoc \
 		--go_out=proto/gen \
-		--go_opt=paths=source_relative \
-		--go-grpc_out=proto/gen \
-		--go-grpc_opt=paths=source_relative \
+		--go_opt=module=github.com/F3dosik/GophKeeper/proto/gen \
 		--go_opt=default_api_level=API_OPAQUE \
+		--go-grpc_out=proto/gen \
+		--go-grpc_opt=module=github.com/F3dosik/GophKeeper/proto/gen \
 		proto/*.proto

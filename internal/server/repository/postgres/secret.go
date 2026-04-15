@@ -33,10 +33,12 @@ func (r *secretRepository) Create(ctx context.Context, secret *domain.Secret) er
 	})
 
 	if err != nil {
-		if isUniqueViolation(err) {
+		switch {
+		case isUniqueViolation(err):
 			return domain.ErrSecretAlreadyExists
+		case isForeignKeyViolation(err):
+			return domain.ErrUserNotFound
 		}
-
 		return fmt.Errorf("secretRepository.Create: %w", err)
 	}
 

@@ -24,7 +24,6 @@ message GetSaltResponse {
     string salt = 1;
 }
 
-
 message LoginRequest {
     Credentials credentials = 1;
 }
