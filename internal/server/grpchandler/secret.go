@@ -1,8 +1,9 @@
-package grpc
+package grpchandler
 
 import (
 	"context"
 
+	"github.com/F3dosik/GophKeeper/internal/server/middleware"
 	"github.com/F3dosik/GophKeeper/internal/server/service"
 	pb "github.com/F3dosik/GophKeeper/proto/gen"
 )
@@ -23,7 +24,7 @@ func NewSecretHandler(secretService service.SecretService) *secretHandler {
 // Возвращает codes.AlreadyExists если секрет с таким blind index уже существует.
 // Возвращает codes.InvalidArgument если blind index или data пустые.
 func (h *secretHandler) CreateSecret(ctx context.Context, req *pb.CreateSecretRequest) (*pb.CreateSecretResponse, error) {
-	userID, err := UserIDFromContext(ctx)
+	userID, err := middleware.UserIDFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +42,7 @@ func (h *secretHandler) CreateSecret(ctx context.Context, req *pb.CreateSecretRe
 // Возвращает codes.NotFound если секрет не найден.
 // Возвращает codes.InvalidArgument если blind index или data пустые.
 func (h *secretHandler) UpdateSecret(ctx context.Context, req *pb.UpdateSecretRequest) (*pb.UpdateSecretResponse, error) {
-	userID, err := UserIDFromContext(ctx)
+	userID, err := middleware.UserIDFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +59,7 @@ func (h *secretHandler) UpdateSecret(ctx context.Context, req *pb.UpdateSecretRe
 // GetSecret обрабатывает запрос получения секрета по blind index.
 // Возвращает codes.NotFound если секрет не найден.
 func (h *secretHandler) GetSecret(ctx context.Context, req *pb.GetSecretRequest) (*pb.GetSecretResponse, error) {
-	userID, err := UserIDFromContext(ctx)
+	userID, err := middleware.UserIDFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +74,7 @@ func (h *secretHandler) GetSecret(ctx context.Context, req *pb.GetSecretRequest)
 // DeleteSecret обрабатывает запрос удаления секрета по blind index.
 // Возвращает codes.NotFound если секрет не найден.
 func (h *secretHandler) DeleteSecret(ctx context.Context, req *pb.DeleteSecretRequest) (*pb.DeleteSecretResponse, error) {
-	userID, err := UserIDFromContext(ctx)
+	userID, err := middleware.UserIDFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +88,7 @@ func (h *secretHandler) DeleteSecret(ctx context.Context, req *pb.DeleteSecretRe
 
 // ListSecrets обрабатывает запрос получения всех секретов пользователя.
 func (h *secretHandler) ListSecrets(ctx context.Context, req *pb.ListSecretsRequest) (*pb.ListSecretsResponse, error) {
-	userID, err := UserIDFromContext(ctx)
+	userID, err := middleware.UserIDFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}

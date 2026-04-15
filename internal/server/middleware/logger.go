@@ -5,14 +5,14 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	grpclib "google.golang.org/grpc"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/peer"
 )
 
 // LoggingInterceptor возвращает gRPC унарный interceptor для логирования запросов.
 // Логирует метод, IP клиента, длительность и ошибку каждого запроса.
-func LoggingInterceptor(logger *zap.SugaredLogger) grpclib.UnaryServerInterceptor {
-	return func(ctx context.Context, req any, info *grpclib.UnaryServerInfo, handler grpclib.UnaryHandler) (any, error) {
+func LoggingInterceptor(logger *zap.SugaredLogger) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		start := time.Now()
 
 		var clientIP string

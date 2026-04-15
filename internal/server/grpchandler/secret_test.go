@@ -1,10 +1,11 @@
-package grpc
+package grpchandler
 
 import (
 	"context"
 	"testing"
 
 	"github.com/F3dosik/GophKeeper/internal/domain"
+	"github.com/F3dosik/GophKeeper/internal/server/middleware"
 	"github.com/F3dosik/GophKeeper/internal/server/mocks"
 	pb "github.com/F3dosik/GophKeeper/proto/gen"
 	"github.com/google/uuid"
@@ -27,10 +28,6 @@ var (
 	}
 )
 
-func ctxWithUserID(userID uuid.UUID) context.Context {
-	return context.WithValue(context.Background(), userIDKey, userID)
-}
-
 func TestSecretHandler_CreateSecret_Success(t *testing.T) {
 	mockService := mocks.NewSecretService(t)
 	mockService.On("Create", mock.Anything, testUserID, testBlindIndex, testData).
@@ -45,7 +42,7 @@ func TestSecretHandler_CreateSecret_Success(t *testing.T) {
 		}.Build(),
 	}.Build()
 
-	_, err := handler.CreateSecret(ctxWithUserID(testUserID), req)
+	_, err := handler.CreateSecret(middleware.WithUserID(context.Background(), testUserID), req)
 	assert.NoError(t, err)
 	mockService.AssertExpectations(t)
 }
@@ -64,7 +61,7 @@ func TestSecretHandler_CreateSecret_BlindIndexAlreadyExist(t *testing.T) {
 		}.Build(),
 	}.Build()
 
-	_, err := handler.CreateSecret(ctxWithUserID(testUserID), req)
+	_, err := handler.CreateSecret(middleware.WithUserID(context.Background(), testUserID), req)
 	assert.Equal(t, codes.AlreadyExists, status.Code(err))
 	mockService.AssertExpectations(t)
 
@@ -84,7 +81,7 @@ func TestSecretHandler_CreateSecret_InvalidArgument(t *testing.T) {
 		}.Build(),
 	}.Build()
 
-	_, err := handler.CreateSecret(ctxWithUserID(testUserID), req)
+	_, err := handler.CreateSecret(middleware.WithUserID(context.Background(), testUserID), req)
 	assert.Equal(t, codes.InvalidArgument, status.Code(err))
 	mockService.AssertExpectations(t)
 }
@@ -119,7 +116,7 @@ func TestSecretHandler_UpdateSecret_Success(t *testing.T) {
 		}.Build(),
 	}.Build()
 
-	_, err := handler.UpdateSecret(ctxWithUserID(testUserID), req)
+	_, err := handler.UpdateSecret(middleware.WithUserID(context.Background(), testUserID), req)
 	assert.NoError(t, err)
 	mockService.AssertExpectations(t)
 }
@@ -138,7 +135,7 @@ func TestSecretHandler_UpdateSecret_NotFound(t *testing.T) {
 		}.Build(),
 	}.Build()
 
-	_, err := handler.UpdateSecret(ctxWithUserID(testUserID), req)
+	_, err := handler.UpdateSecret(middleware.WithUserID(context.Background(), testUserID), req)
 	assert.Equal(t, codes.NotFound, status.Code(err))
 	mockService.AssertExpectations(t)
 }
@@ -157,7 +154,7 @@ func TestSecretHandler_UpdateSecret_InvalidArgument(t *testing.T) {
 		}.Build(),
 	}.Build()
 
-	_, err := handler.UpdateSecret(ctxWithUserID(testUserID), req)
+	_, err := handler.UpdateSecret(middleware.WithUserID(context.Background(), testUserID), req)
 	assert.Equal(t, codes.InvalidArgument, status.Code(err))
 	mockService.AssertExpectations(t)
 }
@@ -181,7 +178,7 @@ func TestSecretHandler_UpdateSecret_Unauthenticated(t *testing.T) {
 func TestSecretHandler_GetSecret_Success(t *testing.T) {
 	mockService := mocks.NewSecretService(t)
 	mockService.On("GetByBlindIndex", mock.Anything, testUserID, testBlindIndex).
-		Return(&testSecret, nil)
+		Return(testSecret, nil)
 
 	handler := NewSecretHandler(mockService)
 
@@ -189,7 +186,7 @@ func TestSecretHandler_GetSecret_Success(t *testing.T) {
 		BlindIndex: &testBlindIndex,
 	}.Build()
 
-	resp, err := handler.GetSecret(ctxWithUserID(testUserID), req)
+	resp, err := handler.GetSecret(middleware.WithUserID(context.Background(), testUserID), req)
 	assert.NoError(t, err)
 	assert.Equal(t, testSecret.Data, resp.GetData())
 	mockService.AssertExpectations(t)
@@ -206,7 +203,7 @@ func TestSecretHandler_GetSecret_NotFound(t *testing.T) {
 		BlindIndex: &testBlindIndex,
 	}.Build()
 
-	_, err := handler.GetSecret(ctxWithUserID(testUserID), req)
+	_, err := handler.GetSecret(middleware.WithUserID(context.Background(), testUserID), req)
 	assert.Equal(t, codes.NotFound, status.Code(err))
 	mockService.AssertExpectations(t)
 }
@@ -235,7 +232,7 @@ func TestSecretHandler_DeleteSecret_Success(t *testing.T) {
 		BlindIndex: &testBlindIndex,
 	}.Build()
 
-	_, err := handler.DeleteSecret(ctxWithUserID(testUserID), req)
+	_, err := handler.DeleteSecret(middleware.WithUserID(context.Background(), testUserID), req)
 	assert.NoError(t, err)
 	mockService.AssertExpectations(t)
 }
@@ -251,7 +248,7 @@ func TestSecretHandler_DeleteSecret_NotFound(t *testing.T) {
 		BlindIndex: &testBlindIndex,
 	}.Build()
 
-	_, err := handler.DeleteSecret(ctxWithUserID(testUserID), req)
+	_, err := handler.DeleteSecret(middleware.WithUserID(context.Background(), testUserID), req)
 	assert.Equal(t, codes.NotFound, status.Code(err))
 	mockService.AssertExpectations(t)
 }
@@ -278,7 +275,7 @@ func TestSecretHandler_ListSecrets_Success(t *testing.T) {
 
 	req := pb.ListSecretsRequest_builder{}.Build()
 
-	resp, err := handler.ListSecrets(ctxWithUserID(testUserID), req)
+	resp, err := handler.ListSecrets(middleware.WithUserID(context.Background(), testUserID), req)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(resp.GetItems()))
 	mockService.AssertExpectations(t)

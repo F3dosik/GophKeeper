@@ -5,11 +5,10 @@ import (
 	"context"
 	"strings"
 
-	"github.com/F3dosik/GophKeeper/internal/server/grpc"
 	"github.com/F3dosik/GophKeeper/internal/server/jwtutil"
 	pb "github.com/F3dosik/GophKeeper/proto/gen"
 	"go.uber.org/zap"
-	grpclib "google.golang.org/grpc"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -31,8 +30,8 @@ var publicMethods = map[string]bool{
 // Извлекает JWT токен из metadata заголовка "authorization",
 // валидирует его и добавляет userID в контекст запроса.
 // Возвращает codes.Unauthenticated если токен отсутствует или невалиден.
-func AuthInterceptor(secretKey string, logger *zap.SugaredLogger) grpclib.UnaryServerInterceptor {
-	return func(ctx context.Context, req any, info *grpclib.UnaryServerInfo, handler grpclib.UnaryHandler) (resp any, err error) {
+func AuthInterceptor(secretKey string, logger *zap.SugaredLogger) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
 		if publicMethods[info.FullMethod] {
 			return handler(ctx, req)
 		}
@@ -61,6 +60,6 @@ func AuthInterceptor(secretKey string, logger *zap.SugaredLogger) grpclib.UnaryS
 			return nil, status.Error(codes.Unauthenticated, "invalid token")
 		}
 
-		return handler(grpc.WithUserID(ctx, claims.UserID), req)
+		return handler(WithUserID(ctx, claims.UserID), req)
 	}
 }

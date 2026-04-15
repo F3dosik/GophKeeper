@@ -22,6 +22,8 @@ require (
 )
 
 require (
+	github.com/caarlos0/env/v11 v11.4.0
+	github.com/caarlos0/env/v6 v6.10.1
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect

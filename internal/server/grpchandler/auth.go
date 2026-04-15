@@ -1,5 +1,5 @@
 // Package grpc содержит gRPC обработчики сервера.
-package grpc
+package grpchandler
 
 import (
 	"context"
