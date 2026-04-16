@@ -1,4 +1,4 @@
-.PHONY: generate
+.PHONY:  generate
 
 # Кодогенерация из .proto файлов
 generate:

@@ -45,21 +45,23 @@ services:
         db:
           condition: service_healthy
 
-  seed:
-    image: postgres:18-alpine
-    profiles:
-      - tools
-    env_file:
-      - .env
-    volumes:
-      - ./scripts/seed.sql:/seed.sql
-    command: sh -c "psql $$DATABASE_URL -f /seed.sql"
-    depends_on:
-      db:
-        condition: service_healthy
+  # seed:
+  #   image: postgres:18-alpine
+  #   profiles:
+  #     - tools
+  #   env_file:
+  #     - .env
+  #   volumes:
+  #     - ./scripts/seed.sql:/seed.sql
+  #   command: sh -c "psql $$DATABASE_URL -f /seed.sql"
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
 
   gophkeeper:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile.server
     env_file:
       - .env
     ports:
@@ -68,21 +70,21 @@ services:
       migrate:
         condition: service_completed_successfully
 
-  tests:
-    build:
-      context: .
-      dockerfile: Dockerfile.test
-    command: go test ./...
+  # tests:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.test
+  #   command: go test ./...
 
-  tests-e2e:
-    build:
-      context: .
-      dockerfile: Dockerfile.test
-    command: go test -v -tags=e2e ./tests/e2e/...
-    depends_on:
-      db:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
+  # tests-e2e:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.test
+  #   command: go test -v -tags=e2e ./tests/e2e/...
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #     migrate:
+  #       condition: service_completed_successfully
 volumes:
   pgdata:

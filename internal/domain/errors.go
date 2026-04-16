@@ -22,4 +22,10 @@ var (
 
 	// ErrInvalidArgument возвращается при некорректных входных данных.
 	ErrInvalidArgument = errors.New("invalid argument")
+
+	// ErrNotFound возвращается когда запрашиваемый ресурс не найден.
+	ErrNotFound = errors.New("not found")
+
+	// ErrAlreadyExists возвращается когда ресурс уже существует.
+	ErrAlreadyExists = errors.New("already exists")
 )
