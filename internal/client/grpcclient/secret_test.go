@@ -17,7 +17,7 @@ import (
 
 func TestSecretsClient_ListSecrets(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		mockPB := mocks.NewSecretsClient(t)
+		mockPB := mocks.NewPBSecretsClient(t)
 		blindIndex := "blind-index"
 		mockPB.On("ListSecrets", mock.Anything, mock.Anything, mock.Anything).
 			Return(pb.ListSecretsResponse_builder{
@@ -39,7 +39,7 @@ func TestSecretsClient_ListSecrets(t *testing.T) {
 	})
 
 	t.Run("empty list", func(t *testing.T) {
-		mockPB := mocks.NewSecretsClient(t)
+		mockPB := mocks.NewPBSecretsClient(t)
 		mockPB.On("ListSecrets", mock.Anything, mock.Anything, mock.Anything).
 			Return(pb.ListSecretsResponse_builder{Items: nil}.Build(), nil)
 
@@ -51,7 +51,7 @@ func TestSecretsClient_ListSecrets(t *testing.T) {
 	})
 
 	t.Run("unauthenticated", func(t *testing.T) {
-		mockPB := mocks.NewSecretsClient(t)
+		mockPB := mocks.NewPBSecretsClient(t)
 		mockPB.On("ListSecrets", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil, status.Error(codes.Unauthenticated, "unauthenticated"))
 
@@ -62,7 +62,7 @@ func TestSecretsClient_ListSecrets(t *testing.T) {
 	})
 
 	t.Run("internal error", func(t *testing.T) {
-		mockPB := mocks.NewSecretsClient(t)
+		mockPB := mocks.NewPBSecretsClient(t)
 		mockPB.On("ListSecrets", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil, status.Error(codes.Internal, "internal error"))
 
@@ -75,7 +75,7 @@ func TestSecretsClient_ListSecrets(t *testing.T) {
 
 func TestSecretsClient_CreateSecret(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		mockPB := mocks.NewSecretsClient(t)
+		mockPB := mocks.NewPBSecretsClient(t)
 		mockPB.On("CreateSecret", mock.Anything, mock.MatchedBy(func(req *pb.CreateSecretRequest) bool {
 			return req.GetItem().GetBlindIndex() == "blind-index" &&
 				string(req.GetItem().GetData()) == "encrypted"
@@ -88,7 +88,7 @@ func TestSecretsClient_CreateSecret(t *testing.T) {
 	})
 
 	t.Run("already exists", func(t *testing.T) {
-		mockPB := mocks.NewSecretsClient(t)
+		mockPB := mocks.NewPBSecretsClient(t)
 		mockPB.On("CreateSecret", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil, status.Error(codes.AlreadyExists, "secret already exists"))
 
@@ -99,7 +99,7 @@ func TestSecretsClient_CreateSecret(t *testing.T) {
 	})
 
 	t.Run("unauthenticated", func(t *testing.T) {
-		mockPB := mocks.NewSecretsClient(t)
+		mockPB := mocks.NewPBSecretsClient(t)
 		mockPB.On("CreateSecret", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil, status.Error(codes.Unauthenticated, "unauthenticated"))
 
@@ -112,7 +112,7 @@ func TestSecretsClient_CreateSecret(t *testing.T) {
 
 func TestSecretsClient_UpdateSecret(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		mockPB := mocks.NewSecretsClient(t)
+		mockPB := mocks.NewPBSecretsClient(t)
 		mockPB.On("UpdateSecret", mock.Anything, mock.MatchedBy(func(req *pb.UpdateSecretRequest) bool {
 			return req.GetItem().GetBlindIndex() == "blind-index" &&
 				string(req.GetItem().GetData()) == "encrypted"
@@ -125,7 +125,7 @@ func TestSecretsClient_UpdateSecret(t *testing.T) {
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		mockPB := mocks.NewSecretsClient(t)
+		mockPB := mocks.NewPBSecretsClient(t)
 		mockPB.On("UpdateSecret", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil, status.Error(codes.NotFound, "secret not found"))
 
@@ -136,7 +136,7 @@ func TestSecretsClient_UpdateSecret(t *testing.T) {
 	})
 
 	t.Run("unauthenticated", func(t *testing.T) {
-		mockPB := mocks.NewSecretsClient(t)
+		mockPB := mocks.NewPBSecretsClient(t)
 		mockPB.On("UpdateSecret", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil, status.Error(codes.Unauthenticated, "unauthenticated"))
 
@@ -149,7 +149,7 @@ func TestSecretsClient_UpdateSecret(t *testing.T) {
 
 func TestSecretsClient_GetSecret(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		mockPB := mocks.NewSecretsClient(t)
+		mockPB := mocks.NewPBSecretsClient(t)
 		mockPB.On("GetSecret", mock.Anything, mock.MatchedBy(func(req *pb.GetSecretRequest) bool {
 			return req.GetBlindIndex() == "blind-index"
 		}), mock.Anything).Return(
@@ -164,7 +164,7 @@ func TestSecretsClient_GetSecret(t *testing.T) {
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		mockPB := mocks.NewSecretsClient(t)
+		mockPB := mocks.NewPBSecretsClient(t)
 		mockPB.On("GetSecret", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil, status.Error(codes.NotFound, "secret not found"))
 
@@ -175,7 +175,7 @@ func TestSecretsClient_GetSecret(t *testing.T) {
 	})
 
 	t.Run("unauthenticated", func(t *testing.T) {
-		mockPB := mocks.NewSecretsClient(t)
+		mockPB := mocks.NewPBSecretsClient(t)
 		mockPB.On("GetSecret", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil, status.Error(codes.Unauthenticated, "unauthenticated"))
 
@@ -188,7 +188,7 @@ func TestSecretsClient_GetSecret(t *testing.T) {
 
 func TestSecretsClient_DeleteSecret(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		mockPB := mocks.NewSecretsClient(t)
+		mockPB := mocks.NewPBSecretsClient(t)
 		mockPB.On("DeleteSecret", mock.Anything, mock.MatchedBy(func(req *pb.DeleteSecretRequest) bool {
 			return req.GetBlindIndex() == "blind-index"
 		}), mock.Anything).Return(&pb.DeleteSecretResponse{}, nil)
@@ -200,7 +200,7 @@ func TestSecretsClient_DeleteSecret(t *testing.T) {
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		mockPB := mocks.NewSecretsClient(t)
+		mockPB := mocks.NewPBSecretsClient(t)
 		mockPB.On("DeleteSecret", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil, status.Error(codes.NotFound, "secret not found"))
 
@@ -211,7 +211,7 @@ func TestSecretsClient_DeleteSecret(t *testing.T) {
 	})
 
 	t.Run("unauthenticated", func(t *testing.T) {
-		mockPB := mocks.NewSecretsClient(t)
+		mockPB := mocks.NewPBSecretsClient(t)
 		mockPB.On("DeleteSecret", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil, status.Error(codes.Unauthenticated, "unauthenticated"))
 

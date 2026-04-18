@@ -36,7 +36,7 @@ func TestSecretHandler_CreateSecret_Success(t *testing.T) {
 	handler := NewSecretHandler(mockService)
 
 	req := pb.CreateSecretRequest_builder{
-		Item: pb.SecretItem_builder{
+		Item: pb.SecretData_builder{
 			BlindIndex: &testBlindIndex,
 			Data:       testData,
 		}.Build(),
@@ -55,7 +55,7 @@ func TestSecretHandler_CreateSecret_BlindIndexAlreadyExist(t *testing.T) {
 	handler := NewSecretHandler(mockService)
 
 	req := pb.CreateSecretRequest_builder{
-		Item: pb.SecretItem_builder{
+		Item: pb.SecretData_builder{
 			BlindIndex: &testBlindIndex,
 			Data:       testData,
 		}.Build(),
@@ -75,7 +75,7 @@ func TestSecretHandler_CreateSecret_InvalidArgument(t *testing.T) {
 	handler := NewSecretHandler(mockService)
 
 	req := pb.CreateSecretRequest_builder{
-		Item: pb.SecretItem_builder{
+		Item: pb.SecretData_builder{
 			BlindIndex: &testBlindIndex,
 			Data:       emptyData,
 		}.Build(),
@@ -91,7 +91,7 @@ func TestSecretHandler_CreateSecret_Unauthenticated(t *testing.T) {
 	handler := NewSecretHandler(mockService)
 
 	req := pb.CreateSecretRequest_builder{
-		Item: pb.SecretItem_builder{
+		Item: pb.SecretData_builder{
 			BlindIndex: &testBlindIndex,
 			Data:       testData,
 		}.Build(),
@@ -110,7 +110,7 @@ func TestSecretHandler_UpdateSecret_Success(t *testing.T) {
 	handler := NewSecretHandler(mockService)
 
 	req := pb.UpdateSecretRequest_builder{
-		Item: pb.SecretItem_builder{
+		Item: pb.SecretData_builder{
 			BlindIndex: &testBlindIndex,
 			Data:       testData,
 		}.Build(),
@@ -129,7 +129,7 @@ func TestSecretHandler_UpdateSecret_NotFound(t *testing.T) {
 	handler := NewSecretHandler(mockService)
 
 	req := pb.UpdateSecretRequest_builder{
-		Item: pb.SecretItem_builder{
+		Item: pb.SecretData_builder{
 			BlindIndex: &testBlindIndex,
 			Data:       testData,
 		}.Build(),
@@ -148,7 +148,7 @@ func TestSecretHandler_UpdateSecret_InvalidArgument(t *testing.T) {
 	handler := NewSecretHandler(mockService)
 
 	req := pb.UpdateSecretRequest_builder{
-		Item: pb.SecretItem_builder{
+		Item: pb.SecretData_builder{
 			BlindIndex: &testBlindIndex,
 			Data:       emptyData,
 		}.Build(),
@@ -164,7 +164,7 @@ func TestSecretHandler_UpdateSecret_Unauthenticated(t *testing.T) {
 	handler := NewSecretHandler(mockService)
 
 	req := pb.UpdateSecretRequest_builder{
-		Item: pb.SecretItem_builder{
+		Item: pb.SecretData_builder{
 			BlindIndex: &testBlindIndex,
 			Data:       testData,
 		}.Build(),

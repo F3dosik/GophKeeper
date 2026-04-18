@@ -39,7 +39,7 @@ func (h *authHandler) GetSalt(ctx context.Context, req *pb.GetSaltRequest) (*pb.
 	if err != nil {
 		return nil, toGRPCError(err)
 	}
-	return pb.GetSaltResponse_builder{Salt: &salt}.Build(), nil
+	return pb.GetSaltResponse_builder{Salt: salt}.Build(), nil
 }
 
 // Login обрабатывает запрос аутентификации пользователя.

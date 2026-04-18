@@ -4,7 +4,7 @@ CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     login CITEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    password_salt TEXT NOT NULL, 
+    password_salt BYTEA NOT NULL, 
     created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 

@@ -16,11 +16,11 @@ func TestAuthService_Login_Success(t *testing.T) {
 	mockRepo.On("GetByLogin", mock.Anything, "user").
 		Return(&domain.User{
 			ID:           uuid.New(),
-			PasswordHash: "masterkey123",
+			PasswordHash: []byte("masterkey123"),
 		}, nil)
 	svc := NewAuthService(mockRepo, "jwt-secret")
 
-	token, err := svc.Login(context.Background(), "user", "masterkey123")
+	token, err := svc.Login(context.Background(), "user", []byte("masterkey123"))
 
 	assert.NoError(t, err)
 	assert.NotEmpty(t, token)
@@ -31,12 +31,12 @@ func TestAuthService_Login_InvalidCredentials(t *testing.T) {
 	mockRepo := mocks.NewUserRepository(t)
 	mockRepo.On("GetByLogin", mock.Anything, "user").
 		Return(&domain.User{
-			PasswordHash: "correcthash",
+			PasswordHash: []byte("correcthash"),
 		}, nil)
 
 	svc := NewAuthService(mockRepo, "jwt-secret")
 
-	_, err := svc.Login(context.Background(), "user", "wronghash")
+	_, err := svc.Login(context.Background(), "user", []byte("wronghash"))
 
 	assert.ErrorIs(t, err, domain.ErrInvalidCredentials)
 	mockRepo.AssertExpectations(t)

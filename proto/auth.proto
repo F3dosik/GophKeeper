@@ -6,12 +6,12 @@ option go_package = "github.com/F3dosik/GophKeeper/proto/gen";
 
 message Credentials {
     string login = 1;
-    string master_key = 2;
+    bytes master_key = 2;
 }
 
 message CreateUserRequest {
     Credentials credentials = 1;
-    string salt = 2;
+    bytes salt = 2;
 }
 
 message CreateUserResponse {}
@@ -21,7 +21,7 @@ message GetSaltRequest {
 }
 
 message GetSaltResponse {
-    string salt = 1;
+    bytes salt = 1;
 }
 
 message LoginRequest {

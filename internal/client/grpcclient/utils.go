@@ -11,7 +11,7 @@ const tokenMetadataKey = "authorization"
 func toPBCredentials(c domain.Credentials) *pb.Credentials {
 	return pb.Credentials_builder{
 		Login:     &c.Login,
-		MasterKey: &c.MasterKey,
+		MasterKey: c.MasterKey,
 	}.Build()
 }
 
@@ -21,6 +21,8 @@ func fromPBSecrets(items []*pb.SecretItem) []*domain.Secret {
 		secrets = append(secrets, &domain.Secret{
 			BlindIndex: item.GetBlindIndex(),
 			Data:       item.GetData(),
+			CreatedAt:  item.GetCreatedAt().AsTime(),
+			UpdatedAt:  item.GetCreatedAt().AsTime(),
 		})
 	}
 	return secrets

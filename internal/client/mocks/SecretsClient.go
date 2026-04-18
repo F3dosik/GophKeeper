@@ -5,8 +5,7 @@ package mocks
 import (
 	context "context"
 
-	gen "github.com/F3dosik/GophKeeper/proto/gen"
-	grpc "google.golang.org/grpc"
+	domain "github.com/F3dosik/GophKeeper/internal/domain"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -16,110 +15,65 @@ type SecretsClient struct {
 	mock.Mock
 }
 
-// CreateSecret provides a mock function with given fields: ctx, in, opts
-func (_m *SecretsClient) CreateSecret(ctx context.Context, in *gen.CreateSecretRequest, opts ...grpc.CallOption) (*gen.CreateSecretResponse, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, ctx, in)
-	_ca = append(_ca, _va...)
-	ret := _m.Called(_ca...)
+// CreateSecret provides a mock function with given fields: ctx, blindIndex, data
+func (_m *SecretsClient) CreateSecret(ctx context.Context, blindIndex string, data []byte) error {
+	ret := _m.Called(ctx, blindIndex, data)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateSecret")
 	}
 
-	var r0 *gen.CreateSecretResponse
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *gen.CreateSecretRequest, ...grpc.CallOption) (*gen.CreateSecretResponse, error)); ok {
-		return rf(ctx, in, opts...)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, *gen.CreateSecretRequest, ...grpc.CallOption) *gen.CreateSecretResponse); ok {
-		r0 = rf(ctx, in, opts...)
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, []byte) error); ok {
+		r0 = rf(ctx, blindIndex, data)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*gen.CreateSecretResponse)
-		}
+		r0 = ret.Error(0)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *gen.CreateSecretRequest, ...grpc.CallOption) error); ok {
-		r1 = rf(ctx, in, opts...)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
+	return r0
 }
 
-// DeleteSecret provides a mock function with given fields: ctx, in, opts
-func (_m *SecretsClient) DeleteSecret(ctx context.Context, in *gen.DeleteSecretRequest, opts ...grpc.CallOption) (*gen.DeleteSecretResponse, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, ctx, in)
-	_ca = append(_ca, _va...)
-	ret := _m.Called(_ca...)
+// DeleteSecret provides a mock function with given fields: ctx, blindIndex
+func (_m *SecretsClient) DeleteSecret(ctx context.Context, blindIndex string) error {
+	ret := _m.Called(ctx, blindIndex)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteSecret")
 	}
 
-	var r0 *gen.DeleteSecretResponse
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *gen.DeleteSecretRequest, ...grpc.CallOption) (*gen.DeleteSecretResponse, error)); ok {
-		return rf(ctx, in, opts...)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, *gen.DeleteSecretRequest, ...grpc.CallOption) *gen.DeleteSecretResponse); ok {
-		r0 = rf(ctx, in, opts...)
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = rf(ctx, blindIndex)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*gen.DeleteSecretResponse)
-		}
+		r0 = ret.Error(0)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *gen.DeleteSecretRequest, ...grpc.CallOption) error); ok {
-		r1 = rf(ctx, in, opts...)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
+	return r0
 }
 
-// GetSecret provides a mock function with given fields: ctx, in, opts
-func (_m *SecretsClient) GetSecret(ctx context.Context, in *gen.GetSecretRequest, opts ...grpc.CallOption) (*gen.GetSecretResponse, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, ctx, in)
-	_ca = append(_ca, _va...)
-	ret := _m.Called(_ca...)
+// GetSecret provides a mock function with given fields: ctx, blindIndex
+func (_m *SecretsClient) GetSecret(ctx context.Context, blindIndex string) (*domain.Secret, error) {
+	ret := _m.Called(ctx, blindIndex)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetSecret")
 	}
 
-	var r0 *gen.GetSecretResponse
+	var r0 *domain.Secret
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *gen.GetSecretRequest, ...grpc.CallOption) (*gen.GetSecretResponse, error)); ok {
-		return rf(ctx, in, opts...)
+	if rf, ok := ret.Get(0).(func(context.Context, string) (*domain.Secret, error)); ok {
+		return rf(ctx, blindIndex)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, *gen.GetSecretRequest, ...grpc.CallOption) *gen.GetSecretResponse); ok {
-		r0 = rf(ctx, in, opts...)
+	if rf, ok := ret.Get(0).(func(context.Context, string) *domain.Secret); ok {
+		r0 = rf(ctx, blindIndex)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*gen.GetSecretResponse)
+			r0 = ret.Get(0).(*domain.Secret)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *gen.GetSecretRequest, ...grpc.CallOption) error); ok {
-		r1 = rf(ctx, in, opts...)
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, blindIndex)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -127,36 +81,29 @@ func (_m *SecretsClient) GetSecret(ctx context.Context, in *gen.GetSecretRequest
 	return r0, r1
 }
 
-// ListSecrets provides a mock function with given fields: ctx, in, opts
-func (_m *SecretsClient) ListSecrets(ctx context.Context, in *gen.ListSecretsRequest, opts ...grpc.CallOption) (*gen.ListSecretsResponse, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, ctx, in)
-	_ca = append(_ca, _va...)
-	ret := _m.Called(_ca...)
+// ListSecrets provides a mock function with given fields: ctx
+func (_m *SecretsClient) ListSecrets(ctx context.Context) ([]*domain.Secret, error) {
+	ret := _m.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListSecrets")
 	}
 
-	var r0 *gen.ListSecretsResponse
+	var r0 []*domain.Secret
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *gen.ListSecretsRequest, ...grpc.CallOption) (*gen.ListSecretsResponse, error)); ok {
-		return rf(ctx, in, opts...)
+	if rf, ok := ret.Get(0).(func(context.Context) ([]*domain.Secret, error)); ok {
+		return rf(ctx)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, *gen.ListSecretsRequest, ...grpc.CallOption) *gen.ListSecretsResponse); ok {
-		r0 = rf(ctx, in, opts...)
+	if rf, ok := ret.Get(0).(func(context.Context) []*domain.Secret); ok {
+		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*gen.ListSecretsResponse)
+			r0 = ret.Get(0).([]*domain.Secret)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *gen.ListSecretsRequest, ...grpc.CallOption) error); ok {
-		r1 = rf(ctx, in, opts...)
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -164,41 +111,22 @@ func (_m *SecretsClient) ListSecrets(ctx context.Context, in *gen.ListSecretsReq
 	return r0, r1
 }
 
-// UpdateSecret provides a mock function with given fields: ctx, in, opts
-func (_m *SecretsClient) UpdateSecret(ctx context.Context, in *gen.UpdateSecretRequest, opts ...grpc.CallOption) (*gen.UpdateSecretResponse, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, ctx, in)
-	_ca = append(_ca, _va...)
-	ret := _m.Called(_ca...)
+// UpdateSecret provides a mock function with given fields: ctx, blindIndex, data
+func (_m *SecretsClient) UpdateSecret(ctx context.Context, blindIndex string, data []byte) error {
+	ret := _m.Called(ctx, blindIndex, data)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateSecret")
 	}
 
-	var r0 *gen.UpdateSecretResponse
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *gen.UpdateSecretRequest, ...grpc.CallOption) (*gen.UpdateSecretResponse, error)); ok {
-		return rf(ctx, in, opts...)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, *gen.UpdateSecretRequest, ...grpc.CallOption) *gen.UpdateSecretResponse); ok {
-		r0 = rf(ctx, in, opts...)
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, []byte) error); ok {
+		r0 = rf(ctx, blindIndex, data)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*gen.UpdateSecretResponse)
-		}
+		r0 = ret.Error(0)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *gen.UpdateSecretRequest, ...grpc.CallOption) error); ok {
-		r1 = rf(ctx, in, opts...)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
+	return r0
 }
 
 // NewSecretsClient creates a new instance of SecretsClient. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.

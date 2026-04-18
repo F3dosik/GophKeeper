@@ -3,6 +3,7 @@ package service
 
 import (
 	"context"
+	"crypto/subtle"
 	"fmt"
 
 	"github.com/F3dosik/GophKeeper/internal/domain"
@@ -12,15 +13,15 @@ import (
 type AuthService interface {
 	// Create регистрирует нового пользователя.
 	// Возвращает ErrUserAlreadyExists если логин занят.
-	Create(ctx context.Context, login, masterKey, salt string) error
+	Create(ctx context.Context, login string, masterKey, salt []byte) error
 
 	// GetSalt возвращает соль пользователя по логину.
 	// Возвращает ErrUserNotFound если пользователь не найден.
-	GetSalt(ctx context.Context, login string) (string, error)
+	GetSalt(ctx context.Context, login string) ([]byte, error)
 
 	// Login проверяет credentials и возвращает JWT токен.
 	// Возвращает ErrInvalidCredentials если masterKey неверный.
-	Login(ctx context.Context, login, masterKey string) (string, error)
+	Login(ctx context.Context, login string, masterKey []byte) (string, error)
 }
 
 // authService реализует AuthService.
@@ -36,7 +37,7 @@ func NewAuthService(repo domain.UserRepository, jwtSecret string) AuthService {
 }
 
 // Create регистрирует нового пользователя.
-func (s *authService) Create(ctx context.Context, login, masterKey, salt string) error {
+func (s *authService) Create(ctx context.Context, login string, masterKey, salt []byte) error {
 	return s.repo.Create(ctx, &domain.User{
 		Login:        login,
 		PasswordHash: masterKey,
@@ -45,23 +46,23 @@ func (s *authService) Create(ctx context.Context, login, masterKey, salt string)
 }
 
 // GetSalt возвращает соль пользователя по логину.
-func (s *authService) GetSalt(ctx context.Context, login string) (string, error) {
+func (s *authService) GetSalt(ctx context.Context, login string) ([]byte, error) {
 	user, err := s.repo.GetByLogin(ctx, login)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	return user.PasswordSalt, nil
 }
 
 // Login проверяет credentials и возвращает JWT токен.
-func (s *authService) Login(ctx context.Context, login, masterKey string) (string, error) {
+func (s *authService) Login(ctx context.Context, login string, masterKey []byte) (string, error) {
 	user, err := s.repo.GetByLogin(ctx, login)
 	if err != nil {
 		return "", err
 	}
 
-	if user.PasswordHash != masterKey {
+	if subtle.ConstantTimeCompare(user.PasswordHash, masterKey) != 1 {
 		return "", domain.ErrInvalidCredentials
 	}
 	token, err := jwtutil.GenerateToken(user.ID, s.jwtSecret)

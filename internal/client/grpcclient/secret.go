@@ -33,14 +33,14 @@ func (c *secretsClient) ListSecrets(ctx context.Context) ([]*domain.Secret, erro
 }
 
 func (c *secretsClient) CreateSecret(ctx context.Context, blindIndex string, data []byte) error {
-	item := pb.SecretItem_builder{BlindIndex: &blindIndex, Data: data}.Build()
+	item := pb.SecretData_builder{BlindIndex: &blindIndex, Data: data}.Build()
 	req := pb.CreateSecretRequest_builder{Item: item}.Build()
 	_, err := c.client.CreateSecret(ctx, req)
 	return fromGRPCError(err)
 }
 
 func (c *secretsClient) UpdateSecret(ctx context.Context, blindIndex string, data []byte) error {
-	item := pb.SecretItem_builder{BlindIndex: &blindIndex, Data: data}.Build()
+	item := pb.SecretData_builder{BlindIndex: &blindIndex, Data: data}.Build()
 	req := pb.UpdateSecretRequest_builder{Item: item}.Build()
 	_, err := c.client.UpdateSecret(ctx, req)
 	return fromGRPCError(err)

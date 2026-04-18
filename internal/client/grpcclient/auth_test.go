@@ -1,6 +1,7 @@
 package grpcclient_test
 
 import (
+	"bytes"
 	"context"
 	"testing"
 
@@ -15,57 +16,59 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func strPtr(s string) *string {
-	return &s
-}
+var (
+	hash     = []byte("hash")
+	testSalt = []byte("salt")
+	jwtToken = "jwtToken"
+)
 
 func TestAuthClient_CreateUser(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		mockPB := mocks.NewAuthClient(t)
+		mockPB := mocks.NewPBAuthClient(t)
 		mockPB.On("CreateUser", mock.Anything, mock.MatchedBy(func(req *pb.CreateUserRequest) bool {
 			return req.GetCredentials().GetLogin() == "user" &&
-				req.GetCredentials().GetMasterKey() == "hash" &&
-				req.GetSalt() == "salt"
+				bytes.Equal(req.GetCredentials().GetMasterKey(), hash) &&
+				bytes.Equal(req.GetSalt(), testSalt)
 		}), mock.Anything).Return(&pb.CreateUserResponse{}, nil)
 
 		client := grpcclient.NewAuthClient(mockPB)
 		err := client.CreateUser(context.Background(), domain.Credentials{
 			Login:     "user",
-			MasterKey: "hash",
-		}, "salt")
+			MasterKey: hash,
+		}, testSalt)
 
 		require.NoError(t, err)
 	})
 
 	t.Run("user already exists", func(t *testing.T) {
-		mockPB := mocks.NewAuthClient(t)
+		mockPB := mocks.NewPBAuthClient(t)
 		mockPB.On("CreateUser", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil, status.Error(codes.AlreadyExists, "user already exists"))
 
 		client := grpcclient.NewAuthClient(mockPB)
-		err := client.CreateUser(context.Background(), domain.Credentials{}, "salt")
+		err := client.CreateUser(context.Background(), domain.Credentials{}, testSalt)
 
 		assert.ErrorIs(t, err, domain.ErrAlreadyExists)
 	})
 
 	t.Run("invalid argument", func(t *testing.T) {
-		mockPB := mocks.NewAuthClient(t)
+		mockPB := mocks.NewPBAuthClient(t)
 		mockPB.On("CreateUser", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil, status.Error(codes.InvalidArgument, "invalid argument"))
 
 		client := grpcclient.NewAuthClient(mockPB)
-		err := client.CreateUser(context.Background(), domain.Credentials{}, "")
+		err := client.CreateUser(context.Background(), domain.Credentials{}, []byte{})
 
 		assert.ErrorIs(t, err, domain.ErrInvalidArgument)
 	})
 
 	t.Run("internal error", func(t *testing.T) {
-		mockPB := mocks.NewAuthClient(t)
+		mockPB := mocks.NewPBAuthClient(t)
 		mockPB.On("CreateUser", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil, status.Error(codes.Internal, "internal error"))
 
 		client := grpcclient.NewAuthClient(mockPB)
-		err := client.CreateUser(context.Background(), domain.Credentials{}, "salt")
+		err := client.CreateUser(context.Background(), domain.Credentials{}, testSalt)
 
 		assert.Error(t, err)
 	})
@@ -73,22 +76,22 @@ func TestAuthClient_CreateUser(t *testing.T) {
 
 func TestAuthClient_GetSalt(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		mockPB := mocks.NewAuthClient(t)
+		mockPB := mocks.NewPBAuthClient(t)
 		mockPB.On("GetSalt", mock.Anything, mock.MatchedBy(func(req *pb.GetSaltRequest) bool {
 			return req.GetLogin() == "user"
 		}), mock.Anything).Return(
-			pb.GetSaltResponse_builder{Salt: strPtr("salt")}.Build(), nil,
+			pb.GetSaltResponse_builder{Salt: testSalt}.Build(), nil,
 		)
 
 		client := grpcclient.NewAuthClient(mockPB)
 		salt, err := client.GetSalt(context.Background(), "user")
 
 		require.NoError(t, err)
-		assert.Equal(t, "salt", salt)
+		assert.Equal(t, testSalt, salt)
 	})
 
 	t.Run("user not found", func(t *testing.T) {
-		mockPB := mocks.NewAuthClient(t)
+		mockPB := mocks.NewPBAuthClient(t)
 		mockPB.On("GetSalt", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil, status.Error(codes.NotFound, "user not found"))
 
@@ -99,7 +102,7 @@ func TestAuthClient_GetSalt(t *testing.T) {
 	})
 
 	t.Run("internal error", func(t *testing.T) {
-		mockPB := mocks.NewAuthClient(t)
+		mockPB := mocks.NewPBAuthClient(t)
 		mockPB.On("GetSalt", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil, status.Error(codes.Internal, "internal error"))
 
@@ -112,26 +115,26 @@ func TestAuthClient_GetSalt(t *testing.T) {
 
 func TestAuthClient_Login(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		mockPB := mocks.NewAuthClient(t)
+		mockPB := mocks.NewPBAuthClient(t)
 		mockPB.On("Login", mock.Anything, mock.MatchedBy(func(req *pb.LoginRequest) bool {
 			return req.GetCredentials().GetLogin() == "user" &&
-				req.GetCredentials().GetMasterKey() == "hash"
+				bytes.Equal(req.GetCredentials().GetMasterKey(), hash)
 		}), mock.Anything).Return(
-			pb.LoginResponse_builder{Token: strPtr("jwt-token")}.Build(), nil,
+			pb.LoginResponse_builder{Token: &jwtToken}.Build(), nil,
 		)
 
 		client := grpcclient.NewAuthClient(mockPB)
 		token, err := client.Login(context.Background(), domain.Credentials{
 			Login:     "user",
-			MasterKey: "hash",
+			MasterKey: hash,
 		})
 
 		require.NoError(t, err)
-		assert.Equal(t, "jwt-token", token)
+		assert.Equal(t, jwtToken, token)
 	})
 
 	t.Run("invalid credentials", func(t *testing.T) {
-		mockPB := mocks.NewAuthClient(t)
+		mockPB := mocks.NewPBAuthClient(t)
 		mockPB.On("Login", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil, status.Error(codes.Unauthenticated, "invalid credentials"))
 
@@ -142,7 +145,7 @@ func TestAuthClient_Login(t *testing.T) {
 	})
 
 	t.Run("user not found", func(t *testing.T) {
-		mockPB := mocks.NewAuthClient(t)
+		mockPB := mocks.NewPBAuthClient(t)
 		mockPB.On("Login", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil, status.Error(codes.NotFound, "user not found"))
 
@@ -153,7 +156,7 @@ func TestAuthClient_Login(t *testing.T) {
 	})
 
 	t.Run("internal error", func(t *testing.T) {
-		mockPB := mocks.NewAuthClient(t)
+		mockPB := mocks.NewPBAuthClient(t)
 		mockPB.On("Login", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil, status.Error(codes.Internal, "internal error"))
 
