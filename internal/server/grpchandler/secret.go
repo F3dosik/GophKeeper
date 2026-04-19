@@ -6,6 +6,7 @@ import (
 	"github.com/F3dosik/GophKeeper/internal/server/middleware"
 	"github.com/F3dosik/GophKeeper/internal/server/service"
 	pb "github.com/F3dosik/GophKeeper/proto/gen"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // secretHandler реализует интерфейс pb.SecretServer.
@@ -68,7 +69,11 @@ func (h *secretHandler) GetSecret(ctx context.Context, req *pb.GetSecretRequest)
 		return nil, toGRPCError(err)
 	}
 
-	return pb.GetSecretResponse_builder{Data: secret.Data}.Build(), nil
+	return pb.GetSecretResponse_builder{
+		Data:      secret.Data,
+		CreatedAt: timestamppb.New(secret.CreatedAt),
+		UpdatedAt: timestamppb.New(secret.UpdatedAt),
+	}.Build(), nil
 }
 
 // DeleteSecret обрабатывает запрос удаления секрета по blind index.
@@ -103,6 +108,8 @@ func (h *secretHandler) ListSecrets(ctx context.Context, req *pb.ListSecretsRequ
 		si := &pb.SecretItem{}
 		si.SetBlindIndex(secret.BlindIndex)
 		si.SetData(secret.Data)
+		si.SetCreatedAt(timestamppb.New(secret.CreatedAt))
+		si.SetUpdatedAt(timestamppb.New(secret.UpdatedAt))
 		items = append(items, si)
 	}
 

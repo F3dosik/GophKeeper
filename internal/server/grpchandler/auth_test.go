@@ -16,9 +16,9 @@ import (
 
 var (
 	testLogin     = "test_user"
-	testMasterKey = "secret"
-	testWrongKey  = "wrongkey"
-	testSalt      = "salt"
+	testMasterKey = []byte("secret")
+	testWrongKey  = []byte("wrongkey")
+	testSalt      = []byte("salt")
 )
 
 func TestAuthHandler_CreateUser_Success(t *testing.T) {
@@ -31,9 +31,9 @@ func TestAuthHandler_CreateUser_Success(t *testing.T) {
 	req := pb.CreateUserRequest_builder{
 		Credentials: pb.Credentials_builder{
 			Login:     &testLogin,
-			MasterKey: &testMasterKey,
+			MasterKey: testMasterKey,
 		}.Build(),
-		Salt: &testSalt,
+		Salt: testSalt,
 	}.Build()
 
 	resp, err := handler.CreateUser(context.Background(), req)
@@ -53,9 +53,9 @@ func TestAuthHandler_CreateUser_UserAlreadyExists(t *testing.T) {
 	req := pb.CreateUserRequest_builder{
 		Credentials: pb.Credentials_builder{
 			Login:     &testLogin,
-			MasterKey: &testMasterKey,
+			MasterKey: testMasterKey,
 		}.Build(),
-		Salt: &testSalt,
+		Salt: testSalt,
 	}.Build()
 
 	_, err := handler.CreateUser(context.Background(), req)
@@ -85,7 +85,7 @@ func TestAuthHandler_GetSalt_Success(t *testing.T) {
 func TestAuthHandler_GetSalt_UserNotFound(t *testing.T) {
 	mockService := mocks.NewAuthService(t)
 	mockService.On("GetSalt", mock.Anything, testLogin).
-		Return("", domain.ErrUserNotFound)
+		Return([]byte{}, domain.ErrUserNotFound)
 
 	handler := NewAuthHandler(mockService)
 
@@ -109,7 +109,7 @@ func TestAuthHandler_Login_Success(t *testing.T) {
 	req := pb.LoginRequest_builder{
 		Credentials: pb.Credentials_builder{
 			Login:     proto.String(testLogin),
-			MasterKey: proto.String(testMasterKey),
+			MasterKey: testMasterKey,
 		}.Build(),
 	}.Build()
 
@@ -130,7 +130,7 @@ func TestAuthHandler_Login_InvalidCredentials(t *testing.T) {
 	req := pb.LoginRequest_builder{
 		Credentials: pb.Credentials_builder{
 			Login:     proto.String(testLogin),
-			MasterKey: proto.String(testWrongKey),
+			MasterKey: testWrongKey,
 		}.Build(),
 	}.Build()
 

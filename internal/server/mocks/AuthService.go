@@ -14,7 +14,7 @@ type AuthService struct {
 }
 
 // Create provides a mock function with given fields: ctx, login, masterKey, salt
-func (_m *AuthService) Create(ctx context.Context, login string, masterKey string, salt string) error {
+func (_m *AuthService) Create(ctx context.Context, login string, masterKey []byte, salt []byte) error {
 	ret := _m.Called(ctx, login, masterKey, salt)
 
 	if len(ret) == 0 {
@@ -22,7 +22,7 @@ func (_m *AuthService) Create(ctx context.Context, login string, masterKey strin
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, []byte, []byte) error); ok {
 		r0 = rf(ctx, login, masterKey, salt)
 	} else {
 		r0 = ret.Error(0)
@@ -32,22 +32,24 @@ func (_m *AuthService) Create(ctx context.Context, login string, masterKey strin
 }
 
 // GetSalt provides a mock function with given fields: ctx, login
-func (_m *AuthService) GetSalt(ctx context.Context, login string) (string, error) {
+func (_m *AuthService) GetSalt(ctx context.Context, login string) ([]byte, error) {
 	ret := _m.Called(ctx, login)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetSalt")
 	}
 
-	var r0 string
+	var r0 []byte
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) (string, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string) ([]byte, error)); ok {
 		return rf(ctx, login)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) string); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string) []byte); ok {
 		r0 = rf(ctx, login)
 	} else {
-		r0 = ret.Get(0).(string)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]byte)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
@@ -60,7 +62,7 @@ func (_m *AuthService) GetSalt(ctx context.Context, login string) (string, error
 }
 
 // Login provides a mock function with given fields: ctx, login, masterKey
-func (_m *AuthService) Login(ctx context.Context, login string, masterKey string) (string, error) {
+func (_m *AuthService) Login(ctx context.Context, login string, masterKey []byte) (string, error) {
 	ret := _m.Called(ctx, login, masterKey)
 
 	if len(ret) == 0 {
@@ -69,16 +71,16 @@ func (_m *AuthService) Login(ctx context.Context, login string, masterKey string
 
 	var r0 string
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) (string, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, []byte) (string, error)); ok {
 		return rf(ctx, login, masterKey)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) string); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, []byte) string); ok {
 		r0 = rf(ctx, login, masterKey)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string, []byte) error); ok {
 		r1 = rf(ctx, login, masterKey)
 	} else {
 		r1 = ret.Error(1)
