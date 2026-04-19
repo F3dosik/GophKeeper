@@ -11,11 +11,11 @@ import (
 type AuthClient interface {
 	// CreateUser регистрирует нового пользователя на сервере.
 	// salt должен быть сгенерирован клиентом перед деривацией ключей.
-	CreateUser(ctx context.Context, creds domain.Credentials, salt string) error
+	CreateUser(ctx context.Context, creds domain.Credentials, salt []byte) error
 
 	// GetSalt возвращает соль пользователя по логину.
 	// Используется для деривации ключей перед аутентификацией.
-	GetSalt(ctx context.Context, login string) (string, error)
+	GetSalt(ctx context.Context, login string) ([]byte, error)
 
 	// Login аутентифицирует пользователя и возвращает JWT токен.
 	Login(ctx context.Context, creds domain.Credentials) (string, error)
@@ -29,16 +29,16 @@ func NewAuthClient(client pb.AuthClient) AuthClient {
 	return &authClient{client: client}
 }
 
-func (c *authClient) CreateUser(ctx context.Context, creds domain.Credentials, salt string) error {
+func (c *authClient) CreateUser(ctx context.Context, creds domain.Credentials, salt []byte) error {
 	req := pb.CreateUserRequest_builder{
 		Credentials: toPBCredentials(creds),
-		Salt:        &salt,
+		Salt:        salt,
 	}.Build()
 	_, err := c.client.CreateUser(ctx, req)
 	return fromGRPCError(err)
 }
 
-func (c *authClient) GetSalt(ctx context.Context, login string) (string, error) {
+func (c *authClient) GetSalt(ctx context.Context, login string) ([]byte, error) {
 	req := pb.GetSaltRequest_builder{Login: &login}.Build()
 	resp, err := c.client.GetSalt(ctx, req)
 	return resp.GetSalt(), fromGRPCError(err)

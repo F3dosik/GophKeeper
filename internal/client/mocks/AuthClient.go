@@ -5,8 +5,7 @@ package mocks
 import (
 	context "context"
 
-	gen "github.com/F3dosik/GophKeeper/proto/gen"
-	grpc "google.golang.org/grpc"
+	domain "github.com/F3dosik/GophKeeper/internal/domain"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -16,73 +15,47 @@ type AuthClient struct {
 	mock.Mock
 }
 
-// CreateUser provides a mock function with given fields: ctx, in, opts
-func (_m *AuthClient) CreateUser(ctx context.Context, in *gen.CreateUserRequest, opts ...grpc.CallOption) (*gen.CreateUserResponse, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, ctx, in)
-	_ca = append(_ca, _va...)
-	ret := _m.Called(_ca...)
+// CreateUser provides a mock function with given fields: ctx, creds, salt
+func (_m *AuthClient) CreateUser(ctx context.Context, creds domain.Credentials, salt []byte) error {
+	ret := _m.Called(ctx, creds, salt)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateUser")
 	}
 
-	var r0 *gen.CreateUserResponse
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *gen.CreateUserRequest, ...grpc.CallOption) (*gen.CreateUserResponse, error)); ok {
-		return rf(ctx, in, opts...)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, *gen.CreateUserRequest, ...grpc.CallOption) *gen.CreateUserResponse); ok {
-		r0 = rf(ctx, in, opts...)
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, domain.Credentials, []byte) error); ok {
+		r0 = rf(ctx, creds, salt)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*gen.CreateUserResponse)
-		}
+		r0 = ret.Error(0)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *gen.CreateUserRequest, ...grpc.CallOption) error); ok {
-		r1 = rf(ctx, in, opts...)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
+	return r0
 }
 
-// GetSalt provides a mock function with given fields: ctx, in, opts
-func (_m *AuthClient) GetSalt(ctx context.Context, in *gen.GetSaltRequest, opts ...grpc.CallOption) (*gen.GetSaltResponse, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, ctx, in)
-	_ca = append(_ca, _va...)
-	ret := _m.Called(_ca...)
+// GetSalt provides a mock function with given fields: ctx, login
+func (_m *AuthClient) GetSalt(ctx context.Context, login string) ([]byte, error) {
+	ret := _m.Called(ctx, login)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetSalt")
 	}
 
-	var r0 *gen.GetSaltResponse
+	var r0 []byte
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *gen.GetSaltRequest, ...grpc.CallOption) (*gen.GetSaltResponse, error)); ok {
-		return rf(ctx, in, opts...)
+	if rf, ok := ret.Get(0).(func(context.Context, string) ([]byte, error)); ok {
+		return rf(ctx, login)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, *gen.GetSaltRequest, ...grpc.CallOption) *gen.GetSaltResponse); ok {
-		r0 = rf(ctx, in, opts...)
+	if rf, ok := ret.Get(0).(func(context.Context, string) []byte); ok {
+		r0 = rf(ctx, login)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*gen.GetSaltResponse)
+			r0 = ret.Get(0).([]byte)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *gen.GetSaltRequest, ...grpc.CallOption) error); ok {
-		r1 = rf(ctx, in, opts...)
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, login)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -90,36 +63,27 @@ func (_m *AuthClient) GetSalt(ctx context.Context, in *gen.GetSaltRequest, opts 
 	return r0, r1
 }
 
-// Login provides a mock function with given fields: ctx, in, opts
-func (_m *AuthClient) Login(ctx context.Context, in *gen.LoginRequest, opts ...grpc.CallOption) (*gen.LoginResponse, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, ctx, in)
-	_ca = append(_ca, _va...)
-	ret := _m.Called(_ca...)
+// Login provides a mock function with given fields: ctx, creds
+func (_m *AuthClient) Login(ctx context.Context, creds domain.Credentials) (string, error) {
+	ret := _m.Called(ctx, creds)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Login")
 	}
 
-	var r0 *gen.LoginResponse
+	var r0 string
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *gen.LoginRequest, ...grpc.CallOption) (*gen.LoginResponse, error)); ok {
-		return rf(ctx, in, opts...)
+	if rf, ok := ret.Get(0).(func(context.Context, domain.Credentials) (string, error)); ok {
+		return rf(ctx, creds)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, *gen.LoginRequest, ...grpc.CallOption) *gen.LoginResponse); ok {
-		r0 = rf(ctx, in, opts...)
+	if rf, ok := ret.Get(0).(func(context.Context, domain.Credentials) string); ok {
+		r0 = rf(ctx, creds)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*gen.LoginResponse)
-		}
+		r0 = ret.Get(0).(string)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *gen.LoginRequest, ...grpc.CallOption) error); ok {
-		r1 = rf(ctx, in, opts...)
+	if rf, ok := ret.Get(1).(func(context.Context, domain.Credentials) error); ok {
+		r1 = rf(ctx, creds)
 	} else {
 		r1 = ret.Error(1)
 	}
