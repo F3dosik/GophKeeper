@@ -1,0 +1,26 @@
+.git
+.github
+.gitignore
+.vscode
+.idea
+
+# Local env and secrets
+.env
+*.pem
+*.key
+certs/
+
+# Build artifacts
+bin/
+dist/
+*.out
+coverage.*
+
+# Test and docs
+tests/
+*.md
+Makefile
+
+# Editor
+*.swp
+.DS_Store

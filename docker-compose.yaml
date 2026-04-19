@@ -12,13 +12,13 @@ services:
       interval: 5s
       retries: 5
       start_period: 10s
-  
+
   migrate:
     image: migrate/migrate
     env_file:
       - .env
     volumes:
-    - ./migrations:/migrations
+      - ./migrations:/migrations
     command: [
       "-path", "/migrations",
       "-database", "${DATABASE_URL}",
@@ -29,37 +29,24 @@ services:
         condition: service_healthy
 
   migrate-down:
-      image: migrate/migrate
-      profiles:
-        - tools
-      env_file:
-        - .env
-      volumes:
+    image: migrate/migrate
+    profiles:
+      - tools
+    env_file:
+      - .env
+    volumes:
       - ./migrations:/migrations
-      command: [
-        "-path", "/migrations",
-        "-database", "${DATABASE_URL}",
-        "down", "1"
-      ]
-      depends_on:
-        db:
-          condition: service_healthy
-
-  # seed:
-  #   image: postgres:18-alpine
-  #   profiles:
-  #     - tools
-  #   env_file:
-  #     - .env
-  #   volumes:
-  #     - ./scripts/seed.sql:/seed.sql
-  #   command: sh -c "psql $$DATABASE_URL -f /seed.sql"
-  #   depends_on:
-  #     db:
-  #       condition: service_healthy
+    command: [
+      "-path", "/migrations",
+      "-database", "${DATABASE_URL}",
+      "down", "1"
+    ]
+    depends_on:
+      db:
+        condition: service_healthy
 
   gophkeeper:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile.server
     env_file:
@@ -70,21 +57,5 @@ services:
       migrate:
         condition: service_completed_successfully
 
-  # tests:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.test
-  #   command: go test ./...
-
-  # tests-e2e:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.test
-  #   command: go test -v -tags=e2e ./tests/e2e/...
-  #   depends_on:
-  #     db:
-  #       condition: service_healthy
-  #     migrate:
-  #       condition: service_completed_successfully
 volumes:
   pgdata:
