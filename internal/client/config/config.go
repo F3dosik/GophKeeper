@@ -1,4 +1,6 @@
-package app
+// Package config содержит конфигурацию клиента GophKeeper и её загрузку
+// из переменных окружения.
+package config
 
 import (
 	"fmt"
@@ -11,13 +13,13 @@ import (
 
 const (
 	defaultServerAddress = "localhost:50051"
-	defaultTokenPath     = "~/.gophkeeper/token"
+	defaultSessionPath   = "~/.gophkeeper/session"
 )
 
 // Config содержит конфигурацию клиента.
 type Config struct {
 	ServerAddress string `env:"GOPHKEEPER_SERVER"`
-	TokenPath     string `env:"GOPHKEEPER_TOKEN"`
+	SessionPath   string `env:"GOPHKEEPER_SESSION"`
 	TLSCertPath   string `env:"GOPHKEEPER_TLS_CERT"`
 }
 
@@ -32,11 +34,11 @@ func Load() (*Config, error) {
 		config.ServerAddress = defaultServerAddress
 	}
 
-	if config.TokenPath == "" {
-		config.TokenPath = defaultTokenPath
+	if config.SessionPath == "" {
+		config.SessionPath = defaultSessionPath
 	}
 
-	config.TokenPath = expandHome(config.TokenPath)
+	config.SessionPath = expandHome(config.SessionPath)
 
 	return &config, nil
 }
