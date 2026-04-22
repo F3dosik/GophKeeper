@@ -16,8 +16,10 @@ type secretHandler struct {
 	secretService service.SecretService
 }
 
-// NewSecretHandler создает новый экземпляр secretHandler.
-func NewSecretHandler(secretService service.SecretService) *secretHandler {
+// NewSecretHandler создаёт новый экземпляр обработчика секретов.
+// Возвращает pb.SecretsServer, чтобы тип был именуемым вне пакета и легко подменялся
+// в тестах и при регистрации в gRPC-сервере.
+func NewSecretHandler(secretService service.SecretService) pb.SecretsServer {
 	return &secretHandler{secretService: secretService}
 }
 

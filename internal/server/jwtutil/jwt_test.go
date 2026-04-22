@@ -17,16 +17,16 @@ func TestGenerateToken(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		userID := uuid.New()
 
-		token, err := jwtutil.GenerateToken(userID, testSecret)
+		token, err := jwtutil.GenerateToken(userID, testSecret, time.Hour)
 
 		require.NoError(t, err)
 		assert.NotEmpty(t, token)
 	})
 
 	t.Run("different userIDs produce different tokens", func(t *testing.T) {
-		t1, err := jwtutil.GenerateToken(uuid.New(), testSecret)
+		t1, err := jwtutil.GenerateToken(uuid.New(), testSecret, time.Hour)
 		require.NoError(t, err)
-		t2, err := jwtutil.GenerateToken(uuid.New(), testSecret)
+		t2, err := jwtutil.GenerateToken(uuid.New(), testSecret, time.Hour)
 		require.NoError(t, err)
 
 		assert.NotEqual(t, t1, t2)
@@ -36,7 +36,7 @@ func TestGenerateToken(t *testing.T) {
 func TestParseToken(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		userID := uuid.New()
-		token, err := jwtutil.GenerateToken(userID, testSecret)
+		token, err := jwtutil.GenerateToken(userID, testSecret, time.Hour)
 		require.NoError(t, err)
 
 		claims, err := jwtutil.ParseToken(token, testSecret)
@@ -46,7 +46,7 @@ func TestParseToken(t *testing.T) {
 	})
 
 	t.Run("wrong secret", func(t *testing.T) {
-		token, err := jwtutil.GenerateToken(uuid.New(), testSecret)
+		token, err := jwtutil.GenerateToken(uuid.New(), testSecret, time.Hour)
 		require.NoError(t, err)
 
 		_, err = jwtutil.ParseToken(token, "wrong-secret")

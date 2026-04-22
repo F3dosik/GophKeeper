@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	testJWTSecret = "e2e-jwt-secret"
+	testJWTSecret = "e2e-jwt-secret-that-is-32-chars!!"
 	migrationPath = "../../migrations/000001_init.up.sql"
 )
 
@@ -87,7 +87,7 @@ func startTestServer(pool *pgxpool.Pool) (stop func(), addr string, err error) {
 	userRepo := postgres.NewUserRepository(pool)
 	secretRepo := postgres.NewSecretRepository(pool)
 
-	authService := service.NewAuthService(userRepo, testJWTSecret)
+	authService := service.NewAuthService(userRepo, testJWTSecret, time.Hour)
 	secretService := service.NewSecretService(secretRepo)
 
 	authHandler := grpchandler.NewAuthHandler(authService)

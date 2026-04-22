@@ -2,8 +2,8 @@ package app
 
 import (
 	"fmt"
-	"log"
 	"strings"
+	"time"
 
 	"github.com/F3dosik/GophKeeper/internal/logger"
 	"github.com/caarlos0/env/v11"
@@ -12,19 +12,24 @@ import (
 const (
 	defaultServerPort = "50051"
 	defaultLogLevel   = string(logger.ModeDevelopment)
+	defaultTokenTTL   = 24 * time.Hour
 )
 
 // Config содержит конфигурацию сервера.
 type Config struct {
-	DatabaseURL string `env:"DATABASE_URL"`
-	JWTSecret   string `env:"JWT_SECRET"`
-	ServerPort  string `env:"SERVER_PORT"`
-	LogLevel    string `env:"LOG_LEVEL"`
+	DatabaseURL string        `env:"DATABASE_URL"`
+	JWTSecret   string        `env:"JWT_SECRET"`
+	ServerPort  string        `env:"SERVER_PORT"`
+	LogLevel    string        `env:"LOG_LEVEL"`
+	TokenTTL    time.Duration `env:"TOKEN_TTL"`
 }
 
 // Load загружает и валидирует конфигурацию из переменных окружения.
 func Load() (*Config, error) {
-	config := parseConfig()
+	config, err := parseConfig()
+	if err != nil {
+		return nil, fmt.Errorf("load config: %w", err)
+	}
 
 	if err := config.Validate(); err != nil {
 		return nil, fmt.Errorf("load config: %w", err)
@@ -32,11 +37,11 @@ func Load() (*Config, error) {
 	return config, nil
 }
 
-func parseConfig() *Config {
+func parseConfig() (*Config, error) {
 	var config Config
 	err := env.Parse(&config)
 	if err != nil {
-		log.Printf("Warning: failed to parse env config: %v\n", err)
+		return nil, fmt.Errorf("parseconfig: %w", err)
 	}
 
 	if config.ServerPort == "" {
@@ -51,21 +56,29 @@ func parseConfig() *Config {
 		config.LogLevel = defaultLogLevel
 	}
 
-	return &config
+	if config.TokenTTL == 0 {
+		config.TokenTTL = defaultTokenTTL
+	}
+
+	return &config, nil
 }
 
 // Validate проверяет корректность конфигурации.
 func (c *Config) Validate() error {
-	if c.ServerPort == "" {
-		return fmt.Errorf("SERVER_PORT is required")
-	}
-
 	if c.DatabaseURL == "" {
 		return fmt.Errorf("DATABASE_URL is required")
 	}
 
 	if c.JWTSecret == "" {
 		return fmt.Errorf("JWT_SECRET is required")
+	}
+
+	if len(c.JWTSecret) < 32 {
+		return fmt.Errorf("JWT_SECRET must be at least 32 characters")
+	}
+
+	if c.TokenTTL <= 0 {
+		return fmt.Errorf("TOKEN_TTL must be positive")
 	}
 
 	switch c.LogLevel {

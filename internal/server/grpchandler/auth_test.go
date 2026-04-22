@@ -82,23 +82,6 @@ func TestAuthHandler_GetSalt_Success(t *testing.T) {
 	mockService.AssertExpectations(t)
 }
 
-func TestAuthHandler_GetSalt_UserNotFound(t *testing.T) {
-	mockService := mocks.NewAuthService(t)
-	mockService.On("GetSalt", mock.Anything, testLogin).
-		Return([]byte{}, domain.ErrUserNotFound)
-
-	handler := NewAuthHandler(mockService)
-
-	req := pb.GetSaltRequest_builder{
-		Login: &testLogin,
-	}.Build()
-
-	_, err := handler.GetSalt(context.Background(), req)
-
-	assert.Equal(t, codes.NotFound, status.Code(err))
-	mockService.AssertExpectations(t)
-}
-
 func TestAuthHandler_Login_Success(t *testing.T) {
 	mockService := mocks.NewAuthService(t)
 	mockService.On("Login", mock.Anything, testLogin, testMasterKey).

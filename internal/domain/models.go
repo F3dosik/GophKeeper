@@ -40,7 +40,7 @@ const (
 )
 
 // ErrUnknownSecretType возвращается при попытке использовать неизвестный тип секрета.
-var ErrUnknownSecretType = errors.New("неизвестный тип секрета")
+var ErrUnknownSecretType = errors.New("unknown secret type")
 
 // ParseSecretType валидирует строку и возвращает SecretType.
 // Возвращает ErrUnknownSecretType, если значение не соответствует ни одному типу.

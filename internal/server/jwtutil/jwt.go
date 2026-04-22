@@ -16,13 +16,13 @@ type Claims struct {
 }
 
 // GenerateToken генерирует подписанный JWT токен для пользователя.
-// Токен содержит userID и истекает через 24 часа.
+// Токен содержит userID и истекает через ttl.
 // Возвращает подписанную строку токена или ошибку если подпись не удалась.
-func GenerateToken(userID uuid.UUID, secretKey string) (string, error) {
+func GenerateToken(userID uuid.UUID, secretKey string, ttl time.Duration) (string, error) {
 	claims := Claims{
 		UserID: userID,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(ttl)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}

@@ -25,6 +25,7 @@ type authClient struct {
 	client pb.AuthClient
 }
 
+// NewAuthClient создаёт новый AuthClient поверх сгенерированного gRPC клиента.
 func NewAuthClient(client pb.AuthClient) AuthClient {
 	return &authClient{client: client}
 }
@@ -41,7 +42,10 @@ func (c *authClient) CreateUser(ctx context.Context, creds domain.Credentials, s
 func (c *authClient) GetSalt(ctx context.Context, login string) ([]byte, error) {
 	req := pb.GetSaltRequest_builder{Login: &login}.Build()
 	resp, err := c.client.GetSalt(ctx, req)
-	return resp.GetSalt(), fromGRPCError(err)
+	if err != nil {
+		return nil, fromGRPCError(err)
+	}
+	return resp.GetSalt(), nil
 }
 
 func (c *authClient) Login(ctx context.Context, creds domain.Credentials) (string, error) {
@@ -49,5 +53,8 @@ func (c *authClient) Login(ctx context.Context, creds domain.Credentials) (strin
 		Credentials: toPBCredentials(creds),
 	}.Build()
 	resp, err := c.client.Login(ctx, req)
-	return resp.GetToken(), fromGRPCError(err)
+	if err != nil {
+		return "", fromGRPCError(err)
+	}
+	return resp.GetToken(), nil
 }

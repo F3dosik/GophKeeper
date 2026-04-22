@@ -31,6 +31,7 @@
 | `JWT_SECRET`   | Секрет для подписи JWT (≥ 32 символа)            | `your-super-secret-key-min-32-chars`                        |
 | `SERVER_PORT`  | Порт gRPC-сервера (по умолчанию `50051`)         | `50051`                                                     |
 | `LOG_LEVEL`    | `development` или `production`                   | `development`                                               |
+| `TOKEN_TTL`    | Время жизни JWT (по умолчанию `24h`)             | `1h`, `30m`, `24h`                                          |
 
 Пример — см. [`.env_example`](.env_example).
 

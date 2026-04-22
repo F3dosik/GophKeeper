@@ -2,6 +2,7 @@ package app_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/F3dosik/GophKeeper/internal/server/app"
 	"github.com/stretchr/testify/assert"
@@ -26,6 +27,7 @@ func TestLoad_Defaults(t *testing.T) {
 	assert.Equal(t, "development", cfg.LogLevel)
 	assert.Equal(t, "postgres://localhost/db", cfg.DatabaseURL)
 	assert.Equal(t, "secret", cfg.JWTSecret)
+	assert.Equal(t, 24*time.Hour, cfg.TokenTTL)
 }
 
 func TestLoad_FromEnv(t *testing.T) {
@@ -59,9 +61,10 @@ func TestValidate_Errors(t *testing.T) {
 		cfg  app.Config
 		want string
 	}{
-		{"missing DATABASE_URL", app.Config{ServerPort: ":50051", JWTSecret: "s", LogLevel: "development"}, "DATABASE_URL"},
-		{"missing JWT_SECRET", app.Config{ServerPort: ":50051", DatabaseURL: "postgres://", LogLevel: "development"}, "JWT_SECRET"},
-		{"invalid log level", app.Config{ServerPort: ":50051", DatabaseURL: "postgres://", JWTSecret: "s", LogLevel: "debug"}, "invalid log mode"},
+		{"missing DATABASE_URL", app.Config{ServerPort: ":50051", JWTSecret: "s", LogLevel: "development", TokenTTL: time.Hour}, "DATABASE_URL"},
+		{"missing JWT_SECRET", app.Config{ServerPort: ":50051", DatabaseURL: "postgres://", LogLevel: "development", TokenTTL: time.Hour}, "JWT_SECRET"},
+		{"invalid log level", app.Config{ServerPort: ":50051", DatabaseURL: "postgres://", JWTSecret: "s", LogLevel: "debug", TokenTTL: time.Hour}, "invalid log mode"},
+		{"non-positive TOKEN_TTL", app.Config{ServerPort: ":50051", DatabaseURL: "postgres://", JWTSecret: "01234567890123456789012345678901", LogLevel: "development", TokenTTL: 0}, "TOKEN_TTL"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -78,6 +81,7 @@ func TestValidate_Success(t *testing.T) {
 		DatabaseURL: "postgres://",
 		JWTSecret:   "s",
 		LogLevel:    "production",
+		TokenTTL:    time.Hour,
 	}
 	assert.NoError(t, cfg.Validate())
 }

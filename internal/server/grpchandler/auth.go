@@ -15,8 +15,10 @@ type authHandler struct {
 	authService service.AuthService
 }
 
-// NewAuthHandler создаёт новый экземпляр authHandler.
-func NewAuthHandler(authService service.AuthService) *authHandler {
+// NewAuthHandler создаёт новый экземпляр обработчика аутентификации.
+// Возвращает pb.AuthServer, чтобы тип был именуемым вне пакета и легко подменялся
+// в тестах и при регистрации в gRPC-сервере.
+func NewAuthHandler(authService service.AuthService) pb.AuthServer {
 	return &authHandler{authService: authService}
 }
 
@@ -33,7 +35,8 @@ func (h *authHandler) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 }
 
 // GetSalt обрабатывает запрос получения соли пользователя по логину.
-// Возвращает codes.NotFound если пользователь не найден.
+// Для несуществующего логина возвращает детерминированную фиктивную соль,
+// чтобы не раскрывать факт наличия пользователя (защита от перечисления).
 func (h *authHandler) GetSalt(ctx context.Context, req *pb.GetSaltRequest) (*pb.GetSaltResponse, error) {
 	salt, err := h.authService.GetSalt(ctx, req.GetLogin())
 	if err != nil {
@@ -43,8 +46,8 @@ func (h *authHandler) GetSalt(ctx context.Context, req *pb.GetSaltRequest) (*pb.
 }
 
 // Login обрабатывает запрос аутентификации пользователя.
-// Возвращает codes.NotFound если пользователь не найден.
-// Возвращает codes.Unauthenticated если masterKey неверный.
+// Возвращает codes.Unauthenticated если masterKey неверный или логин не существует
+// (единый код ответа скрывает факт наличия пользователя).
 func (h *authHandler) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
 	token, err := h.authService.Login(
 		ctx, req.GetCredentials().GetLogin(),

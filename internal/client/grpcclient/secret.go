@@ -7,11 +7,21 @@ import (
 	pb "github.com/F3dosik/GophKeeper/proto/gen"
 )
 
+// SecretsClient определяет интерфейс для взаимодействия с сервисом секретов.
 type SecretsClient interface {
+	// ListSecrets возвращает все секреты текущего пользователя.
 	ListSecrets(ctx context.Context) ([]*domain.Secret, error)
+
+	// CreateSecret создаёт новый секрет с заданным blindIndex и зашифрованными данными.
 	CreateSecret(ctx context.Context, blindIndex string, data []byte) error
+
+	// UpdateSecret обновляет зашифрованные данные секрета, идентифицируемого по blindIndex.
 	UpdateSecret(ctx context.Context, blindIndex string, data []byte) error
+
+	// GetSecret возвращает секрет по blindIndex.
 	GetSecret(ctx context.Context, blindIndex string) (*domain.Secret, error)
+
+	// DeleteSecret удаляет секрет по blindIndex.
 	DeleteSecret(ctx context.Context, blindIndex string) error
 }
 
@@ -19,6 +29,7 @@ type secretsClient struct {
 	client pb.SecretsClient
 }
 
+// NewSecretsClient создаёт новый SecretsClient поверх сгенерированного gRPC клиента.
 func NewSecretsClient(client pb.SecretsClient) SecretsClient {
 	return &secretsClient{client: client}
 }

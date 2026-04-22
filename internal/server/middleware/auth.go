@@ -16,7 +16,7 @@ import (
 
 type metadataKey string
 
-var tokenKey metadataKey = "authorization"
+const tokenKey metadataKey = "authorization"
 
 // publicMethods содержит список методов не требующих аутентификации.
 var publicMethods = map[string]bool{

@@ -22,7 +22,7 @@ func fromPBSecrets(items []*pb.SecretItem) []*domain.Secret {
 			BlindIndex: item.GetBlindIndex(),
 			Data:       item.GetData(),
 			CreatedAt:  item.GetCreatedAt().AsTime(),
-			UpdatedAt:  item.GetCreatedAt().AsTime(),
+			UpdatedAt:  item.GetUpdatedAt().AsTime(),
 		})
 	}
 	return secrets

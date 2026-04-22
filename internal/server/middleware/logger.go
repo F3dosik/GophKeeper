@@ -10,7 +10,7 @@ import (
 )
 
 // LoggingInterceptor возвращает gRPC унарный interceptor для логирования запросов.
-// Логирует метод, IP клиента, длительность и ошибку каждого запроса.
+// Логирует метод, IP клиента, длительность и ошибку (при ее наличии) каждого запроса.
 func LoggingInterceptor(logger *zap.SugaredLogger) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		start := time.Now()
@@ -21,12 +21,15 @@ func LoggingInterceptor(logger *zap.SugaredLogger) grpc.UnaryServerInterceptor {
 		}
 		resp, err := handler(ctx, req)
 
-		logger.Infow("request",
+		fields := []any{
 			"method", info.FullMethod,
 			"duration", time.Since(start),
 			"client_ip", clientIP,
-			"error", err,
-		)
+		}
+		if err != nil {
+			fields = append(fields, "error", err)
+		}
+		logger.Infow("request", fields...)
 
 		return resp, err
 	}

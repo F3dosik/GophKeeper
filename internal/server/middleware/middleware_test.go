@@ -3,6 +3,7 @@ package middleware_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/F3dosik/GophKeeper/internal/server/jwtutil"
 	"github.com/F3dosik/GophKeeper/internal/server/middleware"
@@ -58,7 +59,7 @@ func TestAuthInterceptor_ValidToken(t *testing.T) {
 	interceptor := middleware.AuthInterceptor(testSecret, zap.NewNop().Sugar())
 
 	userID := uuid.New()
-	token, err := jwtutil.GenerateToken(userID, testSecret)
+	token, err := jwtutil.GenerateToken(userID, testSecret, time.Hour)
 	assert.NoError(t, err)
 
 	md := metadata.Pairs("authorization", "Bearer "+token)

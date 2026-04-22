@@ -1,3 +1,4 @@
+// Package main — точка входа сервера GophKeeper.
 package main
 
 import (

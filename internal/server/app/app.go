@@ -34,7 +34,7 @@ func New(ctx context.Context, cfg *Config, logger *zap.SugaredLogger) (*App, err
 	userRepo := postgres.NewUserRepository(pool)
 	secretRepo := postgres.NewSecretRepository(pool)
 
-	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
+	authService := service.NewAuthService(userRepo, cfg.JWTSecret, cfg.TokenTTL)
 	secretService := service.NewSecretService(secretRepo)
 
 	authHandler := grpchandler.NewAuthHandler(authService)

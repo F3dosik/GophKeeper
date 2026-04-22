@@ -198,6 +198,11 @@ func (c *Commands) newDeleteCmd() *cobra.Command {
 				return err
 			}
 
+			secretSvc, err := c.unlockSecretService(cmd.Context())
+			if err != nil {
+				return err
+			}
+
 			if !skipConfirm {
 				confirm, err := promptLine(fmt.Sprintf("Удалить секрет %q типа %s? [y/N]: ", name, t))
 				if err != nil {
@@ -207,11 +212,6 @@ func (c *Commands) newDeleteCmd() *cobra.Command {
 					fmt.Println("Отменено")
 					return nil
 				}
-			}
-
-			secretSvc, err := c.unlockSecretService(cmd.Context())
-			if err != nil {
-				return err
 			}
 
 			if err := secretSvc.DeleteSecret(cmd.Context(), name, t); err != nil {
