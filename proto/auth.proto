@@ -4,37 +4,63 @@ package auth;
 
 option go_package = "github.com/F3dosik/GophKeeper/proto/gen";
 
+// Credentials — учётные данные пользователя, используемые при регистрации и входе.
+// master_key — производный ключ, вычисленный клиентом из пароля и соли (Argon2id).
+// Сервер хранит его хеш, сам пароль на сервер не передаётся.
 message Credentials {
+    // Логин пользователя.
     string login = 1;
-    string master_key = 2;
+    // Производный ключ (32 байта), полученный на клиенте.
+    bytes master_key = 2;
 }
 
+// CreateUserRequest — запрос регистрации нового пользователя.
 message CreateUserRequest {
+    // Учётные данные будущего пользователя.
     Credentials credentials = 1;
-    string salt = 2;
+    // Случайная соль (16+ байт), сгенерированная клиентом, — используется при деривации ключа.
+    bytes salt = 2;
 }
 
+// CreateUserResponse — пустой ответ при успешной регистрации.
 message CreateUserResponse {}
 
+// GetSaltRequest — запрос соли пользователя по его логину.
+// Клиент запрашивает соль перед Login, чтобы получить тот же master_key, что и при регистрации.
 message GetSaltRequest {
+    // Логин пользователя.
     string login = 1;
 }
 
+// GetSaltResponse — ответ с солью пользователя.
 message GetSaltResponse {
-    string salt = 1;
+    // Соль, сохранённая при регистрации пользователя.
+    bytes salt = 1;
 }
 
-
+// LoginRequest — запрос на вход в систему.
 message LoginRequest {
+    // Учётные данные пользователя.
     Credentials credentials = 1;
 }
 
+// LoginResponse — ответ на успешный вход.
 message LoginResponse {
+    // JWT-токен, который клиент передаёт в метаданных последующих запросов.
     string token = 1;
 }
 
+// Auth — сервис аутентификации и регистрации пользователей.
 service Auth {
+    // CreateUser регистрирует нового пользователя.
+    // Ошибки: AlreadyExists — логин занят; InvalidArgument — невалидные данные.
     rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+
+    // GetSalt возвращает соль пользователя, сохранённую при регистрации.
+    // Ошибка: NotFound — пользователь не найден.
     rpc GetSalt(GetSaltRequest) returns (GetSaltResponse);
+
+    // Login выполняет вход и возвращает JWT-токен.
+    // Ошибки: NotFound — пользователь не найден; Unauthenticated — неверные учётные данные.
     rpc Login(LoginRequest) returns (LoginResponse);
 }

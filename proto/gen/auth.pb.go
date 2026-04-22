@@ -23,7 +23,7 @@ const (
 type Credentials struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Login       *string                `protobuf:"bytes,1,opt,name=login"`
-	xxx_hidden_MasterKey   *string                `protobuf:"bytes,2,opt,name=master_key,json=masterKey"`
+	xxx_hidden_MasterKey   []byte                 `protobuf:"bytes,2,opt,name=master_key,json=masterKey"`
 	XXX_raceDetectHookData protoimpl.RaceDetectHookData
 	XXX_presence           [1]uint32
 	unknownFields          protoimpl.UnknownFields
@@ -65,14 +65,11 @@ func (x *Credentials) GetLogin() string {
 	return ""
 }
 
-func (x *Credentials) GetMasterKey() string {
+func (x *Credentials) GetMasterKey() []byte {
 	if x != nil {
-		if x.xxx_hidden_MasterKey != nil {
-			return *x.xxx_hidden_MasterKey
-		}
-		return ""
+		return x.xxx_hidden_MasterKey
 	}
-	return ""
+	return nil
 }
 
 func (x *Credentials) SetLogin(v string) {
@@ -80,8 +77,11 @@ func (x *Credentials) SetLogin(v string) {
 	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 2)
 }
 
-func (x *Credentials) SetMasterKey(v string) {
-	x.xxx_hidden_MasterKey = &v
+func (x *Credentials) SetMasterKey(v []byte) {
+	if v == nil {
+		v = []byte{}
+	}
+	x.xxx_hidden_MasterKey = v
 	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 2)
 }
 
@@ -113,7 +113,7 @@ type Credentials_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	Login     *string
-	MasterKey *string
+	MasterKey []byte
 }
 
 func (b0 Credentials_builder) Build() *Credentials {
@@ -134,7 +134,7 @@ func (b0 Credentials_builder) Build() *Credentials {
 type CreateUserRequest struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Credentials *Credentials           `protobuf:"bytes,1,opt,name=credentials"`
-	xxx_hidden_Salt        *string                `protobuf:"bytes,2,opt,name=salt"`
+	xxx_hidden_Salt        []byte                 `protobuf:"bytes,2,opt,name=salt"`
 	XXX_raceDetectHookData protoimpl.RaceDetectHookData
 	XXX_presence           [1]uint32
 	unknownFields          protoimpl.UnknownFields
@@ -173,22 +173,22 @@ func (x *CreateUserRequest) GetCredentials() *Credentials {
 	return nil
 }
 
-func (x *CreateUserRequest) GetSalt() string {
+func (x *CreateUserRequest) GetSalt() []byte {
 	if x != nil {
-		if x.xxx_hidden_Salt != nil {
-			return *x.xxx_hidden_Salt
-		}
-		return ""
+		return x.xxx_hidden_Salt
 	}
-	return ""
+	return nil
 }
 
 func (x *CreateUserRequest) SetCredentials(v *Credentials) {
 	x.xxx_hidden_Credentials = v
 }
 
-func (x *CreateUserRequest) SetSalt(v string) {
-	x.xxx_hidden_Salt = &v
+func (x *CreateUserRequest) SetSalt(v []byte) {
+	if v == nil {
+		v = []byte{}
+	}
+	x.xxx_hidden_Salt = v
 	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 2)
 }
 
@@ -219,7 +219,7 @@ type CreateUserRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	Credentials *Credentials
-	Salt        *string
+	Salt        []byte
 }
 
 func (b0 CreateUserRequest_builder) Build() *CreateUserRequest {
@@ -357,7 +357,7 @@ func (b0 GetSaltRequest_builder) Build() *GetSaltRequest {
 
 type GetSaltResponse struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Salt        *string                `protobuf:"bytes,1,opt,name=salt"`
+	xxx_hidden_Salt        []byte                 `protobuf:"bytes,1,opt,name=salt"`
 	XXX_raceDetectHookData protoimpl.RaceDetectHookData
 	XXX_presence           [1]uint32
 	unknownFields          protoimpl.UnknownFields
@@ -389,18 +389,18 @@ func (x *GetSaltResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *GetSaltResponse) GetSalt() string {
+func (x *GetSaltResponse) GetSalt() []byte {
 	if x != nil {
-		if x.xxx_hidden_Salt != nil {
-			return *x.xxx_hidden_Salt
-		}
-		return ""
+		return x.xxx_hidden_Salt
 	}
-	return ""
+	return nil
 }
 
-func (x *GetSaltResponse) SetSalt(v string) {
-	x.xxx_hidden_Salt = &v
+func (x *GetSaltResponse) SetSalt(v []byte) {
+	if v == nil {
+		v = []byte{}
+	}
+	x.xxx_hidden_Salt = v
 	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 1)
 }
 
@@ -419,7 +419,7 @@ func (x *GetSaltResponse) ClearSalt() {
 type GetSaltResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Salt *string
+	Salt []byte
 }
 
 func (b0 GetSaltResponse_builder) Build() *GetSaltResponse {
@@ -587,15 +587,15 @@ const file_proto_auth_proto_rawDesc = "" +
 	"\vCredentials\x12\x14\n" +
 	"\x05login\x18\x01 \x01(\tR\x05login\x12\x1d\n" +
 	"\n" +
-	"master_key\x18\x02 \x01(\tR\tmasterKey\"\\\n" +
+	"master_key\x18\x02 \x01(\fR\tmasterKey\"\\\n" +
 	"\x11CreateUserRequest\x123\n" +
 	"\vcredentials\x18\x01 \x01(\v2\x11.auth.CredentialsR\vcredentials\x12\x12\n" +
-	"\x04salt\x18\x02 \x01(\tR\x04salt\"\x14\n" +
+	"\x04salt\x18\x02 \x01(\fR\x04salt\"\x14\n" +
 	"\x12CreateUserResponse\"&\n" +
 	"\x0eGetSaltRequest\x12\x14\n" +
 	"\x05login\x18\x01 \x01(\tR\x05login\"%\n" +
 	"\x0fGetSaltResponse\x12\x12\n" +
-	"\x04salt\x18\x01 \x01(\tR\x04salt\"C\n" +
+	"\x04salt\x18\x01 \x01(\fR\x04salt\"C\n" +
 	"\fLoginRequest\x123\n" +
 	"\vcredentials\x18\x01 \x01(\v2\x11.auth.CredentialsR\vcredentials\"%\n" +
 	"\rLoginResponse\x12\x14\n" +

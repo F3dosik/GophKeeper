@@ -19,4 +19,13 @@ var (
 
 	// ErrInvalidCredentials возвращается при несовпадении логина или пароля во время аутентификации.
 	ErrInvalidCredentials = errors.New("invalid credentials")
+
+	// ErrInvalidArgument возвращается при некорректных входных данных.
+	ErrInvalidArgument = errors.New("invalid argument")
+
+	// ErrNotFound возвращается когда запрашиваемый ресурс не найден.
+	ErrNotFound = errors.New("not found")
+
+	// ErrAlreadyExists возвращается когда ресурс уже существует.
+	ErrAlreadyExists = errors.New("already exists")
 )
