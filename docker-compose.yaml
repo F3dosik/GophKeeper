@@ -53,6 +53,9 @@ services:
       - .env
     ports:
       - "${SERVER_PORT:-50051}:50051"
+    volumes:
+      # Сертификаты из `make certs`; пути внутри контейнера задаются в TLS_CERT_FILE / TLS_KEY_FILE.
+      - ./certs:/certs:ro
     depends_on:
       migrate:
         condition: service_completed_successfully
