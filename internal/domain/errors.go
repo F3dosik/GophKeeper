@@ -28,4 +28,14 @@ var (
 
 	// ErrAlreadyExists возвращается когда ресурс уже существует.
 	ErrAlreadyExists = errors.New("already exists")
+
+	// ErrSecretTooLarge возвращается, если данные секрета превышают допустимый размер.
+	ErrSecretTooLarge = errors.New("secret too large")
+
+	// ErrSecretQuotaExceeded возвращается, если у пользователя достигнут лимит количества секретов.
+	ErrSecretQuotaExceeded = errors.New("secret quota exceeded")
+
+	// ErrResourceExhausted возвращается клиенту, когда сервер отклонил запрос из-за лимита
+	// (частоты запросов или квоты хранилища).
+	ErrResourceExhausted = errors.New("limit exceeded")
 )

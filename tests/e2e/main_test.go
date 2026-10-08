@@ -91,7 +91,9 @@ func startTestServer(pool *pgxpool.Pool) (stop func(), addr string, err error) {
 	secretRepo := postgres.NewSecretRepository(pool)
 
 	authService := service.NewAuthService(userRepo, testJWTSecret, time.Hour)
-	secretService := service.NewSecretService(secretRepo)
+	secretService := service.NewSecretService(secretRepo, service.SecretLimits{
+		MaxSize: 1 << 20, MaxCount: 1000,
+	})
 
 	authHandler := grpchandler.NewAuthHandler(authService)
 	secretHandler := grpchandler.NewSecretHandler(secretService)

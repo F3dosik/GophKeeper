@@ -11,6 +11,7 @@ type SecretService interface {
 	// Create регистрирует новый секрет.
 	// Возвращает ErrSecretAlreadyExists если секрет с указанным blindIndex уже существует.
 	// Возвращает ErrInvalidArgument если blind index или data пустые.
+	// Возвращает ErrSecretTooLarge или ErrSecretQuotaExceeded при превышении квот.
 	Create(ctx context.Context, userID uuid.UUID, blindIndex string, data []byte) error
 
 	// Update изменяет существующую приватную информацию.
@@ -30,20 +31,42 @@ type SecretService interface {
 	Delete(ctx context.Context, userID uuid.UUID, blindIndex string) error
 }
 
+// SecretLimits задаёт квоты на хранение секретов одного пользователя.
+// Без них любой зарегистрировавшийся может заполнить диск сервера.
+type SecretLimits struct {
+	// MaxSize — максимальный размер зашифрованных данных одного секрета в байтах.
+	MaxSize int
+	// MaxCount — максимальное количество секретов у одного пользователя.
+	MaxCount int
+}
+
 // secretService реализует SecretService.
 type secretService struct {
-	repo domain.SecretRepository
+	repo   domain.SecretRepository
+	limits SecretLimits
 }
 
 // NewSecretService создаёт новый экземпляр secretService.
-func NewSecretService(repo domain.SecretRepository) SecretService {
-	return &secretService{repo: repo}
+func NewSecretService(repo domain.SecretRepository, limits SecretLimits) SecretService {
+	return &secretService{repo: repo, limits: limits}
 }
 
 // Create регистрирует новый секрет.
 func (s *secretService) Create(ctx context.Context, userID uuid.UUID, blindIndex string, data []byte) error {
 	if blindIndex == "" || len(data) == 0 {
 		return domain.ErrInvalidArgument
+	}
+	if len(data) > s.limits.MaxSize {
+		return domain.ErrSecretTooLarge
+	}
+	// Проверка не атомарна с вставкой: параллельные запросы могут превысить лимит
+	// на единицы, что допустимо для защиты от заполнения диска.
+	count, err := s.repo.CountByUserID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if count >= s.limits.MaxCount {
+		return domain.ErrSecretQuotaExceeded
 	}
 	return s.repo.Create(ctx, &domain.Secret{
 		UserID:     userID,
@@ -56,6 +79,9 @@ func (s *secretService) Create(ctx context.Context, userID uuid.UUID, blindIndex
 func (s *secretService) Update(ctx context.Context, userID uuid.UUID, blindIndex string, data []byte) error {
 	if blindIndex == "" || len(data) == 0 {
 		return domain.ErrInvalidArgument
+	}
+	if len(data) > s.limits.MaxSize {
+		return domain.ErrSecretTooLarge
 	}
 	return s.repo.Update(ctx, &domain.Secret{
 		UserID:     userID,

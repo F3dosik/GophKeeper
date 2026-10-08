@@ -156,3 +156,17 @@ func (r *secretRepository) Delete(ctx context.Context, userID uuid.UUID, blindIn
 
 	return nil
 }
+
+// CountByUserID возвращает количество секретов пользователя.
+func (r *secretRepository) CountByUserID(ctx context.Context, userID uuid.UUID) (int, error) {
+	var count int
+	err := repository.WithRetry(ctx, isRetriable, func() error {
+		return r.pool.QueryRow(ctx, `
+			SELECT count(*) FROM secrets WHERE user_id = $1
+		`, userID).Scan(&count)
+	})
+	if err != nil {
+		return 0, fmt.Errorf("secretRepository.CountByUserID: %w", err)
+	}
+	return count, nil
+}

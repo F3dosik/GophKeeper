@@ -39,4 +39,7 @@ type SecretRepository interface {
 	// Delete удаляет секрет по идентификатору пользователя и blind index.
 	// Возвращает ErrSecretNotFound, если секрет не найден.
 	Delete(ctx context.Context, userID uuid.UUID, blindIndex string) error
+
+	// CountByUserID возвращает количество секретов пользователя.
+	CountByUserID(ctx context.Context, userID uuid.UUID) (int, error)
 }
