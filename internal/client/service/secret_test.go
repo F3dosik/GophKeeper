@@ -148,8 +148,8 @@ func TestSecretsService_ListSecrets(t *testing.T) {
 
 		mockSecrets := mocks.NewSecretsClient(t)
 		mockSecrets.On("ListSecrets", mock.Anything).Return([]*domain.Secret{
-			{Data: encrypted1, CreatedAt: now, UpdatedAt: now},
-			{Data: encrypted2, CreatedAt: now, UpdatedAt: now},
+			{BlindIndex: blindIndexForTest(t, payload1), Data: encrypted1, CreatedAt: now, UpdatedAt: now},
+			{BlindIndex: blindIndexForTest(t, payload2), Data: encrypted2, CreatedAt: now, UpdatedAt: now},
 		}, nil)
 
 		svc, err := service.NewSecretsService(mockSecrets, testMasterKey)
@@ -268,6 +268,54 @@ func TestSecretsService_UpdateSecret(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, capturedIndex1, capturedIndex2)
+	})
+}
+
+// blindIndexForTest вычисляет blind index payload так же, как сервис.
+func blindIndexForTest(t *testing.T, payload *domain.SecretPayload) string {
+	t.Helper()
+
+	hmacKey, err := crypto.HKDF(testMasterKey, crypto.InfoBlindIndex)
+	require.NoError(t, err)
+	return crypto.BlindIndex(payload.Name, payload.Type, hmacKey)
+}
+
+// Сервер может вернуть под одним blind index шифротекст другого секрета того же
+// пользователя: AES-GCM его расшифрует, поэтому клиент обязан сверить имя и тип.
+func TestSecretsService_DetectsSwappedSecret(t *testing.T) {
+	bank := &domain.SecretPayload{
+		Name: "bank", Type: domain.SecretTypeCredentials,
+		Data: json.RawMessage(`{"login":"real","password":"real"}`),
+	}
+	decoy := &domain.SecretPayload{
+		Name: "decoy", Type: domain.SecretTypeCredentials,
+		Data: json.RawMessage(`{"login":"attacker","password":"phish"}`),
+	}
+	decoyData := encryptPayloadForTest(t, testMasterKey, decoy)
+
+	t.Run("get", func(t *testing.T) {
+		mockSecrets := mocks.NewSecretsClient(t)
+		mockSecrets.On("GetSecret", mock.Anything, blindIndexForTest(t, bank)).
+			Return(&domain.Secret{Data: decoyData}, nil)
+
+		svc, err := service.NewSecretsService(mockSecrets, testMasterKey)
+		require.NoError(t, err)
+
+		_, err = svc.GetSecret(context.Background(), "bank", domain.SecretTypeCredentials)
+		assert.ErrorIs(t, err, service.ErrIntegrity)
+	})
+
+	t.Run("list", func(t *testing.T) {
+		mockSecrets := mocks.NewSecretsClient(t)
+		mockSecrets.On("ListSecrets", mock.Anything).Return([]*domain.Secret{
+			{BlindIndex: blindIndexForTest(t, bank), Data: decoyData},
+		}, nil)
+
+		svc, err := service.NewSecretsService(mockSecrets, testMasterKey)
+		require.NoError(t, err)
+
+		_, err = svc.ListSecrets(context.Background())
+		assert.ErrorIs(t, err, service.ErrIntegrity)
 	})
 }
 
