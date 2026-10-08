@@ -2,13 +2,20 @@ package service
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/F3dosik/GophKeeper/internal/client/grpcclient"
 	"github.com/F3dosik/GophKeeper/internal/domain"
 	"github.com/F3dosik/GophKeeper/pkg/crypto"
 )
+
+// ErrIntegrity возвращается, если расшифрованный секрет не соответствует записи, под которой
+// он хранится на сервере: сервер (или тот, кто его контролирует) подменил данные одного
+// секрета данными другого.
+var ErrIntegrity = errors.New("нарушена целостность: данные секрета не соответствуют его имени и типу")
 
 // SecretsService определяет интерфейс для работы с секретами пользователя.
 type SecretsService interface {
@@ -74,8 +81,11 @@ func (s *secretsService) encryptPayload(payload *domain.SecretPayload) ([]byte, 
 	return ciphertext, nil
 }
 
-// decryptPayload расшифровывает данные и десериализует их в SecretPayload.
-func (s *secretsService) decryptPayload(data []byte) (*domain.SecretPayload, error) {
+// decryptPayload расшифровывает данные, десериализует их в SecretPayload и проверяет,
+// что имя и тип внутри шифротекста дают тот же blind index, под которым запись хранится.
+// AES-GCM гарантирует, что шифротекст создан владельцем ключа, а эта проверка —
+// что сервер вернул именно запрошенный секрет, а не другой секрет того же пользователя.
+func (s *secretsService) decryptPayload(blindIndex string, data []byte) (*domain.SecretPayload, error) {
 	plaintext, err := s.cipher.Decrypt(data)
 	if err != nil {
 		return nil, fmt.Errorf("decrypt payload: %w", err)
@@ -84,6 +94,11 @@ func (s *secretsService) decryptPayload(data []byte) (*domain.SecretPayload, err
 	var payload domain.SecretPayload
 	if err := json.Unmarshal(plaintext, &payload); err != nil {
 		return nil, fmt.Errorf("decode payload: %w", err)
+	}
+
+	expected := crypto.BlindIndex(payload.Name, payload.Type, s.hmacKey)
+	if subtle.ConstantTimeCompare([]byte(expected), []byte(blindIndex)) != 1 {
+		return nil, ErrIntegrity
 	}
 	return &payload, nil
 }
@@ -97,7 +112,7 @@ func (s *secretsService) ListSecrets(ctx context.Context) ([]*domain.SecretInfo,
 	}
 	secretInformations := make([]*domain.SecretInfo, 0, len(secrets))
 	for _, secret := range secrets {
-		payload, err := s.decryptPayload(secret.Data)
+		payload, err := s.decryptPayload(secret.BlindIndex, secret.Data)
 		if err != nil {
 			return nil, fmt.Errorf("secretService.ListSecrets: %w", err)
 		}
@@ -153,7 +168,7 @@ func (s *secretsService) GetSecret(ctx context.Context, name string, secretType 
 		return nil, fmt.Errorf("secretService.GetSecret: %w", err)
 	}
 
-	payload, err := s.decryptPayload(secret.Data)
+	payload, err := s.decryptPayload(blindIndex, secret.Data)
 	if err != nil {
 		return nil, fmt.Errorf("secretService.GetSecret: %w", err)
 	}

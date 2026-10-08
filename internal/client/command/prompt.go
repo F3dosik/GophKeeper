@@ -43,6 +43,8 @@ const (
 var (
 	// ErrPasswordsMismatch возвращается, когда пароль и подтверждение не совпадают.
 	ErrPasswordsMismatch = errors.New("пароли не совпадают")
+	// ErrWrongMasterPassword возвращается, когда мастер-пароль не прошёл проверку на сервере.
+	ErrWrongMasterPassword = errors.New("неверный мастер-пароль")
 	// ErrPasswordTooShort возвращается, когда пароль короче минимально допустимой длины.
 	ErrPasswordTooShort = fmt.Errorf("пароль должен быть не короче %d символов", minPasswordLength)
 	// ErrUnknownSecretType возвращается, когда тип секрета не определен.

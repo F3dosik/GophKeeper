@@ -5,6 +5,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/F3dosik/GophKeeper/internal/domain"
 	"github.com/F3dosik/GophKeeper/internal/server/jwtutil"
 	pb "github.com/F3dosik/GophKeeper/proto/gen"
 	"go.uber.org/zap"
@@ -28,9 +29,10 @@ var publicMethods = map[string]bool{
 // AuthInterceptor возвращает gRPC унарный interceptor для аутентификации запросов.
 // Пропускает публичные методы без проверки токена.
 // Извлекает JWT токен из metadata заголовка "authorization",
-// валидирует его и добавляет userID в контекст запроса.
-// Возвращает codes.Unauthenticated если токен отсутствует или невалиден.
-func AuthInterceptor(secretKey string, logger *zap.SugaredLogger) grpc.UnaryServerInterceptor {
+// валидирует его, проверяет по tokens, что токен не отозван, и добавляет userID
+// и claims в контекст запроса.
+// Возвращает codes.Unauthenticated если токен отсутствует, невалиден или отозван.
+func AuthInterceptor(secretKey string, tokens domain.TokenRepository, logger *zap.SugaredLogger) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
 		if publicMethods[info.FullMethod] {
 			return handler(ctx, req)
@@ -60,6 +62,17 @@ func AuthInterceptor(secretKey string, logger *zap.SugaredLogger) grpc.UnaryServ
 			return nil, status.Error(codes.Unauthenticated, "invalid token")
 		}
 
-		return handler(WithUserID(ctx, claims.UserID), req)
+		active, err := tokens.IsActive(ctx, claims.UserID, claims.TokenVersion, claims.TokenID)
+		if err != nil {
+			logger.Errorw("check token revocation", "method", info.FullMethod, "error", err)
+			return nil, status.Error(codes.Internal, "internal error")
+		}
+		if !active {
+			logger.Warnw("revoked token", "method", info.FullMethod, "user_id", claims.UserID)
+			return nil, status.Error(codes.Unauthenticated, "token revoked")
+		}
+
+		ctx = WithUserID(ctx, claims.UserID)
+		return handler(WithClaims(ctx, claims), req)
 	}
 }

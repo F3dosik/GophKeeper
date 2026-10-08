@@ -5,6 +5,7 @@ package command
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/F3dosik/GophKeeper/internal/client/grpcclient"
 	"github.com/F3dosik/GophKeeper/internal/client/service"
 	"github.com/F3dosik/GophKeeper/internal/client/session"
+	"github.com/F3dosik/GophKeeper/internal/domain"
 	"github.com/spf13/cobra"
 )
 
@@ -44,11 +46,14 @@ func New(
 	}
 }
 
-// newSecretService деривирует мастер-ключ из (login, password) и создаёт
+// newSecretService проверяет мастер-пароль, деривирует мастер-ключ из (login, password) и создаёт
 // SecretsService, готовый для операций шифрования/дешифрования секретов.
 // Чистый конструктор без ввода-вывода — пригоден для модульных тестов.
 func (c *Commands) newSecretService(ctx context.Context, login, password string) (service.SecretsService, error) {
-	masterKey, err := c.authService.DeriveMasterKey(ctx, login, password)
+	masterKey, err := c.authService.Unlock(ctx, login, password)
+	if errors.Is(err, domain.ErrInvalidCredentials) {
+		return nil, ErrWrongMasterPassword
+	}
 	if err != nil {
 		return nil, err
 	}

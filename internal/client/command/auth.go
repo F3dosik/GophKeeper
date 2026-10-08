@@ -1,8 +1,11 @@
 package command
 
 import (
+	"errors"
 	"fmt"
 	"os"
+
+	"github.com/F3dosik/GophKeeper/internal/domain"
 
 	"github.com/spf13/cobra"
 )
@@ -84,16 +87,34 @@ func (c *Commands) newLoginCmd() *cobra.Command {
 
 // newLogoutCmd создаёт команду выхода из системы.
 func (c *Commands) newLogoutCmd() *cobra.Command {
-	return &cobra.Command{
+	var all bool
+	cmd := &cobra.Command{
 		Use:   "logout",
-		Short: "Выход из системы (удаление сохранённой сессии)",
+		Short: "Выход из системы (отзыв токена на сервере и удаление сессии)",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := os.Remove(c.cfg.SessionPath); err != nil && !os.IsNotExist(err) {
-				return fmt.Errorf("logout: %w", err)
+			if _, err := os.Stat(c.cfg.SessionPath); os.IsNotExist(err) {
+				fmt.Println("Вход не выполнен.")
+				return nil
 			}
-			fmt.Println("Сессия удалена.")
+
+			err := c.authService.Logout(cmd.Context(), all)
+			if all && errors.Is(err, domain.ErrInvalidCredentials) {
+				return fmt.Errorf("токен этого устройства недействителен (истёк или отозван): " +
+					"выполните 'gophkeeper auth login' и повторите 'logout --all'")
+			}
+			if err != nil {
+				return err
+			}
+
+			if all {
+				fmt.Println("Выполнен выход на всех устройствах.")
+			} else {
+				fmt.Println("Выход выполнен, токен отозван.")
+			}
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&all, "all", false, "отозвать токены на всех устройствах")
+	return cmd
 }

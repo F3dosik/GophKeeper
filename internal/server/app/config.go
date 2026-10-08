@@ -12,7 +12,14 @@ import (
 const (
 	defaultServerPort = "50051"
 	defaultLogLevel   = string(logger.ModeDevelopment)
-	defaultTokenTTL   = 24 * time.Hour
+	// Короткий срок жизни ограничивает ущерб от украденного токена; клиент получает
+	// новый токен при каждой проверке мастер-пароля, поэтому частый вход не нужен.
+	defaultTokenTTL = time.Hour
+
+	defaultAuthRateLimit  = 30      // запросов к Auth в минуту с одного IP
+	defaultAuthRateBurst  = 10      // запросов к Auth подряд с одного IP
+	defaultSecretMaxSize  = 1 << 20 // 1 MiB зашифрованных данных на секрет
+	defaultSecretMaxCount = 1000    // секретов на пользователя
 )
 
 // Config содержит конфигурацию сервера.
@@ -26,6 +33,16 @@ type Config struct {
 	// Задаются вместе; если оба пусты, сервер работает без TLS (только для локальной разработки).
 	TLSCertFile string `env:"TLS_CERT_FILE"`
 	TLSKeyFile  string `env:"TLS_KEY_FILE"`
+
+	// AuthRateLimit и AuthRateBurst ограничивают частоту вызовов GetSalt/CreateUser/Login
+	// с одного IP: среднее число запросов в минуту и максимум запросов подряд.
+	AuthRateLimit int `env:"AUTH_RATE_LIMIT"`
+	AuthRateBurst int `env:"AUTH_RATE_BURST"`
+
+	// SecretMaxSize — максимальный размер зашифрованных данных одного секрета в байтах,
+	// SecretMaxCount — максимальное количество секретов у пользователя.
+	SecretMaxSize  int `env:"SECRET_MAX_SIZE"`
+	SecretMaxCount int `env:"SECRET_MAX_COUNT"`
 }
 
 // TLSEnabled сообщает, настроен ли TLS.
@@ -69,6 +86,22 @@ func parseConfig() (*Config, error) {
 		config.TokenTTL = defaultTokenTTL
 	}
 
+	if config.AuthRateLimit == 0 {
+		config.AuthRateLimit = defaultAuthRateLimit
+	}
+
+	if config.AuthRateBurst == 0 {
+		config.AuthRateBurst = defaultAuthRateBurst
+	}
+
+	if config.SecretMaxSize == 0 {
+		config.SecretMaxSize = defaultSecretMaxSize
+	}
+
+	if config.SecretMaxCount == 0 {
+		config.SecretMaxCount = defaultSecretMaxCount
+	}
+
 	return &config, nil
 }
 
@@ -98,6 +131,14 @@ func (c *Config) Validate() error {
 	case string(logger.ModeDevelopment), string(logger.ModeProduction):
 	default:
 		return fmt.Errorf("invalid log mode: %s, allowed: development, production", c.LogLevel)
+	}
+
+	if c.AuthRateLimit <= 0 || c.AuthRateBurst <= 0 {
+		return fmt.Errorf("AUTH_RATE_LIMIT and AUTH_RATE_BURST must be positive")
+	}
+
+	if c.SecretMaxSize <= 0 || c.SecretMaxCount <= 0 {
+		return fmt.Errorf("SECRET_MAX_SIZE and SECRET_MAX_COUNT must be positive")
 	}
 
 	return nil

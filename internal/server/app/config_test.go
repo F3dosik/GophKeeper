@@ -17,6 +17,9 @@ func setValidEnv(t *testing.T) {
 	t.Setenv("JWT_SECRET", testJWTSecret)
 	t.Setenv("SERVER_PORT", "")
 	t.Setenv("LOG_LEVEL", "")
+	for _, key := range []string{"AUTH_RATE_LIMIT", "AUTH_RATE_BURST", "SECRET_MAX_SIZE", "SECRET_MAX_COUNT"} {
+		t.Setenv(key, "")
+	}
 }
 
 func TestLoad_Defaults(t *testing.T) {
@@ -29,7 +32,11 @@ func TestLoad_Defaults(t *testing.T) {
 	assert.Equal(t, "development", cfg.LogLevel)
 	assert.Equal(t, "postgres://localhost/db", cfg.DatabaseURL)
 	assert.Equal(t, testJWTSecret, cfg.JWTSecret)
-	assert.Equal(t, 24*time.Hour, cfg.TokenTTL)
+	assert.Equal(t, time.Hour, cfg.TokenTTL)
+	assert.Equal(t, 30, cfg.AuthRateLimit)
+	assert.Equal(t, 10, cfg.AuthRateBurst)
+	assert.Equal(t, 1<<20, cfg.SecretMaxSize)
+	assert.Equal(t, 1000, cfg.SecretMaxCount)
 }
 
 func TestLoad_FromEnv(t *testing.T) {
@@ -79,15 +86,46 @@ func TestValidate_Errors(t *testing.T) {
 	}
 }
 
-func TestValidate_Success(t *testing.T) {
-	cfg := app.Config{
-		ServerPort:  ":50051",
-		DatabaseURL: "postgres://",
-		JWTSecret:   testJWTSecret,
-		LogLevel:    "production",
-		TokenTTL:    time.Hour,
+// validConfig возвращает конфигурацию, проходящую Validate.
+func validConfig() app.Config {
+	return app.Config{
+		ServerPort:     ":50051",
+		DatabaseURL:    "postgres://",
+		JWTSecret:      testJWTSecret,
+		LogLevel:       "production",
+		TokenTTL:       time.Hour,
+		AuthRateLimit:  30,
+		AuthRateBurst:  10,
+		SecretMaxSize:  1 << 20,
+		SecretMaxCount: 1000,
 	}
+}
+
+func TestValidate_Success(t *testing.T) {
+	cfg := validConfig()
 	assert.NoError(t, cfg.Validate())
+}
+
+func TestValidate_Limits(t *testing.T) {
+	tests := []struct {
+		name   string
+		modify func(*app.Config)
+		want   string
+	}{
+		{"zero rate limit", func(c *app.Config) { c.AuthRateLimit = 0 }, "AUTH_RATE_LIMIT"},
+		{"negative burst", func(c *app.Config) { c.AuthRateBurst = -1 }, "AUTH_RATE_BURST"},
+		{"zero secret size", func(c *app.Config) { c.SecretMaxSize = 0 }, "SECRET_MAX_SIZE"},
+		{"zero secret count", func(c *app.Config) { c.SecretMaxCount = 0 }, "SECRET_MAX_COUNT"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := validConfig()
+			tt.modify(&cfg)
+			err := cfg.Validate()
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.want)
+		})
+	}
 }
 
 func TestLoad_ValidationErrorPropagates(t *testing.T) {

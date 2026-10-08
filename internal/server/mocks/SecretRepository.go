@@ -16,6 +16,34 @@ type SecretRepository struct {
 	mock.Mock
 }
 
+// CountByUserID provides a mock function with given fields: ctx, userID
+func (_m *SecretRepository) CountByUserID(ctx context.Context, userID uuid.UUID) (int, error) {
+	ret := _m.Called(ctx, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountByUserID")
+	}
+
+	var r0 int
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (int, error)); ok {
+		return rf(ctx, userID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) int); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = rf(ctx, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Create provides a mock function with given fields: ctx, secret
 func (_m *SecretRepository) Create(ctx context.Context, secret *domain.Secret) error {
 	ret := _m.Called(ctx, secret)

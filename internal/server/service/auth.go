@@ -11,6 +11,7 @@ import (
 	"github.com/F3dosik/GophKeeper/internal/domain"
 	"github.com/F3dosik/GophKeeper/internal/server/jwtutil"
 	"github.com/F3dosik/GophKeeper/pkg/crypto"
+	"github.com/google/uuid"
 )
 
 type AuthService interface {
@@ -27,19 +28,27 @@ type AuthService interface {
 	// Возвращает ErrInvalidCredentials если authKey неверный или логин не существует
 	// (единый код ответа скрывает факт наличия пользователя).
 	Login(ctx context.Context, login string, authKey []byte) (string, error)
+
+	// Logout отзывает токен с идентификатором jti (действующий до expiresAt) или,
+	// если allSessions == true, все токены пользователя userID.
+	Logout(ctx context.Context, userID, jti uuid.UUID, expiresAt time.Time, allSessions bool) error
 }
 
 // authService реализует AuthService.
 type authService struct {
 	repo      domain.UserRepository
+	tokens    domain.TokenRepository
 	jwtSecret string
 	tokenTTL  time.Duration
 }
 
 // NewAuthService создаёт новый экземпляр authService.
-// jwtSecret используется для подписи JWT токенов, tokenTTL задаёт время жизни токена.
-func NewAuthService(repo domain.UserRepository, jwtSecret string, tokenTTL time.Duration) AuthService {
-	return &authService{repo: repo, jwtSecret: jwtSecret, tokenTTL: tokenTTL}
+// tokens хранит состояние отзыва токенов, jwtSecret используется для подписи
+// JWT токенов, tokenTTL задаёт время жизни токена.
+func NewAuthService(
+	repo domain.UserRepository, tokens domain.TokenRepository, jwtSecret string, tokenTTL time.Duration,
+) AuthService {
+	return &authService{repo: repo, tokens: tokens, jwtSecret: jwtSecret, tokenTTL: tokenTTL}
 }
 
 // Create регистрирует нового пользователя.
@@ -82,10 +91,20 @@ func (s *authService) Login(ctx context.Context, login string, authKey []byte) (
 	if subtle.ConstantTimeCompare(user.PasswordHash, crypto.HashAuthKey(authKey)) != 1 {
 		return "", domain.ErrInvalidCredentials
 	}
-	token, err := jwtutil.GenerateToken(user.ID, s.jwtSecret, s.tokenTTL)
+	token, err := jwtutil.GenerateToken(user.ID, user.TokenVersion, s.jwtSecret, s.tokenTTL)
 	if err != nil {
 		return "", fmt.Errorf("authService.Login: generate token: %w", err)
 	}
 
 	return token, nil
+}
+
+// Logout отзывает текущий токен или все токены пользователя.
+func (s *authService) Logout(
+	ctx context.Context, userID, jti uuid.UUID, expiresAt time.Time, allSessions bool,
+) error {
+	if allSessions {
+		return s.tokens.RevokeAll(ctx, userID)
+	}
+	return s.tokens.Revoke(ctx, jti, expiresAt)
 }

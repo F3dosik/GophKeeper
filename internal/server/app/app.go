@@ -17,6 +17,9 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
+// maxMessageOverhead — запас размера gRPC-сообщения сверх данных секрета (blind index и т.п.).
+const maxMessageOverhead = 64 << 10
+
 // App содержит все зависимости и конфигурацию gRPC сервера.
 type App struct {
 	grpcServer *grpc.Server
@@ -34,9 +37,13 @@ func New(ctx context.Context, cfg *Config, logger *zap.SugaredLogger) (*App, err
 
 	userRepo := postgres.NewUserRepository(pool)
 	secretRepo := postgres.NewSecretRepository(pool)
+	tokenRepo := postgres.NewTokenRepository(pool)
 
-	authService := service.NewAuthService(userRepo, cfg.JWTSecret, cfg.TokenTTL)
-	secretService := service.NewSecretService(secretRepo)
+	authService := service.NewAuthService(userRepo, tokenRepo, cfg.JWTSecret, cfg.TokenTTL)
+	secretService := service.NewSecretService(secretRepo, service.SecretLimits{
+		MaxSize:  cfg.SecretMaxSize,
+		MaxCount: cfg.SecretMaxCount,
+	})
 
 	authHandler := grpchandler.NewAuthHandler(authService)
 	secretHandler := grpchandler.NewSecretHandler(secretService)
@@ -44,8 +51,14 @@ func New(ctx context.Context, cfg *Config, logger *zap.SugaredLogger) (*App, err
 	opts := []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(
 			middleware.LoggingInterceptor(logger),
-			middleware.AuthInterceptor(cfg.JWTSecret, logger),
+			middleware.RateLimitInterceptor(
+				middleware.NewIPRateLimiter(cfg.AuthRateLimit, cfg.AuthRateBurst), logger,
+			),
+			middleware.AuthInterceptor(cfg.JWTSecret, tokenRepo, logger),
 		),
+		// Сообщения больше секрета максимального размера (плюс запас на служебные поля)
+		// отклоняются до разбора и не расходуют память сервера.
+		grpc.MaxRecvMsgSize(cfg.SecretMaxSize + maxMessageOverhead),
 	}
 	if cfg.TLSEnabled() {
 		creds, err := credentials.NewServerTLSFromFile(cfg.TLSCertFile, cfg.TLSKeyFile)

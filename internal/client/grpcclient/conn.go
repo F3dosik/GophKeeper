@@ -20,16 +20,16 @@ var ErrInsecureWithCert = errors.New("insecure mode and TLS certificate are mutu
 // Соединение без шифрования устанавливается только при allowInsecure == true —
 // допустимо лишь для локальной разработки.
 //
-// token, если не пуст, прикрепляется к каждому исходящему RPC-вызову через
-// authInterceptor в заголовке Authorization. Закрытие соединения — ответственность вызывающего.
-func Dial(serverAddr, tlsCertPath string, allowInsecure bool, token string) (*grpc.ClientConn, error) {
+// Текущий токен из tokens, если не пуст, прикрепляется к каждому исходящему RPC-вызову
+// через authInterceptor в заголовке Authorization. Закрытие соединения — ответственность вызывающего.
+func Dial(serverAddr, tlsCertPath string, allowInsecure bool, tokens *TokenStore) (*grpc.ClientConn, error) {
 	creds, err := transportCredentials(tlsCertPath, allowInsecure)
 	if err != nil {
 		return nil, fmt.Errorf("dial: %w", err)
 	}
 	return grpc.NewClient(serverAddr,
 		grpc.WithTransportCredentials(creds),
-		grpc.WithUnaryInterceptor(authInterceptor(token)),
+		grpc.WithUnaryInterceptor(authInterceptor(tokens)),
 	)
 }
 

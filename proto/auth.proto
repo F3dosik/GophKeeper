@@ -52,6 +52,16 @@ message LoginResponse {
     string token = 1;
 }
 
+// LogoutRequest — запрос на выход.
+message LogoutRequest {
+    // true — отозвать все токены пользователя (выйти на всех устройствах),
+    // false — только токен, с которым выполнен запрос.
+    bool all_sessions = 1;
+}
+
+// LogoutResponse — пустой ответ при успешном выходе.
+message LogoutResponse {}
+
 // Auth — сервис аутентификации и регистрации пользователей.
 service Auth {
     // CreateUser регистрирует нового пользователя.
@@ -65,4 +75,9 @@ service Auth {
     // Login выполняет вход и возвращает JWT-токен.
     // Ошибки: NotFound — пользователь не найден; Unauthenticated — неверные учётные данные.
     rpc Login(LoginRequest) returns (LoginResponse);
+
+    // Logout отзывает текущий токен или все токены пользователя.
+    // Требует JWT-токен в метаданных (authorization: Bearer ...).
+    // Ошибка: Unauthenticated — токен отсутствует, истёк или уже отозван.
+    rpc Logout(LogoutRequest) returns (LogoutResponse);
 }

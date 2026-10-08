@@ -31,7 +31,8 @@ func main() {
 		token = sess.Token
 	}
 
-	conn, err := grpcclient.Dial(cfg.ServerAddress, cfg.TLSCertPath, cfg.Insecure, token)
+	tokens := grpcclient.NewTokenStore(token)
+	conn, err := grpcclient.Dial(cfg.ServerAddress, cfg.TLSCertPath, cfg.Insecure, tokens)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -43,7 +44,7 @@ func main() {
 
 	authClient := grpcclient.NewAuthClient(pb.NewAuthClient(conn))
 	secretsClient := grpcclient.NewSecretsClient(pb.NewSecretsClient(conn))
-	authSvc := service.NewAuthService(authClient, cfg.SessionPath)
+	authSvc := service.NewAuthService(authClient, cfg.SessionPath, tokens)
 
 	if command.New(authSvc, secretsClient, cfg).Execute() != nil {
 		os.Exit(1)

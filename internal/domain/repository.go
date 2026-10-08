@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -15,6 +16,20 @@ type UserRepository interface {
 	// GetByLogin возвращает пользователя по логину.
 	// Возвращает ErrUserNotFound, если пользователь не найден.
 	GetByLogin(ctx context.Context, login string) (*User, error)
+}
+
+// TokenRepository хранит состояние отзыва JWT-токенов.
+type TokenRepository interface {
+	// IsActive сообщает, действителен ли токен: пользователь существует, версия токена
+	// совпадает с текущей версией пользователя и jti не отозван.
+	IsActive(ctx context.Context, userID uuid.UUID, tokenVersion int, jti uuid.UUID) (bool, error)
+
+	// Revoke отзывает один токен по jti. expiresAt — время истечения токена,
+	// после которого запись об отзыве можно удалить.
+	Revoke(ctx context.Context, jti uuid.UUID, expiresAt time.Time) error
+
+	// RevokeAll отзывает все токены пользователя, увеличивая его версию токенов.
+	RevokeAll(ctx context.Context, userID uuid.UUID) error
 }
 
 // SecretRepository определяет методы для работы с зашифрованными секретами в хранилище.
@@ -39,4 +54,7 @@ type SecretRepository interface {
 	// Delete удаляет секрет по идентификатору пользователя и blind index.
 	// Возвращает ErrSecretNotFound, если секрет не найден.
 	Delete(ctx context.Context, userID uuid.UUID, blindIndex string) error
+
+	// CountByUserID возвращает количество секретов пользователя.
+	CountByUserID(ctx context.Context, userID uuid.UUID) (int, error)
 }

@@ -11,6 +11,8 @@
     - [GetSaltResponse](#auth-GetSaltResponse)
     - [LoginRequest](#auth-LoginRequest)
     - [LoginResponse](#auth-LoginResponse)
+    - [LogoutRequest](#auth-LogoutRequest)
+    - [LogoutResponse](#auth-LogoutResponse)
   
     - [Auth](#auth-Auth)
   
@@ -147,6 +149,31 @@ LoginResponse — ответ на успешный вход.
 
 
 
+
+<a name="auth-LogoutRequest"></a>
+
+### LogoutRequest
+LogoutRequest — запрос на выход.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| all_sessions | [bool](#bool) |  | true — отозвать все токены пользователя (выйти на всех устройствах), false — только токен, с которым выполнен запрос. |
+
+
+
+
+
+
+<a name="auth-LogoutResponse"></a>
+
+### LogoutResponse
+LogoutResponse — пустой ответ при успешном выходе.
+
+
+
+
+
  
 
  
@@ -164,6 +191,7 @@ Auth — сервис аутентификации и регистрации п�
 | CreateUser | [CreateUserRequest](#auth-CreateUserRequest) | [CreateUserResponse](#auth-CreateUserResponse) | CreateUser регистрирует нового пользователя. Ошибки: AlreadyExists — логин занят; InvalidArgument — невалидные данные. |
 | GetSalt | [GetSaltRequest](#auth-GetSaltRequest) | [GetSaltResponse](#auth-GetSaltResponse) | GetSalt возвращает соль пользователя, сохранённую при регистрации. Ошибка: NotFound — пользователь не найден. |
 | Login | [LoginRequest](#auth-LoginRequest) | [LoginResponse](#auth-LoginResponse) | Login выполняет вход и возвращает JWT-токен. Ошибки: NotFound — пользователь не найден; Unauthenticated — неверные учётные данные. |
+| Logout | [LogoutRequest](#auth-LogoutRequest) | [LogoutResponse](#auth-LogoutResponse) | Logout отзывает текущий токен или все токены пользователя. Требует JWT-токен в метаданных (authorization: Bearer ...). Ошибка: Unauthenticated — токен отсутствует, истёк или уже отозван. |
 
  
 

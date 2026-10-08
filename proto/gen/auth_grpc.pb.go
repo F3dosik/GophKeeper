@@ -22,6 +22,7 @@ const (
 	Auth_CreateUser_FullMethodName = "/auth.Auth/CreateUser"
 	Auth_GetSalt_FullMethodName    = "/auth.Auth/GetSalt"
 	Auth_Login_FullMethodName      = "/auth.Auth/Login"
+	Auth_Logout_FullMethodName     = "/auth.Auth/Logout"
 )
 
 // AuthClient is the client API for Auth service.
@@ -39,6 +40,10 @@ type AuthClient interface {
 	// Login выполняет вход и возвращает JWT-токен.
 	// Ошибки: NotFound — пользователь не найден; Unauthenticated — неверные учётные данные.
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
+	// Logout отзывает текущий токен или все токены пользователя.
+	// Требует JWT-токен в метаданных (authorization: Bearer ...).
+	// Ошибка: Unauthenticated — токен отсутствует, истёк или уже отозван.
+	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
 }
 
 type authClient struct {
@@ -79,6 +84,16 @@ func (c *authClient) Login(ctx context.Context, in *LoginRequest, opts ...grpc.C
 	return out, nil
 }
 
+func (c *authClient) Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LogoutResponse)
+	err := c.cc.Invoke(ctx, Auth_Logout_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServer is the server API for Auth service.
 // All implementations must embed UnimplementedAuthServer
 // for forward compatibility.
@@ -94,6 +109,10 @@ type AuthServer interface {
 	// Login выполняет вход и возвращает JWT-токен.
 	// Ошибки: NotFound — пользователь не найден; Unauthenticated — неверные учётные данные.
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
+	// Logout отзывает текущий токен или все токены пользователя.
+	// Требует JWT-токен в метаданных (authorization: Bearer ...).
+	// Ошибка: Unauthenticated — токен отсутствует, истёк или уже отозван.
+	Logout(context.Context, *LogoutRequest) (*LogoutResponse, error)
 	mustEmbedUnimplementedAuthServer()
 }
 
@@ -112,6 +131,9 @@ func (UnimplementedAuthServer) GetSalt(context.Context, *GetSaltRequest) (*GetSa
 }
 func (UnimplementedAuthServer) Login(context.Context, *LoginRequest) (*LoginResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Login not implemented")
+}
+func (UnimplementedAuthServer) Logout(context.Context, *LogoutRequest) (*LogoutResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Logout not implemented")
 }
 func (UnimplementedAuthServer) mustEmbedUnimplementedAuthServer() {}
 func (UnimplementedAuthServer) testEmbeddedByValue()              {}
@@ -188,6 +210,24 @@ func _Auth_Login_Handler(srv interface{}, ctx context.Context, dec func(interfac
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Auth_Logout_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LogoutRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServer).Logout(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Auth_Logout_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServer).Logout(ctx, req.(*LogoutRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Auth_ServiceDesc is the grpc.ServiceDesc for Auth service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -206,6 +246,10 @@ var Auth_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Login",
 			Handler:    _Auth_Login_Handler,
+		},
+		{
+			MethodName: "Logout",
+			Handler:    _Auth_Logout_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

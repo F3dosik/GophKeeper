@@ -24,7 +24,9 @@ func fromGRPCError(err error) error {
 	case codes.Unauthenticated:
 		return domain.ErrInvalidCredentials
 	case codes.InvalidArgument:
-		return domain.ErrInvalidArgument
+		return fmt.Errorf("%w: %s", domain.ErrInvalidArgument, st.Message())
+	case codes.ResourceExhausted:
+		return fmt.Errorf("%w: %s", domain.ErrResourceExhausted, st.Message())
 	default:
 		return fmt.Errorf("internal: %s", st.Message())
 	}
