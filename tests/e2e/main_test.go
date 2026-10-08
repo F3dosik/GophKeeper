@@ -92,7 +92,13 @@ func startTestServer(pool *pgxpool.Pool) (stop func(), addr string, err error) {
 	secretRepo := postgres.NewSecretRepository(pool)
 	tokenRepo := postgres.NewTokenRepository(pool)
 
-	authService := service.NewAuthService(userRepo, tokenRepo, testJWTSecret, time.Hour)
+	keys, err := service.DeriveServerKeys(testJWTSecret)
+	if err != nil {
+		return nil, "", fmt.Errorf("derive keys: %w", err)
+	}
+	authService := service.NewAuthService(userRepo, tokenRepo, service.AuthConfig{
+		Keys: keys, TokenTTL: time.Hour,
+	})
 	secretService := service.NewSecretService(secretRepo, service.SecretLimits{
 		MaxSize: 1 << 20, MaxCount: 1000,
 	})
@@ -103,7 +109,7 @@ func startTestServer(pool *pgxpool.Pool) (stop func(), addr string, err error) {
 	server := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			middleware.LoggingInterceptor(log),
-			middleware.AuthInterceptor(testJWTSecret, tokenRepo, log),
+			middleware.AuthInterceptor(keys.TokenSigning, tokenRepo, log),
 		),
 	)
 	pb.RegisterAuthServer(server, authHandler)

@@ -34,21 +34,54 @@ type AuthService interface {
 	Logout(ctx context.Context, userID, jti uuid.UUID, expiresAt time.Time, allSessions bool) error
 }
 
+// Контексты HKDF для ключей, выводимых из JWT_SECRET.
+const (
+	infoTokenSigning = "gophkeeper/jwt-signing"
+	infoFakeSalt     = "gophkeeper/fake-salt"
+)
+
+// ServerKeys — независимые ключи сервера, выведенные из одного секрета (JWT_SECRET).
+// Раздельные ключи гарантируют, что фиктивные соли (их видит любой) ничего не говорят
+// о ключе подписи токенов, а смена одного назначения не затрагивает другое.
+type ServerKeys struct {
+	// TokenSigning — ключ подписи JWT (HMAC-SHA256).
+	TokenSigning string
+	// FakeSalt — ключ для детерминированных фиктивных солей несуществующих логинов.
+	FakeSalt []byte
+}
+
+// DeriveServerKeys выводит ServerKeys из секрета через HKDF-SHA256.
+func DeriveServerKeys(secret string) (ServerKeys, error) {
+	signing, err := crypto.HKDF([]byte(secret), infoTokenSigning)
+	if err != nil {
+		return ServerKeys{}, fmt.Errorf("derive token signing key: %w", err)
+	}
+	fakeSalt, err := crypto.HKDF([]byte(secret), infoFakeSalt)
+	if err != nil {
+		return ServerKeys{}, fmt.Errorf("derive fake salt key: %w", err)
+	}
+	return ServerKeys{TokenSigning: string(signing), FakeSalt: fakeSalt}, nil
+}
+
+// AuthConfig — параметры сервиса аутентификации.
+type AuthConfig struct {
+	// Keys — ключи подписи токенов и фиктивных солей.
+	Keys ServerKeys
+	// TokenTTL — время жизни выдаваемых токенов.
+	TokenTTL time.Duration
+}
+
 // authService реализует AuthService.
 type authService struct {
-	repo      domain.UserRepository
-	tokens    domain.TokenRepository
-	jwtSecret string
-	tokenTTL  time.Duration
+	repo   domain.UserRepository
+	tokens domain.TokenRepository
+	cfg    AuthConfig
 }
 
 // NewAuthService создаёт новый экземпляр authService.
-// tokens хранит состояние отзыва токенов, jwtSecret используется для подписи
-// JWT токенов, tokenTTL задаёт время жизни токена.
-func NewAuthService(
-	repo domain.UserRepository, tokens domain.TokenRepository, jwtSecret string, tokenTTL time.Duration,
-) AuthService {
-	return &authService{repo: repo, tokens: tokens, jwtSecret: jwtSecret, tokenTTL: tokenTTL}
+// tokens хранит состояние отзыва токенов, cfg задаёт ключи и время жизни токенов.
+func NewAuthService(repo domain.UserRepository, tokens domain.TokenRepository, cfg AuthConfig) AuthService {
+	return &authService{repo: repo, tokens: tokens, cfg: cfg}
 }
 
 // Create регистрирует нового пользователя.
@@ -63,12 +96,12 @@ func (s *authService) Create(ctx context.Context, login string, authKey, salt []
 
 // GetSalt возвращает соль пользователя по логину.
 // Для несуществующего логина возвращает детерминированную соль, выведенную
-// из логина и jwtSecret, чтобы ответ был неотличим от реального пользователя.
+// из логина и ключа фиктивных солей, чтобы ответ был неотличим от реального пользователя.
 func (s *authService) GetSalt(ctx context.Context, login string) ([]byte, error) {
 	user, err := s.repo.GetByLogin(ctx, login)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
-			return crypto.GenerateSaltByLogin(login, []byte(s.jwtSecret)), nil
+			return crypto.GenerateSaltByLogin(login, s.cfg.Keys.FakeSalt), nil
 		}
 		return nil, err
 	}
@@ -91,7 +124,7 @@ func (s *authService) Login(ctx context.Context, login string, authKey []byte) (
 	if subtle.ConstantTimeCompare(user.PasswordHash, crypto.HashAuthKey(authKey)) != 1 {
 		return "", domain.ErrInvalidCredentials
 	}
-	token, err := jwtutil.GenerateToken(user.ID, user.TokenVersion, s.jwtSecret, s.tokenTTL)
+	token, err := jwtutil.GenerateToken(user.ID, user.TokenVersion, s.cfg.Keys.TokenSigning, s.cfg.TokenTTL)
 	if err != nil {
 		return "", fmt.Errorf("authService.Login: generate token: %w", err)
 	}
