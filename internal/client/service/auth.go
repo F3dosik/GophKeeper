@@ -23,12 +23,13 @@ import (
 type AuthService interface {
 	// CreateUser регистрирует нового пользователя на сервере.
 	// Генерирует соль, деривирует мастер-ключ через Argon2id и отправляет на сервер.
-	CreateUser(ctx context.Context, login, password string) error
+	// kdf — параметры Argon2id новой учётки (обычно domain.DefaultKDFParams).
+	CreateUser(ctx context.Context, login, password string, kdf domain.KDFParams) error
 
 	// CreateTemporaryUser регистрирует пользователя со сгенерированным временным паролем
 	// (доступно только на административном порту сервера). Возвращает пароль и время,
 	// до которого им можно войти; при первом входе пароль нужно сменить.
-	CreateTemporaryUser(ctx context.Context, login string) (password string, expiresAt time.Time, err error)
+	CreateTemporaryUser(ctx context.Context, login string, kdf domain.KDFParams) (password string, expiresAt time.Time, err error)
 
 	// Login аутентифицирует пользователя и сохраняет сессию (логин + JWT токен) в файл.
 	// Запрашивает соль с сервера, деривирует ключ аутентификации и получает токен.
@@ -49,7 +50,8 @@ type AuthService interface {
 	// ChangePassword меняет пароль: генерирует новую соль, выводит ключи из нового пароля,
 	// получает от reencrypt перешифрованные новым мастер-ключом секреты и отправляет всё
 	// на сервер. Сохраняет новый токен. reencrypt может быть nil, если секретов нет.
-	ChangePassword(ctx context.Context, login, oldPassword, newPassword string, reencrypt Reencryptor) error
+	// newKDF — параметры Argon2id для нового пароля.
+	ChangePassword(ctx context.Context, login, oldPassword, newPassword string, newKDF domain.KDFParams, reencrypt Reencryptor) error
 }
 
 // Reencryptor перешифровывает все секреты пользователя ключами от newMasterKey.
@@ -74,20 +76,20 @@ func NewAuthService(client grpcclient.AuthClient, sessionPath string, tokens *gr
 // CreateUser регистрирует нового пользователя.
 // Генерирует случайную соль, деривирует мастер-ключ через Argon2id и отправляет на сервер
 // производный от него ключ аутентификации (сам masterKey клиент не покидает).
-func (s *authService) CreateUser(ctx context.Context, login, password string) error {
-	if _, err := s.register(ctx, login, password, false); err != nil {
+func (s *authService) CreateUser(ctx context.Context, login, password string, kdf domain.KDFParams) error {
+	if _, err := s.register(ctx, login, password, kdf, false); err != nil {
 		return fmt.Errorf("authService.CreateUser: %w", err)
 	}
 	return nil
 }
 
 // CreateTemporaryUser регистрирует пользователя со случайным временным паролем.
-func (s *authService) CreateTemporaryUser(ctx context.Context, login string) (string, time.Time, error) {
+func (s *authService) CreateTemporaryUser(ctx context.Context, login string, kdf domain.KDFParams) (string, time.Time, error) {
 	password, err := generateTemporaryPassword()
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("authService.CreateTemporaryUser: %w", err)
 	}
-	expiresAt, err := s.register(ctx, login, password, true)
+	expiresAt, err := s.register(ctx, login, password, kdf, true)
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("authService.CreateTemporaryUser: %w", err)
 	}
@@ -98,13 +100,18 @@ func (s *authService) CreateTemporaryUser(ctx context.Context, login string) (st
 }
 
 // register выводит ключи из пароля с новой солью и регистрирует пользователя.
-func (s *authService) register(ctx context.Context, login, password string, temporary bool) (*time.Time, error) {
+// Параметры проверяются до деривации, чтобы ошибка появилась сразу, а не после Argon2id.
+func (s *authService) register(
+	ctx context.Context, login, password string, kdf domain.KDFParams, temporary bool,
+) (*time.Time, error) {
+	if err := kdf.Validate(); err != nil {
+		return nil, err
+	}
 	salt, err := crypto.GenerateSalt()
 	if err != nil {
 		return nil, err
 	}
 
-	kdf := domain.DefaultKDFParams
 	_, authKey, err := deriveKeys(password, salt, kdf)
 	if err != nil {
 		return nil, err
@@ -239,8 +246,11 @@ func (s *authService) saveSession(login, token string) error {
 
 // ChangePassword меняет пароль и перешифровывает секреты.
 func (s *authService) ChangePassword(
-	ctx context.Context, login, oldPassword, newPassword string, reencrypt Reencryptor,
+	ctx context.Context, login, oldPassword, newPassword string, newKDF domain.KDFParams, reencrypt Reencryptor,
 ) error {
+	if err := newKDF.Validate(); err != nil {
+		return fmt.Errorf("authService.ChangePassword: %w", err)
+	}
 	_, oldAuthKey, err := s.userKeys(ctx, login, oldPassword)
 	if err != nil {
 		return fmt.Errorf("authService.ChangePassword: %w", err)
@@ -250,7 +260,6 @@ func (s *authService) ChangePassword(
 	if err != nil {
 		return fmt.Errorf("authService.ChangePassword: %w", err)
 	}
-	newKDF := domain.DefaultKDFParams
 	newMasterKey, newAuthKey, err := deriveKeys(newPassword, newSalt, newKDF)
 	if err != nil {
 		return fmt.Errorf("authService.ChangePassword: %w", err)

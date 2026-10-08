@@ -19,7 +19,7 @@ func TestE2E_TemporaryPassword_ForcedChange(t *testing.T) {
 	ctx := context.Background()
 
 	admin := newClientKit(t)
-	tempPassword, expiresAt, err := admin.Auth.CreateTemporaryUser(ctx, admin.Login)
+	tempPassword, expiresAt, err := admin.Auth.CreateTemporaryUser(ctx, admin.Login, domain.DefaultKDFParams)
 	require.NoError(t, err)
 	assert.WithinDuration(t, time.Now().Add(time.Hour), expiresAt, time.Minute)
 
@@ -38,7 +38,7 @@ func TestE2E_TemporaryPassword_ForcedChange(t *testing.T) {
 	_, err = user.Auth.Unlock(ctx, user.Login, tempPassword)
 	assert.ErrorIs(t, err, domain.ErrPasswordChangeRequired)
 
-	require.NoError(t, user.Auth.ChangePassword(ctx, user.Login, tempPassword, newPassword, nil))
+	require.NoError(t, user.Auth.ChangePassword(ctx, user.Login, tempPassword, newPassword, domain.DefaultKDFParams, nil))
 
 	// Новый пароль даёт полный доступ, временный больше не подходит.
 	assert.NoError(t, listWithToken(ctx, t, user.Tokens.Token()))

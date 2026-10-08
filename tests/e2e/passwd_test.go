@@ -37,7 +37,7 @@ func TestE2E_ChangePassword_ReencryptsSecrets(t *testing.T) {
 		require.NoError(t, kit.Secrets.CreateSecret(ctx, credsPayload(t, name, "user-"+name, "pass-"+name)))
 	}
 
-	require.NoError(t, kit.Auth.ChangePassword(ctx, kit.Login, kit.Password, newPassword,
+	require.NoError(t, kit.Auth.ChangePassword(ctx, kit.Login, kit.Password, newPassword, domain.DefaultKDFParams,
 		func(newMasterKey []byte) ([]domain.ReencryptedSecret, error) {
 			return kit.Secrets.Reencrypt(ctx, newMasterKey)
 		}))
@@ -68,7 +68,7 @@ func TestE2E_ChangePassword_RevokesOtherDevices(t *testing.T) {
 	require.NoError(t, err)
 	phoneToken := phone.Tokens.Token()
 
-	require.NoError(t, laptop.Auth.ChangePassword(ctx, laptop.Login, laptop.Password, newPassword, nil))
+	require.NoError(t, laptop.Auth.ChangePassword(ctx, laptop.Login, laptop.Password, newPassword, domain.DefaultKDFParams, nil))
 
 	assert.ErrorIs(t, listWithToken(ctx, t, phoneToken), domain.ErrInvalidCredentials)
 	assert.NoError(t, listWithToken(ctx, t, laptop.Tokens.Token()), "the changing device gets a fresh token")
@@ -83,7 +83,7 @@ func TestE2E_ChangePassword_AbortsWhenSecretsChange(t *testing.T) {
 	kit.initSecretsService(ctx, t)
 	require.NoError(t, kit.Secrets.CreateSecret(ctx, credsPayload(t, "github", "u", "p")))
 
-	err := kit.Auth.ChangePassword(ctx, kit.Login, kit.Password, newPassword,
+	err := kit.Auth.ChangePassword(ctx, kit.Login, kit.Password, newPassword, domain.DefaultKDFParams,
 		func(newMasterKey []byte) ([]domain.ReencryptedSecret, error) {
 			items, err := kit.Secrets.Reencrypt(ctx, newMasterKey)
 			if err != nil {
@@ -106,9 +106,34 @@ func TestE2E_ChangePassword_WrongCurrentPassword(t *testing.T) {
 	kit := newClientKit(t)
 	kit.registerAndLogin(ctx, t)
 
-	err := kit.Auth.ChangePassword(ctx, kit.Login, "wrong-password-1", newPassword, nil)
+	err := kit.Auth.ChangePassword(ctx, kit.Login, "wrong-password-1", newPassword, domain.DefaultKDFParams, nil)
 	assert.ErrorIs(t, err, domain.ErrInvalidCredentials)
 
 	_, err = kit.Auth.Unlock(ctx, kit.Login, kit.Password)
 	assert.NoError(t, err, "password must stay unchanged")
+}
+
+// Параметры Argon2id задаются при регистрации и меняются вместе с паролем.
+func TestE2E_KDFParams_ChosenByClient(t *testing.T) {
+	ctx := context.Background()
+	kit := newClientKit(t)
+	authClient := grpcclient.NewAuthClient(pb.NewAuthClient(kit.conn))
+
+	light := domain.KDFParams{Time: 2, MemoryKiB: 32 * 1024, Threads: 4}
+	require.NoError(t, kit.Auth.CreateUser(ctx, kit.Login, kit.Password, light))
+	_, kdf, err := authClient.GetSalt(ctx, kit.Login)
+	require.NoError(t, err)
+	assert.Equal(t, light, kdf)
+
+	_, err = kit.Auth.Login(ctx, kit.Login, kit.Password)
+	require.NoError(t, err)
+
+	strong := domain.KDFParams{Time: 4, MemoryKiB: 64 * 1024, Threads: 4}
+	require.NoError(t, kit.Auth.ChangePassword(ctx, kit.Login, kit.Password, newPassword, strong, nil))
+	_, kdf, err = authClient.GetSalt(ctx, kit.Login)
+	require.NoError(t, err)
+	assert.Equal(t, strong, kdf)
+
+	_, err = kit.Auth.Unlock(ctx, kit.Login, newPassword)
+	assert.NoError(t, err)
 }

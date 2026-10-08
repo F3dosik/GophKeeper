@@ -27,7 +27,7 @@ func TestAuthService_CreateUser(t *testing.T) {
 		}), mock.AnythingOfType("[]uint8"), domain.DefaultKDFParams, false).Return(nil, nil)
 
 		svc := service.NewAuthService(mockAuth, t.TempDir()+"/token", nil)
-		err := svc.CreateUser(context.Background(), "user", "password")
+		err := svc.CreateUser(context.Background(), "user", "password", domain.DefaultKDFParams)
 
 		require.NoError(t, err)
 		mockAuth.AssertExpectations(t)
@@ -39,7 +39,7 @@ func TestAuthService_CreateUser(t *testing.T) {
 			Return(nil, domain.ErrAlreadyExists)
 
 		svc := service.NewAuthService(mockAuth, t.TempDir()+"/token", nil)
-		err := svc.CreateUser(context.Background(), "user", "password")
+		err := svc.CreateUser(context.Background(), "user", "password", domain.DefaultKDFParams)
 
 		assert.ErrorIs(t, err, domain.ErrAlreadyExists)
 	})
@@ -257,7 +257,7 @@ func TestAuthService_ChangePassword(t *testing.T) {
 	svc := service.NewAuthService(mockAuth, sessionPath, tokens)
 
 	var gotNewMaster []byte
-	err = svc.ChangePassword(context.Background(), "user", "old-password", "new-password",
+	err = svc.ChangePassword(context.Background(), "user", "old-password", "new-password", domain.DefaultKDFParams,
 		func(newMasterKey []byte) ([]domain.ReencryptedSecret, error) {
 			gotNewMaster = newMasterKey
 			return reencrypted, nil
@@ -287,14 +287,14 @@ func TestAuthService_CreateTemporaryUser(t *testing.T) {
 		Return(&expiresAt, nil)
 
 	svc := service.NewAuthService(mockAuth, t.TempDir()+"/session", nil)
-	password, gotExpiresAt, err := svc.CreateTemporaryUser(context.Background(), "bob")
+	password, gotExpiresAt, err := svc.CreateTemporaryUser(context.Background(), "bob", domain.DefaultKDFParams)
 	require.NoError(t, err)
 
 	assert.Regexp(t, `^[a-zA-Z2-9]{4}(-[a-zA-Z2-9]{4}){3}$`, password)
 	assert.NotRegexp(t, `[01lIoO]`, password, "ambiguous characters must not be used")
 	assert.Equal(t, expiresAt, gotExpiresAt)
 
-	other, _, err := svc.CreateTemporaryUser(context.Background(), "bob")
+	other, _, err := svc.CreateTemporaryUser(context.Background(), "bob", domain.DefaultKDFParams)
 	require.NoError(t, err)
 	assert.NotEqual(t, password, other)
 }
@@ -317,4 +317,17 @@ func TestAuthService_Login_PasswordChangeRequired(t *testing.T) {
 
 	_, err = svc.Unlock(context.Background(), "bob", "temp")
 	assert.ErrorIs(t, err, domain.ErrPasswordChangeRequired)
+}
+
+// Недопустимые параметры отклоняются до Argon2id и обращения к серверу
+// (мок без ожиданий упадёт при любом вызове).
+func TestAuthService_RejectsInvalidKDFBeforeWork(t *testing.T) {
+	svc := service.NewAuthService(mocks.NewAuthClient(t), t.TempDir()+"/session", nil)
+	bad := domain.KDFParams{Time: 100, MemoryKiB: 64 * 1024, Threads: 4}
+
+	assert.ErrorIs(t, svc.CreateUser(context.Background(), "user", "password", bad), domain.ErrInvalidArgument)
+	_, _, err := svc.CreateTemporaryUser(context.Background(), "user", bad)
+	assert.ErrorIs(t, err, domain.ErrInvalidArgument)
+	err = svc.ChangePassword(context.Background(), "user", "old", "new", bad, nil)
+	assert.ErrorIs(t, err, domain.ErrInvalidArgument)
 }

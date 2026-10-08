@@ -17,7 +17,7 @@ func TestE2E_RegisterAndLogin(t *testing.T) {
 	ctx := context.Background()
 	kit := newClientKit(t)
 
-	require.NoError(t, kit.Auth.CreateUser(ctx, kit.Login, kit.Password))
+	require.NoError(t, kit.Auth.CreateUser(ctx, kit.Login, kit.Password, domain.DefaultKDFParams))
 	_, err := kit.Auth.Login(ctx, kit.Login, kit.Password)
 	require.NoError(t, err)
 
@@ -31,7 +31,7 @@ func TestE2E_Login_WrongPassword(t *testing.T) {
 	ctx := context.Background()
 	kit := newClientKit(t)
 
-	require.NoError(t, kit.Auth.CreateUser(ctx, kit.Login, kit.Password))
+	require.NoError(t, kit.Auth.CreateUser(ctx, kit.Login, kit.Password, domain.DefaultKDFParams))
 
 	_, err := kit.Auth.Login(ctx, kit.Login, "wrong-password")
 	assert.Error(t, err)
@@ -44,8 +44,8 @@ func TestE2E_Register_DuplicateLogin(t *testing.T) {
 	ctx := context.Background()
 	kit := newClientKit(t)
 
-	require.NoError(t, kit.Auth.CreateUser(ctx, kit.Login, kit.Password))
-	err := kit.Auth.CreateUser(ctx, kit.Login, kit.Password)
+	require.NoError(t, kit.Auth.CreateUser(ctx, kit.Login, kit.Password, domain.DefaultKDFParams))
+	err := kit.Auth.CreateUser(ctx, kit.Login, kit.Password, domain.DefaultKDFParams)
 	assert.Error(t, err)
 }
 
