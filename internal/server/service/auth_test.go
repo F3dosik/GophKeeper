@@ -7,6 +7,7 @@ import (
 
 	"github.com/F3dosik/GophKeeper/internal/domain"
 	"github.com/F3dosik/GophKeeper/internal/server/mocks"
+	"github.com/F3dosik/GophKeeper/pkg/crypto"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -17,11 +18,11 @@ func TestAuthService_Login_Success(t *testing.T) {
 	mockRepo.On("GetByLogin", mock.Anything, "user").
 		Return(&domain.User{
 			ID:           uuid.New(),
-			PasswordHash: []byte("masterkey123"),
+			PasswordHash: crypto.HashAuthKey([]byte("authkey123")),
 		}, nil)
 	svc := NewAuthService(mockRepo, "jwt-secret", time.Hour)
 
-	token, err := svc.Login(context.Background(), "user", []byte("masterkey123"))
+	token, err := svc.Login(context.Background(), "user", []byte("authkey123"))
 
 	assert.NoError(t, err)
 	assert.NotEmpty(t, token)
@@ -32,12 +33,12 @@ func TestAuthService_Login_InvalidCredentials(t *testing.T) {
 	mockRepo := mocks.NewUserRepository(t)
 	mockRepo.On("GetByLogin", mock.Anything, "user").
 		Return(&domain.User{
-			PasswordHash: []byte("correcthash"),
+			PasswordHash: crypto.HashAuthKey([]byte("correctkey")),
 		}, nil)
 
 	svc := NewAuthService(mockRepo, "jwt-secret", time.Hour)
 
-	_, err := svc.Login(context.Background(), "user", []byte("wronghash"))
+	_, err := svc.Login(context.Background(), "user", []byte("wrongkey"))
 
 	assert.ErrorIs(t, err, domain.ErrInvalidCredentials)
 	mockRepo.AssertExpectations(t)
@@ -59,12 +60,12 @@ func TestAuthService_Create_Success(t *testing.T) {
 	mockRepo := mocks.NewUserRepository(t)
 	mockRepo.On("Create", mock.Anything, &domain.User{
 		Login:        "user",
-		PasswordHash: []byte("masterkey"),
+		PasswordHash: crypto.HashAuthKey([]byte("authkey")),
 		PasswordSalt: []byte("salt"),
 	}).Return(nil)
 
 	svc := NewAuthService(mockRepo, "jwt-secret", time.Hour)
-	err := svc.Create(context.Background(), "user", []byte("masterkey"), []byte("salt"))
+	err := svc.Create(context.Background(), "user", []byte("authkey"), []byte("salt"))
 
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)

@@ -22,6 +22,15 @@ type Config struct {
 	ServerPort  string        `env:"SERVER_PORT"`
 	LogLevel    string        `env:"LOG_LEVEL"`
 	TokenTTL    time.Duration `env:"TOKEN_TTL"`
+	// TLSCertFile и TLSKeyFile — пути к сертификату и приватному ключу сервера (PEM).
+	// Задаются вместе; если оба пусты, сервер работает без TLS (только для локальной разработки).
+	TLSCertFile string `env:"TLS_CERT_FILE"`
+	TLSKeyFile  string `env:"TLS_KEY_FILE"`
+}
+
+// TLSEnabled сообщает, настроен ли TLS.
+func (c *Config) TLSEnabled() bool {
+	return c.TLSCertFile != "" && c.TLSKeyFile != ""
 }
 
 // Load загружает и валидирует конфигурацию из переменных окружения.
@@ -75,6 +84,10 @@ func (c *Config) Validate() error {
 
 	if len(c.JWTSecret) < 32 {
 		return fmt.Errorf("JWT_SECRET must be at least 32 characters")
+	}
+
+	if (c.TLSCertFile == "") != (c.TLSKeyFile == "") {
+		return fmt.Errorf("TLS_CERT_FILE and TLS_KEY_FILE must be set together")
 	}
 
 	if c.TokenTTL <= 0 {

@@ -9,10 +9,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const testJWTSecret = "01234567890123456789012345678901"
+
 func setValidEnv(t *testing.T) {
 	t.Helper()
 	t.Setenv("DATABASE_URL", "postgres://localhost/db")
-	t.Setenv("JWT_SECRET", "secret")
+	t.Setenv("JWT_SECRET", testJWTSecret)
 	t.Setenv("SERVER_PORT", "")
 	t.Setenv("LOG_LEVEL", "")
 }
@@ -26,13 +28,13 @@ func TestLoad_Defaults(t *testing.T) {
 	assert.Equal(t, ":50051", cfg.ServerPort)
 	assert.Equal(t, "development", cfg.LogLevel)
 	assert.Equal(t, "postgres://localhost/db", cfg.DatabaseURL)
-	assert.Equal(t, "secret", cfg.JWTSecret)
+	assert.Equal(t, testJWTSecret, cfg.JWTSecret)
 	assert.Equal(t, 24*time.Hour, cfg.TokenTTL)
 }
 
 func TestLoad_FromEnv(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://db")
-	t.Setenv("JWT_SECRET", "s")
+	t.Setenv("JWT_SECRET", testJWTSecret)
 	t.Setenv("SERVER_PORT", "8080")
 	t.Setenv("LOG_LEVEL", "production")
 
@@ -45,7 +47,7 @@ func TestLoad_FromEnv(t *testing.T) {
 
 func TestLoad_PortWithColonUnchanged(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://db")
-	t.Setenv("JWT_SECRET", "s")
+	t.Setenv("JWT_SECRET", testJWTSecret)
 	t.Setenv("SERVER_PORT", ":9090")
 	t.Setenv("LOG_LEVEL", "")
 
@@ -61,10 +63,12 @@ func TestValidate_Errors(t *testing.T) {
 		cfg  app.Config
 		want string
 	}{
-		{"missing DATABASE_URL", app.Config{ServerPort: ":50051", JWTSecret: "s", LogLevel: "development", TokenTTL: time.Hour}, "DATABASE_URL"},
+		{"missing DATABASE_URL", app.Config{ServerPort: ":50051", JWTSecret: testJWTSecret, LogLevel: "development", TokenTTL: time.Hour}, "DATABASE_URL"},
 		{"missing JWT_SECRET", app.Config{ServerPort: ":50051", DatabaseURL: "postgres://", LogLevel: "development", TokenTTL: time.Hour}, "JWT_SECRET"},
-		{"invalid log level", app.Config{ServerPort: ":50051", DatabaseURL: "postgres://", JWTSecret: "s", LogLevel: "debug", TokenTTL: time.Hour}, "invalid log mode"},
+		{"invalid log level", app.Config{ServerPort: ":50051", DatabaseURL: "postgres://", JWTSecret: testJWTSecret, LogLevel: "debug", TokenTTL: time.Hour}, "invalid log mode"},
 		{"non-positive TOKEN_TTL", app.Config{ServerPort: ":50051", DatabaseURL: "postgres://", JWTSecret: "01234567890123456789012345678901", LogLevel: "development", TokenTTL: 0}, "TOKEN_TTL"},
+		{"TLS cert without key", app.Config{ServerPort: ":50051", DatabaseURL: "postgres://", JWTSecret: "01234567890123456789012345678901", LogLevel: "development", TokenTTL: time.Hour, TLSCertFile: "cert.pem"}, "TLS_CERT_FILE and TLS_KEY_FILE"},
+		{"TLS key without cert", app.Config{ServerPort: ":50051", DatabaseURL: "postgres://", JWTSecret: "01234567890123456789012345678901", LogLevel: "development", TokenTTL: time.Hour, TLSKeyFile: "key.pem"}, "TLS_CERT_FILE and TLS_KEY_FILE"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -79,7 +83,7 @@ func TestValidate_Success(t *testing.T) {
 	cfg := app.Config{
 		ServerPort:  ":50051",
 		DatabaseURL: "postgres://",
-		JWTSecret:   "s",
+		JWTSecret:   testJWTSecret,
 		LogLevel:    "production",
 		TokenTTL:    time.Hour,
 	}
@@ -94,4 +98,9 @@ func TestLoad_ValidationErrorPropagates(t *testing.T) {
 
 	_, err := app.Load()
 	assert.Error(t, err)
+}
+
+func TestConfig_TLSEnabled(t *testing.T) {
+	assert.False(t, (&app.Config{}).TLSEnabled())
+	assert.True(t, (&app.Config{TLSCertFile: "cert.pem", TLSKeyFile: "key.pem"}).TLSEnabled())
 }

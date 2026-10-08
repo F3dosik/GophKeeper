@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 // App содержит все зависимости и конфигурацию gRPC сервера.
@@ -40,12 +41,24 @@ func New(ctx context.Context, cfg *Config, logger *zap.SugaredLogger) (*App, err
 	authHandler := grpchandler.NewAuthHandler(authService)
 	secretHandler := grpchandler.NewSecretHandler(secretService)
 
-	grpcServer := grpc.NewServer(
+	opts := []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(
 			middleware.LoggingInterceptor(logger),
 			middleware.AuthInterceptor(cfg.JWTSecret, logger),
 		),
-	)
+	}
+	if cfg.TLSEnabled() {
+		creds, err := credentials.NewServerTLSFromFile(cfg.TLSCertFile, cfg.TLSKeyFile)
+		if err != nil {
+			pool.Close()
+			return nil, fmt.Errorf("app: load TLS credentials: %w", err)
+		}
+		opts = append(opts, grpc.Creds(creds))
+	} else {
+		logger.Warn("TLS is disabled: traffic (including JWT tokens) is sent in plaintext; use only for local development")
+	}
+
+	grpcServer := grpc.NewServer(opts...)
 
 	pb.RegisterAuthServer(grpcServer, authHandler)
 	pb.RegisterSecretsServer(grpcServer, secretHandler)
@@ -65,7 +78,8 @@ func (a *App) Run() error {
 		return fmt.Errorf("app.Run: listen: %w", err)
 	}
 
-	a.logger.Infow("starting gRPC server", "port", a.cfg.ServerPort, "logLevel", a.cfg.LogLevel)
+	a.logger.Infow("starting gRPC server",
+		"port", a.cfg.ServerPort, "logLevel", a.cfg.LogLevel, "tls", a.cfg.TLSEnabled())
 
 	if err := a.grpcServer.Serve(listen); err != nil {
 		return fmt.Errorf("app.Run: serve: %w", err)

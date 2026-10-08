@@ -27,9 +27,17 @@ const (
 // AuthClient is the client API for Auth service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// Auth — сервис аутентификации и регистрации пользователей.
 type AuthClient interface {
+	// CreateUser регистрирует нового пользователя.
+	// Ошибки: AlreadyExists — логин занят; InvalidArgument — невалидные данные.
 	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*CreateUserResponse, error)
+	// GetSalt возвращает соль пользователя, сохранённую при регистрации.
+	// Ошибка: NotFound — пользователь не найден.
 	GetSalt(ctx context.Context, in *GetSaltRequest, opts ...grpc.CallOption) (*GetSaltResponse, error)
+	// Login выполняет вход и возвращает JWT-токен.
+	// Ошибки: NotFound — пользователь не найден; Unauthenticated — неверные учётные данные.
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 }
 
@@ -74,9 +82,17 @@ func (c *authClient) Login(ctx context.Context, in *LoginRequest, opts ...grpc.C
 // AuthServer is the server API for Auth service.
 // All implementations must embed UnimplementedAuthServer
 // for forward compatibility.
+//
+// Auth — сервис аутентификации и регистрации пользователей.
 type AuthServer interface {
+	// CreateUser регистрирует нового пользователя.
+	// Ошибки: AlreadyExists — логин занят; InvalidArgument — невалидные данные.
 	CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error)
+	// GetSalt возвращает соль пользователя, сохранённую при регистрации.
+	// Ошибка: NotFound — пользователь не найден.
 	GetSalt(context.Context, *GetSaltRequest) (*GetSaltResponse, error)
+	// Login выполняет вход и возвращает JWT-токен.
+	// Ошибки: NotFound — пользователь не найден; Unauthenticated — неверные учётные данные.
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	mustEmbedUnimplementedAuthServer()
 }

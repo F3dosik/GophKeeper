@@ -26,6 +26,9 @@ const (
 	InfoEncryption = "encryption"
 	// InfoBlindIndex используется для деривации ключа HMAC-SHA256 blind index.
 	InfoBlindIndex = "blind-index"
+	// InfoAuth используется для деривации ключа аутентификации, который отправляется на сервер.
+	// Ключ независим от ключей шифрования и blind index: знание authKey не позволяет их восстановить.
+	InfoAuth = "auth"
 )
 
 // DeriveKey возвращает ключ из пароля и соли используя Argon2id.
@@ -40,6 +43,14 @@ func GenerateSalt() ([]byte, error) {
 		return nil, fmt.Errorf("generate salt: %w", err)
 	}
 	return salt, nil
+}
+
+// HashAuthKey возвращает SHA-256 от authKey — значение, которое сервер хранит в БД.
+// Медленный хеш не нужен: authKey — 32 случайных байта, полученных через Argon2id на клиенте,
+// поэтому перебор по хешу невозможен, а утечка хеша не даёт пройти аутентификацию.
+func HashAuthKey(authKey []byte) []byte {
+	sum := sha256.Sum256(authKey)
+	return sum[:]
 }
 
 // HKDF выводит ключ длиной 32 байта из masterKey используя HKDF-SHA256.

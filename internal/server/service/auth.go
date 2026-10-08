@@ -16,7 +16,7 @@ import (
 type AuthService interface {
 	// Create регистрирует нового пользователя.
 	// Возвращает ErrUserAlreadyExists если логин занят.
-	Create(ctx context.Context, login string, masterKey, salt []byte) error
+	Create(ctx context.Context, login string, authKey, salt []byte) error
 
 	// GetSalt возвращает соль пользователя по логину.
 	// Для несуществующего логина возвращает детерминированную фиктивную соль,
@@ -24,9 +24,9 @@ type AuthService interface {
 	GetSalt(ctx context.Context, login string) ([]byte, error)
 
 	// Login проверяет credentials и возвращает JWT токен.
-	// Возвращает ErrInvalidCredentials если masterKey неверный или логин не существует
+	// Возвращает ErrInvalidCredentials если authKey неверный или логин не существует
 	// (единый код ответа скрывает факт наличия пользователя).
-	Login(ctx context.Context, login string, masterKey []byte) (string, error)
+	Login(ctx context.Context, login string, authKey []byte) (string, error)
 }
 
 // authService реализует AuthService.
@@ -43,10 +43,11 @@ func NewAuthService(repo domain.UserRepository, jwtSecret string, tokenTTL time.
 }
 
 // Create регистрирует нового пользователя.
-func (s *authService) Create(ctx context.Context, login string, masterKey, salt []byte) error {
+// В БД сохраняется SHA-256 от authKey, а не сам ключ: утечка БД не позволяет войти под пользователем.
+func (s *authService) Create(ctx context.Context, login string, authKey, salt []byte) error {
 	return s.repo.Create(ctx, &domain.User{
 		Login:        login,
-		PasswordHash: masterKey,
+		PasswordHash: crypto.HashAuthKey(authKey),
 		PasswordSalt: salt,
 	})
 }
@@ -67,9 +68,9 @@ func (s *authService) GetSalt(ctx context.Context, login string) ([]byte, error)
 }
 
 // Login проверяет credentials и возвращает JWT токен.
-// Отсутствие пользователя и неверный masterKey возвращают одинаковый ErrInvalidCredentials,
+// Отсутствие пользователя и неверный authKey возвращают одинаковый ErrInvalidCredentials,
 // чтобы скрыть факт существования логина.
-func (s *authService) Login(ctx context.Context, login string, masterKey []byte) (string, error) {
+func (s *authService) Login(ctx context.Context, login string, authKey []byte) (string, error) {
 	user, err := s.repo.GetByLogin(ctx, login)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
@@ -78,7 +79,7 @@ func (s *authService) Login(ctx context.Context, login string, masterKey []byte)
 		return "", err
 	}
 
-	if subtle.ConstantTimeCompare(user.PasswordHash, masterKey) != 1 {
+	if subtle.ConstantTimeCompare(user.PasswordHash, crypto.HashAuthKey(authKey)) != 1 {
 		return "", domain.ErrInvalidCredentials
 	}
 	token, err := jwtutil.GenerateToken(user.ID, s.jwtSecret, s.tokenTTL)

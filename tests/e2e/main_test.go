@@ -25,10 +25,13 @@ import (
 	"google.golang.org/grpc"
 )
 
-const (
-	testJWTSecret = "e2e-jwt-secret-that-is-32-chars!!"
-	migrationPath = "../../migrations/000001_init.up.sql"
-)
+const testJWTSecret = "e2e-jwt-secret-that-is-32-chars!!"
+
+// migrationPaths — up-миграции в порядке применения.
+var migrationPaths = []string{
+	"../../migrations/000001_init.up.sql",
+	"../../migrations/000002_auth_key_hash.up.sql",
+}
 
 // serverAddr — адрес in-process gRPC сервера, заполняется в TestMain.
 var serverAddr string
@@ -43,7 +46,7 @@ func TestMain(m *testing.M) {
 		tcpostgres.WithDatabase("gophkeeper"),
 		tcpostgres.WithUsername("test"),
 		tcpostgres.WithPassword("test"),
-		tcpostgres.WithInitScripts(migrationPath),
+		tcpostgres.WithInitScripts(migrationPaths...),
 		tcpostgres.BasicWaitStrategies(),
 		tcpostgres.WithSQLDriver("pgx"),
 	)

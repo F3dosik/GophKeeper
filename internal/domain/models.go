@@ -95,6 +95,7 @@ type SecretInfo struct {
 // Credentials содержит учётные данные пользователя.
 type Credentials struct {
 	Login string
-	// MasterKey — хэш мастер-пароля, полученный через Argon2id.
-	MasterKey []byte
+	// AuthKey — ключ аутентификации HKDF(masterKey, "auth"), отправляемый на сервер.
+	// Не позволяет восстановить masterKey и ключи шифрования секретов.
+	AuthKey []byte
 }
