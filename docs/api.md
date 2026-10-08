@@ -9,6 +9,7 @@
     - [Credentials](#auth-Credentials)
     - [GetSaltRequest](#auth-GetSaltRequest)
     - [GetSaltResponse](#auth-GetSaltResponse)
+    - [KDFParams](#auth-KDFParams)
     - [LoginRequest](#auth-LoginRequest)
     - [LoginResponse](#auth-LoginResponse)
     - [LogoutRequest](#auth-LogoutRequest)
@@ -52,7 +53,8 @@ CreateUserRequest — запрос регистрации нового поль�
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | credentials | [Credentials](#auth-Credentials) |  | Учётные данные будущего пользователя. |
-| salt | [bytes](#bytes) |  | Случайная соль (16&#43; байт), сгенерированная клиентом, — используется при деривации ключа. |
+| salt | [bytes](#bytes) |  | Случайная соль (16 байт), сгенерированная клиентом, — используется при деривации ключа. |
+| kdf | [KDFParams](#auth-KDFParams) |  | Параметры Argon2id, с которыми клиент вывел ключ. Обязательны. |
 
 
 
@@ -114,6 +116,24 @@ GetSaltResponse — ответ с солью пользователя.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | salt | [bytes](#bytes) |  | Соль, сохранённая при регистрации пользователя. |
+| kdf | [KDFParams](#auth-KDFParams) |  | Параметры Argon2id пользователя. |
+
+
+
+
+
+
+<a name="auth-KDFParams"></a>
+
+### KDFParams
+KDFParams — параметры Argon2id, с которыми из пароля выводится мастер-ключ.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| time | [uint32](#uint32) |  | Число проходов (1–10). |
+| memory_kib | [uint32](#uint32) |  | Объём памяти в КиБ (19456–1048576). |
+| threads | [uint32](#uint32) |  | Степень параллелизма (1–16). |
 
 
 

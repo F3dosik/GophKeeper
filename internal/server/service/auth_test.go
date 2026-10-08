@@ -94,10 +94,11 @@ func TestAuthService_Create_Success(t *testing.T) {
 		Login:        "user",
 		PasswordHash: crypto.HashAuthKey(testAuthKey),
 		PasswordSalt: testSalt,
+		KDF:          domain.DefaultKDFParams,
 	}).Return(nil)
 
 	svc := NewAuthService(mockRepo, mocks.NewTokenRepository(t), testAuthConfig(t))
-	err := svc.Create(context.Background(), "user", testAuthKey, testSalt)
+	err := svc.Create(context.Background(), "user", testAuthKey, testSalt, domain.DefaultKDFParams)
 
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
@@ -109,7 +110,7 @@ func TestAuthService_Create_AlreadyExists(t *testing.T) {
 		Return(domain.ErrUserAlreadyExists)
 
 	svc := NewAuthService(mockRepo, mocks.NewTokenRepository(t), testAuthConfig(t))
-	err := svc.Create(context.Background(), "user", testAuthKey, testSalt)
+	err := svc.Create(context.Background(), "user", testAuthKey, testSalt, domain.DefaultKDFParams)
 
 	assert.ErrorIs(t, err, domain.ErrUserAlreadyExists)
 }
@@ -117,13 +118,14 @@ func TestAuthService_Create_AlreadyExists(t *testing.T) {
 func TestAuthService_GetSalt_Success(t *testing.T) {
 	mockRepo := mocks.NewUserRepository(t)
 	mockRepo.On("GetByLogin", mock.Anything, "user").
-		Return(&domain.User{PasswordSalt: testSalt}, nil)
+		Return(&domain.User{PasswordSalt: testSalt, KDF: domain.LegacyKDFParams}, nil)
 
 	svc := NewAuthService(mockRepo, mocks.NewTokenRepository(t), testAuthConfig(t))
-	salt, err := svc.GetSalt(context.Background(), "user")
+	salt, kdf, err := svc.GetSalt(context.Background(), "user")
 
 	assert.NoError(t, err)
 	assert.Equal(t, testSalt, salt)
+	assert.Equal(t, domain.LegacyKDFParams, kdf, "stored params must be returned as is")
 }
 
 func TestAuthService_GetSalt_UserNotFound_ReturnsDeterministicFakeSalt(t *testing.T) {
@@ -133,11 +135,12 @@ func TestAuthService_GetSalt_UserNotFound_ReturnsDeterministicFakeSalt(t *testin
 
 	svc := NewAuthService(mockRepo, mocks.NewTokenRepository(t), testAuthConfig(t))
 
-	salt1, err := svc.GetSalt(context.Background(), "user")
+	salt1, kdf, err := svc.GetSalt(context.Background(), "user")
+	assert.Equal(t, domain.DefaultKDFParams, kdf)
 	assert.NoError(t, err)
 	assert.Len(t, salt1, 16)
 
-	salt2, err := svc.GetSalt(context.Background(), "user")
+	salt2, _, err := svc.GetSalt(context.Background(), "user")
 	assert.NoError(t, err)
 	assert.Equal(t, salt1, salt2, "fake salt must be deterministic per login")
 }
@@ -147,11 +150,14 @@ func TestAuthService_RejectsInvalidInput(t *testing.T) {
 	svc := NewAuthService(mocks.NewUserRepository(t), mocks.NewTokenRepository(t), testAuthConfig(t))
 	ctx := context.Background()
 
-	assert.ErrorIs(t, svc.Create(ctx, "", testAuthKey, testSalt), domain.ErrInvalidArgument)
-	assert.ErrorIs(t, svc.Create(ctx, "user", nil, testSalt), domain.ErrInvalidArgument)
-	assert.ErrorIs(t, svc.Create(ctx, "user", testAuthKey, make([]byte, 1<<20)), domain.ErrInvalidArgument)
+	kdf := domain.DefaultKDFParams
+	assert.ErrorIs(t, svc.Create(ctx, "", testAuthKey, testSalt, kdf), domain.ErrInvalidArgument)
+	assert.ErrorIs(t, svc.Create(ctx, "user", nil, testSalt, kdf), domain.ErrInvalidArgument)
+	assert.ErrorIs(t, svc.Create(ctx, "user", testAuthKey, make([]byte, 1<<20), kdf), domain.ErrInvalidArgument)
+	assert.ErrorIs(t, svc.Create(ctx, "user", testAuthKey, testSalt, domain.KDFParams{Time: 1, MemoryKiB: 8, Threads: 1}),
+		domain.ErrInvalidArgument, "weak kdf params must be rejected")
 
-	_, err := svc.GetSalt(ctx, strings.Repeat("a", 1<<20))
+	_, _, err := svc.GetSalt(ctx, strings.Repeat("a", 1<<20))
 	assert.ErrorIs(t, err, domain.ErrInvalidArgument)
 
 	_, err = svc.Login(ctx, "user", []byte("short"))

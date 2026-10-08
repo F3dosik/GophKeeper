@@ -6,17 +6,13 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/F3dosik/GophKeeper/internal/domain"
 	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/hkdf"
 )
 
-// Параметры Argon2id согласно рекомендациям OWASP.
-const (
-	timeCost = 1
-	memory   = 64 * 1024
-	threads  = 4
-	keyLen   = 32
-)
+// keyLen — длина мастер-ключа в байтах.
+const keyLen = 32
 
 // Пустая соль для явной передачи в hkdf.
 var noSalt []byte
@@ -31,9 +27,10 @@ const (
 	InfoAuth = "auth"
 )
 
-// DeriveKey возвращает ключ из пароля и соли используя Argon2id.
-func DeriveKey(password string, salt []byte) []byte {
-	return argon2.IDKey([]byte(password), salt, timeCost, memory, threads, keyLen)
+// DeriveKey возвращает ключ из пароля и соли используя Argon2id с параметрами params.
+// Параметры должны быть проверены вызывающим (domain.KDFParams.Validate).
+func DeriveKey(password string, salt []byte, params domain.KDFParams) []byte {
+	return argon2.IDKey([]byte(password), salt, params.Time, params.MemoryKiB, params.Threads, keyLen)
 }
 
 // GenerateSalt генерирует случайную соль длиной 16 байт.

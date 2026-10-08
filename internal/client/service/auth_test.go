@@ -22,7 +22,7 @@ func TestAuthService_CreateUser(t *testing.T) {
 		mockAuth := mocks.NewAuthClient(t)
 		mockAuth.On("CreateUser", mock.Anything, mock.MatchedBy(func(creds domain.Credentials) bool {
 			return creds.Login == "user" && len(creds.AuthKey) == 32
-		}), mock.AnythingOfType("[]uint8")).Return(nil)
+		}), mock.AnythingOfType("[]uint8"), domain.DefaultKDFParams).Return(nil)
 
 		svc := service.NewAuthService(mockAuth, t.TempDir()+"/token", nil)
 		err := svc.CreateUser(context.Background(), "user", "password")
@@ -33,7 +33,7 @@ func TestAuthService_CreateUser(t *testing.T) {
 
 	t.Run("already exists", func(t *testing.T) {
 		mockAuth := mocks.NewAuthClient(t)
-		mockAuth.On("CreateUser", mock.Anything, mock.Anything, mock.Anything).
+		mockAuth.On("CreateUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return(domain.ErrAlreadyExists)
 
 		svc := service.NewAuthService(mockAuth, t.TempDir()+"/token", nil)
@@ -47,7 +47,7 @@ func TestAuthService_Login(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		mockAuth := mocks.NewAuthClient(t)
 		mockAuth.On("GetSalt", mock.Anything, "user").
-			Return([]byte("saltsaltsaltsalt"), nil)
+			Return([]byte("saltsaltsaltsalt"), domain.LegacyKDFParams, nil)
 		mockAuth.On("Login", mock.Anything, mock.MatchedBy(func(creds domain.Credentials) bool {
 			return creds.Login == "user" && len(creds.AuthKey) == 32
 		})).Return("jwt-token", nil)
@@ -68,7 +68,7 @@ func TestAuthService_Login(t *testing.T) {
 	t.Run("get salt error", func(t *testing.T) {
 		mockAuth := mocks.NewAuthClient(t)
 		mockAuth.On("GetSalt", mock.Anything, "user").
-			Return(nil, domain.ErrNotFound)
+			Return(nil, domain.KDFParams{}, domain.ErrNotFound)
 
 		svc := service.NewAuthService(mockAuth, t.TempDir()+"/token", nil)
 		err := svc.Login(context.Background(), "user", "password")
@@ -79,7 +79,7 @@ func TestAuthService_Login(t *testing.T) {
 	t.Run("invalid credentials", func(t *testing.T) {
 		mockAuth := mocks.NewAuthClient(t)
 		mockAuth.On("GetSalt", mock.Anything, "user").
-			Return([]byte("saltsaltsaltsalt"), nil)
+			Return([]byte("saltsaltsaltsalt"), domain.LegacyKDFParams, nil)
 		mockAuth.On("Login", mock.Anything, mock.Anything).
 			Return("", domain.ErrInvalidCredentials)
 
@@ -92,7 +92,7 @@ func TestAuthService_Login(t *testing.T) {
 	t.Run("token saved with correct permissions", func(t *testing.T) {
 		mockAuth := mocks.NewAuthClient(t)
 		mockAuth.On("GetSalt", mock.Anything, "user").
-			Return([]byte("saltsaltsaltsalt"), nil)
+			Return([]byte("saltsaltsaltsalt"), domain.LegacyKDFParams, nil)
 		mockAuth.On("Login", mock.Anything, mock.Anything).
 			Return("jwt-token", nil)
 
@@ -112,7 +112,7 @@ func TestAuthService_Unlock(t *testing.T) {
 		var sentAuthKey []byte
 		mockAuth := mocks.NewAuthClient(t)
 		mockAuth.On("GetSalt", mock.Anything, "user").
-			Return([]byte("saltsaltsaltsalt"), nil)
+			Return([]byte("saltsaltsaltsalt"), domain.LegacyKDFParams, nil)
 		mockAuth.On("Login", mock.Anything, mock.MatchedBy(func(creds domain.Credentials) bool {
 			sentAuthKey = creds.AuthKey
 			return creds.Login == "user" && len(creds.AuthKey) == 32
@@ -137,7 +137,7 @@ func TestAuthService_Unlock(t *testing.T) {
 	t.Run("wrong password", func(t *testing.T) {
 		mockAuth := mocks.NewAuthClient(t)
 		mockAuth.On("GetSalt", mock.Anything, "user").
-			Return([]byte("saltsaltsaltsalt"), nil)
+			Return([]byte("saltsaltsaltsalt"), domain.LegacyKDFParams, nil)
 		mockAuth.On("Login", mock.Anything, mock.Anything).
 			Return("", domain.ErrInvalidCredentials)
 
@@ -151,7 +151,7 @@ func TestAuthService_Unlock(t *testing.T) {
 	t.Run("get salt error", func(t *testing.T) {
 		mockAuth := mocks.NewAuthClient(t)
 		mockAuth.On("GetSalt", mock.Anything, "user").
-			Return(nil, errors.New("network down"))
+			Return(nil, domain.KDFParams{}, errors.New("network down"))
 
 		svc := service.NewAuthService(mockAuth, t.TempDir()+"/session", nil)
 		_, err := svc.Unlock(context.Background(), "user", "password")
@@ -218,4 +218,18 @@ func TestAuthService_Logout(t *testing.T) {
 		_, statErr := os.Stat(path)
 		assert.NoError(t, statErr, "token was not revoked, so the user must be able to retry")
 	})
+}
+
+// Подменённый сервер может прислать слабые параметры Argon2id, чтобы удешевить перебор
+// пароля по перехваченному authKey: клиент не должен с ними работать.
+func TestAuthService_RejectsWeakServerKDF(t *testing.T) {
+	mockAuth := mocks.NewAuthClient(t)
+	mockAuth.On("GetSalt", mock.Anything, "user").
+		Return([]byte("saltsaltsaltsalt"), domain.KDFParams{Time: 1, MemoryKiB: 8, Threads: 1}, nil)
+
+	svc := service.NewAuthService(mockAuth, t.TempDir()+"/session", nil)
+
+	assert.ErrorIs(t, svc.Login(context.Background(), "user", "password"), domain.ErrInvalidArgument)
+	_, err := svc.Unlock(context.Background(), "user", "password")
+	assert.ErrorIs(t, err, domain.ErrInvalidArgument)
 }

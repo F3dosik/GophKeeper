@@ -4,9 +4,12 @@ package grpchandler
 import (
 	"context"
 
+	"github.com/F3dosik/GophKeeper/internal/domain"
 	"github.com/F3dosik/GophKeeper/internal/server/middleware"
 	"github.com/F3dosik/GophKeeper/internal/server/service"
 	pb "github.com/F3dosik/GophKeeper/proto/gen"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // authHandler реализует интерфейс pb.AuthServer.
@@ -26,9 +29,12 @@ func NewAuthHandler(authService service.AuthService) pb.AuthServer {
 // CreateUser обрабатывает запрос регистрации нового пользователя.
 // Возвращает codes.AlreadyExists если пользователь с таким логином уже существует.
 func (h *authHandler) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
+	if !req.HasKdf() {
+		return nil, status.Error(codes.InvalidArgument, "kdf params are required, update the client")
+	}
 	if err := h.authService.Create(
 		ctx, req.GetCredentials().GetLogin(),
-		req.GetCredentials().GetAuthKey(), req.GetSalt(),
+		req.GetCredentials().GetAuthKey(), req.GetSalt(), fromPBKDF(req.GetKdf()),
 	); err != nil {
 		return nil, toGRPCError(err)
 	}
@@ -39,11 +45,11 @@ func (h *authHandler) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 // Для несуществующего логина возвращает детерминированную фиктивную соль,
 // чтобы не раскрывать факт наличия пользователя (защита от перечисления).
 func (h *authHandler) GetSalt(ctx context.Context, req *pb.GetSaltRequest) (*pb.GetSaltResponse, error) {
-	salt, err := h.authService.GetSalt(ctx, req.GetLogin())
+	salt, kdf, err := h.authService.GetSalt(ctx, req.GetLogin())
 	if err != nil {
 		return nil, toGRPCError(err)
 	}
-	return pb.GetSaltResponse_builder{Salt: salt}.Build(), nil
+	return pb.GetSaltResponse_builder{Salt: salt, Kdf: toPBKDF(kdf)}.Build(), nil
 }
 
 // Login обрабатывает запрос аутентификации пользователя.
@@ -75,4 +81,20 @@ func (h *authHandler) Logout(ctx context.Context, req *pb.LogoutRequest) (*pb.Lo
 		return nil, toGRPCError(err)
 	}
 	return pb.LogoutResponse_builder{}.Build(), nil
+}
+
+// fromPBKDF переводит параметры Argon2id из protobuf. Значения вне диапазона uint8
+// для потоков насыщаются, чтобы их отклонила проверка KDFParams.Validate.
+func fromPBKDF(p *pb.KDFParams) domain.KDFParams {
+	threads := p.GetThreads()
+	if threads > 255 {
+		threads = 255
+	}
+	return domain.KDFParams{Time: p.GetTime(), MemoryKiB: p.GetMemoryKib(), Threads: uint8(threads)}
+}
+
+// toPBKDF переводит параметры Argon2id в protobuf.
+func toPBKDF(p domain.KDFParams) *pb.KDFParams {
+	threads := uint32(p.Threads)
+	return pb.KDFParams_builder{Time: &p.Time, MemoryKib: &p.MemoryKiB, Threads: &threads}.Build()
 }

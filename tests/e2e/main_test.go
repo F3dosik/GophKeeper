@@ -32,6 +32,7 @@ var migrationPaths = []string{
 	"../../migrations/000001_init.up.sql",
 	"../../migrations/000002_auth_key_hash.up.sql",
 	"../../migrations/000003_token_revocation.up.sql",
+	"../../migrations/000004_kdf_params.up.sql",
 }
 
 // serverAddr — адрес in-process gRPC сервера, заполняется в TestMain.

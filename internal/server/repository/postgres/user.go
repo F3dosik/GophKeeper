@@ -23,10 +23,12 @@ func NewUserRepository(pool *pgxpool.Pool) domain.UserRepository {
 func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
 	err := repository.WithRetry(ctx, isRetriable, func() error {
 		return r.pool.QueryRow(ctx, `
-		INSERT INTO users (login, password_hash, password_salt)
-		VALUES ($1, $2, $3)
+		INSERT INTO users (login, password_hash, password_salt, kdf_time, kdf_memory_kib, kdf_threads)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id, created_at
-	`, user.Login, user.PasswordHash, user.PasswordSalt).Scan(&user.ID, &user.CreatedAt)
+	`, user.Login, user.PasswordHash, user.PasswordSalt,
+			int64(user.KDF.Time), int64(user.KDF.MemoryKiB), int16(user.KDF.Threads),
+		).Scan(&user.ID, &user.CreatedAt)
 	})
 
 	if err != nil {
@@ -43,14 +45,19 @@ func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
 // GetByLogin получает пользователя по логину.
 func (r *userRepository) GetByLogin(ctx context.Context, login string) (*domain.User, error) {
 	user := domain.User{Login: login}
+	var kdfTime, kdfMemory int64
+	var kdfThreads int16
 
 	err := repository.WithRetry(ctx, isRetriable, func() error {
 		return r.pool.QueryRow(ctx, `
-			SELECT id, password_hash, password_salt, token_version, created_at
+			SELECT id, password_hash, password_salt, kdf_time, kdf_memory_kib, kdf_threads,
+			       token_version, created_at
 			FROM users
 			WHERE login = $1
-		`, login).Scan(&user.ID, &user.PasswordHash, &user.PasswordSalt, &user.TokenVersion, &user.CreatedAt)
+		`, login).Scan(&user.ID, &user.PasswordHash, &user.PasswordSalt, &kdfTime, &kdfMemory, &kdfThreads,
+			&user.TokenVersion, &user.CreatedAt)
 	})
+	user.KDF = domain.KDFParams{Time: uint32(kdfTime), MemoryKiB: uint32(kdfMemory), Threads: uint8(kdfThreads)}
 
 	if err != nil {
 		if isNoRows(err) {

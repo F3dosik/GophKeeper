@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/F3dosik/GophKeeper/internal/domain"
 	"github.com/F3dosik/GophKeeper/pkg/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -28,29 +29,29 @@ func TestGenerateSalt(t *testing.T) {
 func TestDeriveKey(t *testing.T) {
 	t.Run("returns 32 bytes", func(t *testing.T) {
 		salt, _ := crypto.GenerateSalt()
-		key := crypto.DeriveKey("password", salt)
+		key := crypto.DeriveKey("password", salt, domain.LegacyKDFParams)
 		assert.Len(t, key, 32)
 	})
 
 	t.Run("same input returns same key", func(t *testing.T) {
 		salt, _ := crypto.GenerateSalt()
-		key1 := crypto.DeriveKey("password", salt)
-		key2 := crypto.DeriveKey("password", salt)
+		key1 := crypto.DeriveKey("password", salt, domain.LegacyKDFParams)
+		key2 := crypto.DeriveKey("password", salt, domain.LegacyKDFParams)
 		assert.Equal(t, key1, key2)
 	})
 
 	t.Run("different password returns different key", func(t *testing.T) {
 		salt, _ := crypto.GenerateSalt()
-		key1 := crypto.DeriveKey("password1", salt)
-		key2 := crypto.DeriveKey("password2", salt)
+		key1 := crypto.DeriveKey("password1", salt, domain.LegacyKDFParams)
+		key2 := crypto.DeriveKey("password2", salt, domain.LegacyKDFParams)
 		assert.NotEqual(t, key1, key2)
 	})
 
 	t.Run("different salt returns different key", func(t *testing.T) {
 		salt1, _ := crypto.GenerateSalt()
 		salt2, _ := crypto.GenerateSalt()
-		key1 := crypto.DeriveKey("password", salt1)
-		key2 := crypto.DeriveKey("password", salt2)
+		key1 := crypto.DeriveKey("password", salt1, domain.LegacyKDFParams)
+		key2 := crypto.DeriveKey("password", salt2, domain.LegacyKDFParams)
 		assert.NotEqual(t, key1, key2)
 	})
 }
@@ -117,4 +118,19 @@ func TestHashAuthKey_MatchesMigrationVector(t *testing.T) {
 	authKey, err := crypto.HKDF(master, crypto.InfoAuth)
 	require.NoError(t, err)
 	assert.Equal(t, "4d3f61ca7586d06c91f93768457312a3c03e9de00767956966fd379a73813ee5", hex.EncodeToString(crypto.HashAuthKey(authKey)))
+}
+
+// Ключи, выведенные до появления хранения параметров, должны выводиться так же:
+// иначе существующие пользователи потеряют доступ к секретам.
+func TestDeriveKey_LegacyParamsUnchanged(t *testing.T) {
+	salt := []byte("0123456789abcdef")
+	key := crypto.DeriveKey("password", salt, domain.LegacyKDFParams)
+	assert.Equal(t, "26047d86af9138c1", hex.EncodeToString(key)[:16])
+}
+
+func TestDeriveKey_ParamsMatter(t *testing.T) {
+	salt := []byte("0123456789abcdef")
+	assert.NotEqual(t,
+		crypto.DeriveKey("password", salt, domain.LegacyKDFParams),
+		crypto.DeriveKey("password", salt, domain.DefaultKDFParams))
 }

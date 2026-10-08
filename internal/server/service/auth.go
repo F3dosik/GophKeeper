@@ -17,12 +17,14 @@ import (
 type AuthService interface {
 	// Create регистрирует нового пользователя.
 	// Возвращает ErrUserAlreadyExists если логин занят.
-	Create(ctx context.Context, login string, authKey, salt []byte) error
+	// kdf — параметры Argon2id, с которыми клиент вывел authKey.
+	Create(ctx context.Context, login string, authKey, salt []byte, kdf domain.KDFParams) error
 
 	// GetSalt возвращает соль пользователя по логину.
 	// Для несуществующего логина возвращает детерминированную фиктивную соль,
 	// чтобы не раскрывать факт наличия пользователя (защита от перечисления).
-	GetSalt(ctx context.Context, login string) ([]byte, error)
+	// Возвращает соль и параметры Argon2id пользователя.
+	GetSalt(ctx context.Context, login string) ([]byte, domain.KDFParams, error)
 
 	// Login проверяет credentials и возвращает JWT токен.
 	// Возвращает ErrInvalidCredentials если authKey неверный или логин не существует
@@ -86,7 +88,7 @@ func NewAuthService(repo domain.UserRepository, tokens domain.TokenRepository, c
 
 // Create регистрирует нового пользователя.
 // В БД сохраняется SHA-256 от authKey, а не сам ключ: утечка БД не позволяет войти под пользователем.
-func (s *authService) Create(ctx context.Context, login string, authKey, salt []byte) error {
+func (s *authService) Create(ctx context.Context, login string, authKey, salt []byte, kdf domain.KDFParams) error {
 	if err := validateLogin(login); err != nil {
 		return err
 	}
@@ -96,7 +98,11 @@ func (s *authService) Create(ctx context.Context, login string, authKey, salt []
 	if err := validateSalt(salt); err != nil {
 		return err
 	}
+	if err := kdf.Validate(); err != nil {
+		return err
+	}
 	return s.repo.Create(ctx, &domain.User{
+		KDF:          kdf,
 		Login:        login,
 		PasswordHash: crypto.HashAuthKey(authKey),
 		PasswordSalt: salt,
@@ -106,19 +112,20 @@ func (s *authService) Create(ctx context.Context, login string, authKey, salt []
 // GetSalt возвращает соль пользователя по логину.
 // Для несуществующего логина возвращает детерминированную соль, выведенную
 // из логина и ключа фиктивных солей, чтобы ответ был неотличим от реального пользователя.
-func (s *authService) GetSalt(ctx context.Context, login string) ([]byte, error) {
+func (s *authService) GetSalt(ctx context.Context, login string) ([]byte, domain.KDFParams, error) {
 	if err := validateLogin(login); err != nil {
-		return nil, err
+		return nil, domain.KDFParams{}, err
 	}
 	user, err := s.repo.GetByLogin(ctx, login)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
-			return crypto.GenerateSaltByLogin(login, s.cfg.Keys.FakeSalt), nil
+			// Фиктивный пользователь получает параметры, с которыми сейчас создаются новые.
+			return crypto.GenerateSaltByLogin(login, s.cfg.Keys.FakeSalt), domain.DefaultKDFParams, nil
 		}
-		return nil, err
+		return nil, domain.KDFParams{}, err
 	}
 
-	return user.PasswordSalt, nil
+	return user.PasswordSalt, user.KDF, nil
 }
 
 // Login проверяет credentials и возвращает JWT токен.

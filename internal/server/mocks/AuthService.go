@@ -5,6 +5,7 @@ package mocks
 import (
 	context "context"
 
+	domain "github.com/F3dosik/GophKeeper/internal/domain"
 	mock "github.com/stretchr/testify/mock"
 
 	time "time"
@@ -17,17 +18,17 @@ type AuthService struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, login, authKey, salt
-func (_m *AuthService) Create(ctx context.Context, login string, authKey []byte, salt []byte) error {
-	ret := _m.Called(ctx, login, authKey, salt)
+// Create provides a mock function with given fields: ctx, login, authKey, salt, kdf
+func (_m *AuthService) Create(ctx context.Context, login string, authKey []byte, salt []byte, kdf domain.KDFParams) error {
+	ret := _m.Called(ctx, login, authKey, salt, kdf)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, []byte, []byte) error); ok {
-		r0 = rf(ctx, login, authKey, salt)
+	if rf, ok := ret.Get(0).(func(context.Context, string, []byte, []byte, domain.KDFParams) error); ok {
+		r0 = rf(ctx, login, authKey, salt, kdf)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -36,7 +37,7 @@ func (_m *AuthService) Create(ctx context.Context, login string, authKey []byte,
 }
 
 // GetSalt provides a mock function with given fields: ctx, login
-func (_m *AuthService) GetSalt(ctx context.Context, login string) ([]byte, error) {
+func (_m *AuthService) GetSalt(ctx context.Context, login string) ([]byte, domain.KDFParams, error) {
 	ret := _m.Called(ctx, login)
 
 	if len(ret) == 0 {
@@ -44,8 +45,9 @@ func (_m *AuthService) GetSalt(ctx context.Context, login string) ([]byte, error
 	}
 
 	var r0 []byte
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) ([]byte, error)); ok {
+	var r1 domain.KDFParams
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) ([]byte, domain.KDFParams, error)); ok {
 		return rf(ctx, login)
 	}
 	if rf, ok := ret.Get(0).(func(context.Context, string) []byte); ok {
@@ -56,13 +58,19 @@ func (_m *AuthService) GetSalt(ctx context.Context, login string) ([]byte, error
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string) domain.KDFParams); ok {
 		r1 = rf(ctx, login)
 	} else {
-		r1 = ret.Error(1)
+		r1 = ret.Get(1).(domain.KDFParams)
 	}
 
-	return r0, r1
+	if rf, ok := ret.Get(2).(func(context.Context, string) error); ok {
+		r2 = rf(ctx, login)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // Login provides a mock function with given fields: ctx, login, authKey

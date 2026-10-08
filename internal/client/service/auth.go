@@ -61,12 +61,13 @@ func (s *authService) CreateUser(ctx context.Context, login, password string) er
 		return fmt.Errorf("authService: %w", err)
 	}
 
-	authKey, err := deriveAuthKey(password, salt)
+	kdf := domain.DefaultKDFParams
+	_, authKey, err := deriveKeys(password, salt, kdf)
 	if err != nil {
 		return fmt.Errorf("authService.CreateUser: %w", err)
 	}
 	if err := s.client.CreateUser(
-		ctx, domain.Credentials{Login: login, AuthKey: authKey}, salt,
+		ctx, domain.Credentials{Login: login, AuthKey: authKey}, salt, kdf,
 	); err != nil {
 		return fmt.Errorf("authService.CreateUser: %w", err)
 	}
@@ -78,12 +79,7 @@ func (s *authService) CreateUser(ctx context.Context, login, password string) er
 // Запрашивает соль по логину, деривирует ключ аутентификации, получает JWT токен
 // и сохраняет сессию (логин + токен) в файл для последующих вызовов.
 func (s *authService) Login(ctx context.Context, login, password string) error {
-	salt, err := s.client.GetSalt(ctx, login)
-	if err != nil {
-		return fmt.Errorf("authService.Login: %w", err)
-	}
-
-	authKey, err := deriveAuthKey(password, salt)
+	_, authKey, err := s.userKeys(ctx, login, password)
 	if err != nil {
 		return fmt.Errorf("authService.Login: %w", err)
 	}
@@ -104,13 +100,7 @@ func (s *authService) Login(ctx context.Context, login, password string) error {
 // сохраняется в сессию и используется соединением, поэтому короткий срок жизни токена
 // не требует частого повторного входа.
 func (s *authService) Unlock(ctx context.Context, login, password string) ([]byte, error) {
-	salt, err := s.client.GetSalt(ctx, login)
-	if err != nil {
-		return nil, fmt.Errorf("authService.Unlock: %w", err)
-	}
-
-	masterKey := crypto.DeriveKey(password, salt)
-	authKey, err := crypto.HKDF(masterKey, crypto.InfoAuth)
+	masterKey, authKey, err := s.userKeys(ctx, login, password)
 	if err != nil {
 		return nil, fmt.Errorf("authService.Unlock: %w", err)
 	}
@@ -125,11 +115,31 @@ func (s *authService) Unlock(ctx context.Context, login, password string) ([]byt
 	return masterKey, nil
 }
 
-// deriveAuthKey вычисляет ключ аутентификации HKDF(Argon2id(password, salt), "auth").
-// Ключ отправляется на сервер и независим от ключей шифрования, которые выводятся
-// из того же masterKey с другим info.
-func deriveAuthKey(password string, salt []byte) ([]byte, error) {
-	return crypto.HKDF(crypto.DeriveKey(password, salt), crypto.InfoAuth)
+// userKeys запрашивает соль и параметры Argon2id пользователя и выводит из пароля
+// мастер-ключ и ключ аутентификации. Параметры от сервера проверяются: подменённый
+// сервер мог бы прислать слабые параметры, чтобы удешевить перебор пароля по authKey,
+// или огромные, чтобы клиент завис.
+func (s *authService) userKeys(ctx context.Context, login, password string) (masterKey, authKey []byte, err error) {
+	salt, kdf, err := s.client.GetSalt(ctx, login)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := kdf.Validate(); err != nil {
+		return nil, nil, fmt.Errorf("server sent unacceptable kdf params: %w", err)
+	}
+	return deriveKeys(password, salt, kdf)
+}
+
+// deriveKeys выводит мастер-ключ Argon2id(password, salt) и ключ аутентификации
+// HKDF(masterKey, "auth"). Ключ аутентификации отправляется на сервер и независим от
+// ключей шифрования, которые выводятся из того же masterKey с другим info.
+func deriveKeys(password string, salt []byte, kdf domain.KDFParams) (masterKey, authKey []byte, err error) {
+	masterKey = crypto.DeriveKey(password, salt, kdf)
+	authKey, err = crypto.HKDF(masterKey, crypto.InfoAuth)
+	if err != nil {
+		return nil, nil, err
+	}
+	return masterKey, authKey, nil
 }
 
 // Logout отзывает токен на сервере, затем удаляет файл сессии.

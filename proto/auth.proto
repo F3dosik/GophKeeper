@@ -16,12 +16,24 @@ message Credentials {
     bytes auth_key = 2;
 }
 
+// KDFParams — параметры Argon2id, с которыми из пароля выводится мастер-ключ.
+message KDFParams {
+    // Число проходов (1–10).
+    uint32 time = 1;
+    // Объём памяти в КиБ (19456–1048576).
+    uint32 memory_kib = 2;
+    // Степень параллелизма (1–16).
+    uint32 threads = 3;
+}
+
 // CreateUserRequest — запрос регистрации нового пользователя.
 message CreateUserRequest {
     // Учётные данные будущего пользователя.
     Credentials credentials = 1;
-    // Случайная соль (16+ байт), сгенерированная клиентом, — используется при деривации ключа.
+    // Случайная соль (16 байт), сгенерированная клиентом, — используется при деривации ключа.
     bytes salt = 2;
+    // Параметры Argon2id, с которыми клиент вывел ключ. Обязательны.
+    KDFParams kdf = 3;
 }
 
 // CreateUserResponse — пустой ответ при успешной регистрации.
@@ -38,6 +50,8 @@ message GetSaltRequest {
 message GetSaltResponse {
     // Соль, сохранённая при регистрации пользователя.
     bytes salt = 1;
+    // Параметры Argon2id пользователя.
+    KDFParams kdf = 2;
 }
 
 // LoginRequest — запрос на вход в систему.

@@ -16,6 +16,8 @@ type User struct {
 	Login        string
 	PasswordHash []byte
 	PasswordSalt []byte
+	// KDF — параметры Argon2id, с которыми из пароля выводится мастер-ключ.
+	KDF KDFParams
 	// TokenVersion — версия токенов пользователя; токены с другой версией недействительны.
 	TokenVersion int
 	CreatedAt    time.Time

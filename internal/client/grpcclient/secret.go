@@ -1,8 +1,8 @@
 package grpcclient
 
 import (
-	"errors"
 	"context"
+	"errors"
 
 	"github.com/F3dosik/GophKeeper/internal/domain"
 	pb "github.com/F3dosik/GophKeeper/proto/gen"

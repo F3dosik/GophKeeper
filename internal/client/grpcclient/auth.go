@@ -11,11 +11,13 @@ import (
 type AuthClient interface {
 	// CreateUser регистрирует нового пользователя на сервере.
 	// salt должен быть сгенерирован клиентом перед деривацией ключей.
-	CreateUser(ctx context.Context, creds domain.Credentials, salt []byte) error
+	// kdf — параметры Argon2id, с которыми выведен ключ аутентификации.
+	CreateUser(ctx context.Context, creds domain.Credentials, salt []byte, kdf domain.KDFParams) error
 
 	// GetSalt возвращает соль пользователя по логину.
 	// Используется для деривации ключей перед аутентификацией.
-	GetSalt(ctx context.Context, login string) ([]byte, error)
+	// Вместе с солью возвращает параметры Argon2id пользователя.
+	GetSalt(ctx context.Context, login string) ([]byte, domain.KDFParams, error)
 
 	// Login аутентифицирует пользователя и возвращает JWT токен.
 	Login(ctx context.Context, creds domain.Credentials) (string, error)
@@ -34,22 +36,23 @@ func NewAuthClient(client pb.AuthClient) AuthClient {
 	return &authClient{client: client}
 }
 
-func (c *authClient) CreateUser(ctx context.Context, creds domain.Credentials, salt []byte) error {
+func (c *authClient) CreateUser(ctx context.Context, creds domain.Credentials, salt []byte, kdf domain.KDFParams) error {
 	req := pb.CreateUserRequest_builder{
 		Credentials: toPBCredentials(creds),
 		Salt:        salt,
+		Kdf:         toPBKDF(kdf),
 	}.Build()
 	_, err := c.client.CreateUser(ctx, req)
 	return fromGRPCError(err)
 }
 
-func (c *authClient) GetSalt(ctx context.Context, login string) ([]byte, error) {
+func (c *authClient) GetSalt(ctx context.Context, login string) ([]byte, domain.KDFParams, error) {
 	req := pb.GetSaltRequest_builder{Login: &login}.Build()
 	resp, err := c.client.GetSalt(ctx, req)
 	if err != nil {
-		return nil, fromGRPCError(err)
+		return nil, domain.KDFParams{}, fromGRPCError(err)
 	}
-	return resp.GetSalt(), nil
+	return resp.GetSalt(), fromPBKDF(resp.GetKdf()), nil
 }
 
 func (c *authClient) Login(ctx context.Context, creds domain.Credentials) (string, error) {

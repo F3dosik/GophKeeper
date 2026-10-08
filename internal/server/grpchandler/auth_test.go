@@ -23,7 +23,7 @@ var (
 
 func TestAuthHandler_CreateUser_Success(t *testing.T) {
 	mockService := mocks.NewAuthService(t)
-	mockService.On("Create", mock.Anything, testLogin, testAuthKey, testSalt).
+	mockService.On("Create", mock.Anything, testLogin, testAuthKey, testSalt, domain.DefaultKDFParams).
 		Return(nil)
 
 	handler := NewAuthHandler(mockService)
@@ -34,6 +34,7 @@ func TestAuthHandler_CreateUser_Success(t *testing.T) {
 			AuthKey: testAuthKey,
 		}.Build(),
 		Salt: testSalt,
+		Kdf:  toPBKDF(domain.DefaultKDFParams),
 	}.Build()
 
 	resp, err := handler.CreateUser(context.Background(), req)
@@ -45,7 +46,7 @@ func TestAuthHandler_CreateUser_Success(t *testing.T) {
 
 func TestAuthHandler_CreateUser_UserAlreadyExists(t *testing.T) {
 	mockService := mocks.NewAuthService(t)
-	mockService.On("Create", mock.Anything, testLogin, testAuthKey, testSalt).
+	mockService.On("Create", mock.Anything, testLogin, testAuthKey, testSalt, domain.DefaultKDFParams).
 		Return(domain.ErrUserAlreadyExists)
 
 	handler := NewAuthHandler(mockService)
@@ -56,6 +57,7 @@ func TestAuthHandler_CreateUser_UserAlreadyExists(t *testing.T) {
 			AuthKey: testAuthKey,
 		}.Build(),
 		Salt: testSalt,
+		Kdf:  toPBKDF(domain.DefaultKDFParams),
 	}.Build()
 
 	_, err := handler.CreateUser(context.Background(), req)
@@ -67,7 +69,7 @@ func TestAuthHandler_CreateUser_UserAlreadyExists(t *testing.T) {
 func TestAuthHandler_GetSalt_Success(t *testing.T) {
 	mockService := mocks.NewAuthService(t)
 	mockService.On("GetSalt", mock.Anything, testLogin).
-		Return(testSalt, nil)
+		Return(testSalt, domain.DefaultKDFParams, nil)
 
 	handler := NewAuthHandler(mockService)
 
@@ -79,6 +81,7 @@ func TestAuthHandler_GetSalt_Success(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, testSalt, resp.GetSalt())
+	assert.Equal(t, domain.DefaultKDFParams, fromPBKDF(resp.GetKdf()))
 	mockService.AssertExpectations(t)
 }
 
@@ -121,4 +124,18 @@ func TestAuthHandler_Login_InvalidCredentials(t *testing.T) {
 
 	assert.Equal(t, codes.Unauthenticated, status.Code(err))
 	mockService.AssertExpectations(t)
+}
+
+// Старый клиент без параметров Argon2id получает понятную ошибку, а не регистрацию
+// с неизвестными параметрами.
+func TestAuthHandler_CreateUser_RequiresKDF(t *testing.T) {
+	handler := NewAuthHandler(mocks.NewAuthService(t))
+
+	req := pb.CreateUserRequest_builder{
+		Credentials: pb.Credentials_builder{Login: &testLogin, AuthKey: testAuthKey}.Build(),
+		Salt:        testSalt,
+	}.Build()
+
+	_, err := handler.CreateUser(context.Background(), req)
+	assert.Equal(t, codes.InvalidArgument, status.Code(err))
 }
