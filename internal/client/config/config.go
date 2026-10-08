@@ -21,6 +21,9 @@ type Config struct {
 	ServerAddress string `env:"GOPHKEEPER_SERVER"`
 	SessionPath   string `env:"GOPHKEEPER_SESSION"`
 	TLSCertPath   string `env:"GOPHKEEPER_TLS_CERT"`
+	// Insecure разрешает соединение без TLS. Только для локальной разработки:
+	// токен и ключ аутентификации передаются открытым текстом.
+	Insecure bool `env:"GOPHKEEPER_INSECURE"`
 }
 
 // Load загружает и валидирует конфигурацию из переменных окружения.

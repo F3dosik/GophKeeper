@@ -4,6 +4,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"os"
 
@@ -30,11 +31,15 @@ func main() {
 		token = sess.Token
 	}
 
-	conn, err := grpcclient.Dial(cfg.ServerAddress, cfg.TLSCertPath, token)
+	conn, err := grpcclient.Dial(cfg.ServerAddress, cfg.TLSCertPath, cfg.Insecure, token)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer conn.Close()
+
+	if cfg.Insecure {
+		fmt.Fprintln(os.Stderr, "ВНИМАНИЕ: TLS отключён (GOPHKEEPER_INSECURE), данные передаются открытым текстом")
+	}
 
 	authClient := grpcclient.NewAuthClient(pb.NewAuthClient(conn))
 	secretsClient := grpcclient.NewSecretsClient(pb.NewSecretsClient(conn))

@@ -15,10 +15,12 @@ func TestLoad_Defaults(t *testing.T) {
 	t.Setenv("GOPHKEEPER_SERVER", "")
 	t.Setenv("GOPHKEEPER_SESSION", "")
 	t.Setenv("GOPHKEEPER_TLS_CERT", "")
+	t.Setenv("GOPHKEEPER_INSECURE", "")
 
 	cfg, err := config.Load()
 
 	require.NoError(t, err)
+	assert.False(t, cfg.Insecure, "TLS must be enabled by default")
 	assert.Equal(t, "localhost:50051", cfg.ServerAddress)
 	assert.NotEmpty(t, cfg.SessionPath)
 	assert.False(t, strings.HasPrefix(cfg.SessionPath, "~/"), "SessionPath should be expanded")
@@ -68,4 +70,13 @@ func TestLoad_PathWithoutTildeUnchanged(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, "/absolute/path", cfg.SessionPath)
+}
+
+func TestLoad_Insecure(t *testing.T) {
+	t.Setenv("GOPHKEEPER_INSECURE", "true")
+
+	cfg, err := config.Load()
+
+	require.NoError(t, err)
+	assert.True(t, cfg.Insecure)
 }
