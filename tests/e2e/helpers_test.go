@@ -62,7 +62,7 @@ func (k *clientKit) initSecretsService(ctx context.Context, t *testing.T) {
 	sess, err := session.Load(k.SessionPath)
 	require.NoError(t, err)
 
-	authConn, err := grpcclient.Dial(serverAddr, "", sess.Token)
+	authConn, err := grpcclient.Dial(serverAddr, "", true, sess.Token)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = authConn.Close() })
 
