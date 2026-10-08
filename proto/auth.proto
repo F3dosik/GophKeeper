@@ -4,6 +4,8 @@ package auth;
 
 option go_package = "github.com/F3dosik/GophKeeper/proto/gen";
 
+import "google/protobuf/timestamp.proto";
+
 // Credentials — учётные данные пользователя, используемые при регистрации и входе.
 // auth_key — ключ аутентификации: HKDF(masterKey, "auth"), где masterKey = Argon2id(пароль, соль).
 // Он независим от ключей шифрования секретов, поэтому сервер (и тот, кто прочитает его БД)
@@ -76,6 +78,47 @@ message LogoutRequest {
 // LogoutResponse — пустой ответ при успешном выходе.
 message LogoutResponse {}
 
+// ChangePasswordHeader — первое сообщение потока смены пароля.
+message ChangePasswordHeader {
+    // Ключ аутентификации от текущего пароля: подтверждает, что пароль знает владелец,
+    // а не только тот, у кого есть токен.
+    bytes old_auth_key = 1;
+    // Новая соль (16 байт).
+    bytes new_salt = 2;
+    // Ключ аутентификации от нового пароля (32 байта).
+    bytes new_auth_key = 3;
+    // Параметры Argon2id, с которыми выведен новый ключ.
+    KDFParams new_kdf = 4;
+}
+
+// ReencryptedSecret — секрет, перешифрованный ключом от нового пароля.
+message ReencryptedSecret {
+    // Blind index секрета, вычисленный ключом от текущего пароля.
+    string old_blind_index = 1;
+    // Blind index, вычисленный ключом от нового пароля.
+    string new_blind_index = 2;
+    // Данные, зашифрованные ключом от нового пароля.
+    bytes data = 3;
+    // updated_at секрета на момент чтения клиентом: если секрет изменили позже,
+    // смена пароля отменяется, чтобы не затереть изменение старыми данными.
+    google.protobuf.Timestamp expected_updated_at = 4;
+}
+
+// ChangePasswordRequest — сообщение потока смены пароля: сначала header,
+// затем по одному secret на каждый секрет пользователя.
+message ChangePasswordRequest {
+    oneof part {
+        ChangePasswordHeader header = 1;
+        ReencryptedSecret secret = 2;
+    }
+}
+
+// ChangePasswordResponse — ответ на успешную смену пароля.
+message ChangePasswordResponse {
+    // Новый токен. Все ранее выданные токены пользователя отозваны.
+    string token = 1;
+}
+
 // Auth — сервис аутентификации и регистрации пользователей.
 service Auth {
     // CreateUser регистрирует нового пользователя.
@@ -94,4 +137,12 @@ service Auth {
     // Требует JWT-токен в метаданных (authorization: Bearer ...).
     // Ошибка: Unauthenticated — токен отсутствует, истёк или уже отозван.
     rpc Logout(LogoutRequest) returns (LogoutResponse);
+
+    // ChangePassword меняет пароль и перешифровывает все секреты в одной транзакции:
+    // при любой ошибке ничего не меняется. Клиент передаёт header, затем все свои секреты.
+    // Требует JWT-токен. После успеха все прежние токены пользователя отозваны.
+    // Ошибки: Unauthenticated — неверный текущий пароль или токен;
+    // Aborted — секреты изменились во время смены (нужно повторить);
+    // InvalidArgument — некорректные данные.
+    rpc ChangePassword(stream ChangePasswordRequest) returns (ChangePasswordResponse);
 }

@@ -16,6 +16,13 @@ type UserRepository interface {
 	// GetByLogin возвращает пользователя по логину.
 	// Возвращает ErrUserNotFound, если пользователь не найден.
 	GetByLogin(ctx context.Context, login string) (*User, error)
+
+	// ChangePassword в одной транзакции заменяет хеш, соль и параметры пароля,
+	// перешифровывает все секреты пользователя и увеличивает версию токенов
+	// (отзывая все токены). Возвращает новую версию токенов.
+	// Возвращает ErrInvalidCredentials, если change.OldHash не совпадает с сохранённым,
+	// и ErrSecretsChanged, если набор секретов не совпал с переданным.
+	ChangePassword(ctx context.Context, userID uuid.UUID, change PasswordHashChange, secrets SecretIterator) (int, error)
 }
 
 // TokenRepository хранит состояние отзыва JWT-токенов.
@@ -35,13 +42,16 @@ type TokenRepository interface {
 // SecretRepository определяет методы для работы с зашифрованными секретами в хранилище.
 type SecretRepository interface {
 	// Create сохраняет новый секрет и заполняет поля ID, UpdatedAt и CreatedAt.
-	// Возвращает ErrSecretAlreadyExists, если секрет с таким blind index уже существует у пользователя.
-	Create(ctx context.Context, secret *Secret) error
+	// Запись выполняется, только если версия токенов пользователя равна tokenVersion:
+	// так секрет не может появиться со старыми ключами после смены пароля.
+	// Возвращает ErrSecretAlreadyExists, если секрет с таким blind index уже существует у пользователя,
+	// и ErrInvalidCredentials, если версия токенов устарела.
+	Create(ctx context.Context, secret *Secret, tokenVersion int) error
 
 	// Update обновляет данные существующего секрета.
-	// Секрет идентифицируется по UserID и BlindIndex.
-	// Возвращает ErrSecretNotFound, если секрет не найден.
-	Update(ctx context.Context, secret *Secret) error
+	// Секрет идентифицируется по UserID и BlindIndex; как и Create, требует актуальную tokenVersion.
+	// Возвращает ErrSecretNotFound, если секрет не найден или версия токенов устарела.
+	Update(ctx context.Context, secret *Secret, tokenVersion int) error
 
 	// GetByBlindIndex возвращает секрет по идентификатору пользователя и blind index.
 	// Возвращает ErrSecretNotFound, если секрет не найден.

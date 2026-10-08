@@ -4,6 +4,9 @@
 ## Table of Contents
 
 - [auth.proto](#auth-proto)
+    - [ChangePasswordHeader](#auth-ChangePasswordHeader)
+    - [ChangePasswordRequest](#auth-ChangePasswordRequest)
+    - [ChangePasswordResponse](#auth-ChangePasswordResponse)
     - [CreateUserRequest](#auth-CreateUserRequest)
     - [CreateUserResponse](#auth-CreateUserResponse)
     - [Credentials](#auth-Credentials)
@@ -14,6 +17,7 @@
     - [LoginResponse](#auth-LoginResponse)
     - [LogoutRequest](#auth-LogoutRequest)
     - [LogoutResponse](#auth-LogoutResponse)
+    - [ReencryptedSecret](#auth-ReencryptedSecret)
   
     - [Auth](#auth-Auth)
   
@@ -41,6 +45,56 @@
 <p align="right"><a href="#top">Top</a></p>
 
 ## auth.proto
+
+
+
+<a name="auth-ChangePasswordHeader"></a>
+
+### ChangePasswordHeader
+ChangePasswordHeader — первое сообщение потока смены пароля.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| old_auth_key | [bytes](#bytes) |  | Ключ аутентификации от текущего пароля: подтверждает, что пароль знает владелец, а не только тот, у кого есть токен. |
+| new_salt | [bytes](#bytes) |  | Новая соль (16 байт). |
+| new_auth_key | [bytes](#bytes) |  | Ключ аутентификации от нового пароля (32 байта). |
+| new_kdf | [KDFParams](#auth-KDFParams) |  | Параметры Argon2id, с которыми выведен новый ключ. |
+
+
+
+
+
+
+<a name="auth-ChangePasswordRequest"></a>
+
+### ChangePasswordRequest
+ChangePasswordRequest — сообщение потока смены пароля: сначала header,
+затем по одному secret на каждый секрет пользователя.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| header | [ChangePasswordHeader](#auth-ChangePasswordHeader) |  |  |
+| secret | [ReencryptedSecret](#auth-ReencryptedSecret) |  |  |
+
+
+
+
+
+
+<a name="auth-ChangePasswordResponse"></a>
+
+### ChangePasswordResponse
+ChangePasswordResponse — ответ на успешную смену пароля.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| token | [string](#string) |  | Новый токен. Все ранее выданные токены пользователя отозваны. |
+
+
+
 
 
 
@@ -194,6 +248,24 @@ LogoutResponse — пустой ответ при успешном выходе.
 
 
 
+
+<a name="auth-ReencryptedSecret"></a>
+
+### ReencryptedSecret
+ReencryptedSecret — секрет, перешифрованный ключом от нового пароля.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| old_blind_index | [string](#string) |  | Blind index секрета, вычисленный ключом от текущего пароля. |
+| new_blind_index | [string](#string) |  | Blind index, вычисленный ключом от нового пароля. |
+| data | [bytes](#bytes) |  | Данные, зашифрованные ключом от нового пароля. |
+| expected_updated_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  | updated_at секрета на момент чтения клиентом: если секрет изменили позже, смена пароля отменяется, чтобы не затереть изменение старыми данными. |
+
+
+
+
+
  
 
  
@@ -212,6 +284,7 @@ Auth — сервис аутентификации и регистрации п�
 | GetSalt | [GetSaltRequest](#auth-GetSaltRequest) | [GetSaltResponse](#auth-GetSaltResponse) | GetSalt возвращает соль пользователя, сохранённую при регистрации. Ошибка: NotFound — пользователь не найден. |
 | Login | [LoginRequest](#auth-LoginRequest) | [LoginResponse](#auth-LoginResponse) | Login выполняет вход и возвращает JWT-токен. Ошибки: NotFound — пользователь не найден; Unauthenticated — неверные учётные данные. |
 | Logout | [LogoutRequest](#auth-LogoutRequest) | [LogoutResponse](#auth-LogoutResponse) | Logout отзывает текущий токен или все токены пользователя. Требует JWT-токен в метаданных (authorization: Bearer ...). Ошибка: Unauthenticated — токен отсутствует, истёк или уже отозван. |
+| ChangePassword | [ChangePasswordRequest](#auth-ChangePasswordRequest) stream | [ChangePasswordResponse](#auth-ChangePasswordResponse) | ChangePassword меняет пароль и перешифровывает все секреты в одной транзакции: при любой ошибке ничего не меняется. Клиент передаёт header, затем все свои секреты. Требует JWT-токен. После успеха все прежние токены пользователя отозваны. Ошибки: Unauthenticated — неверный текущий пароль или токен; Aborted — секреты изменились во время смены (нужно повторить); InvalidArgument — некорректные данные. |
 
  
 

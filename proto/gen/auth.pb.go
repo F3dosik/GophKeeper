@@ -9,6 +9,7 @@ package gen
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	unsafe "unsafe"
 )
@@ -912,11 +913,614 @@ func (b0 LogoutResponse_builder) Build() *LogoutResponse {
 	return m0
 }
 
+// ChangePasswordHeader — первое сообщение потока смены пароля.
+type ChangePasswordHeader struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_OldAuthKey  []byte                 `protobuf:"bytes,1,opt,name=old_auth_key,json=oldAuthKey"`
+	xxx_hidden_NewSalt     []byte                 `protobuf:"bytes,2,opt,name=new_salt,json=newSalt"`
+	xxx_hidden_NewAuthKey  []byte                 `protobuf:"bytes,3,opt,name=new_auth_key,json=newAuthKey"`
+	xxx_hidden_NewKdf      *KDFParams             `protobuf:"bytes,4,opt,name=new_kdf,json=newKdf"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *ChangePasswordHeader) Reset() {
+	*x = ChangePasswordHeader{}
+	mi := &file_proto_auth_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChangePasswordHeader) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChangePasswordHeader) ProtoMessage() {}
+
+func (x *ChangePasswordHeader) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ChangePasswordHeader) GetOldAuthKey() []byte {
+	if x != nil {
+		return x.xxx_hidden_OldAuthKey
+	}
+	return nil
+}
+
+func (x *ChangePasswordHeader) GetNewSalt() []byte {
+	if x != nil {
+		return x.xxx_hidden_NewSalt
+	}
+	return nil
+}
+
+func (x *ChangePasswordHeader) GetNewAuthKey() []byte {
+	if x != nil {
+		return x.xxx_hidden_NewAuthKey
+	}
+	return nil
+}
+
+func (x *ChangePasswordHeader) GetNewKdf() *KDFParams {
+	if x != nil {
+		return x.xxx_hidden_NewKdf
+	}
+	return nil
+}
+
+func (x *ChangePasswordHeader) SetOldAuthKey(v []byte) {
+	if v == nil {
+		v = []byte{}
+	}
+	x.xxx_hidden_OldAuthKey = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 4)
+}
+
+func (x *ChangePasswordHeader) SetNewSalt(v []byte) {
+	if v == nil {
+		v = []byte{}
+	}
+	x.xxx_hidden_NewSalt = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 4)
+}
+
+func (x *ChangePasswordHeader) SetNewAuthKey(v []byte) {
+	if v == nil {
+		v = []byte{}
+	}
+	x.xxx_hidden_NewAuthKey = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 4)
+}
+
+func (x *ChangePasswordHeader) SetNewKdf(v *KDFParams) {
+	x.xxx_hidden_NewKdf = v
+}
+
+func (x *ChangePasswordHeader) HasOldAuthKey() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
+}
+
+func (x *ChangePasswordHeader) HasNewSalt() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+}
+
+func (x *ChangePasswordHeader) HasNewAuthKey() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
+}
+
+func (x *ChangePasswordHeader) HasNewKdf() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_NewKdf != nil
+}
+
+func (x *ChangePasswordHeader) ClearOldAuthKey() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
+	x.xxx_hidden_OldAuthKey = nil
+}
+
+func (x *ChangePasswordHeader) ClearNewSalt() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_NewSalt = nil
+}
+
+func (x *ChangePasswordHeader) ClearNewAuthKey() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
+	x.xxx_hidden_NewAuthKey = nil
+}
+
+func (x *ChangePasswordHeader) ClearNewKdf() {
+	x.xxx_hidden_NewKdf = nil
+}
+
+type ChangePasswordHeader_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// Ключ аутентификации от текущего пароля: подтверждает, что пароль знает владелец,
+	// а не только тот, у кого есть токен.
+	OldAuthKey []byte
+	// Новая соль (16 байт).
+	NewSalt []byte
+	// Ключ аутентификации от нового пароля (32 байта).
+	NewAuthKey []byte
+	// Параметры Argon2id, с которыми выведен новый ключ.
+	NewKdf *KDFParams
+}
+
+func (b0 ChangePasswordHeader_builder) Build() *ChangePasswordHeader {
+	m0 := &ChangePasswordHeader{}
+	b, x := &b0, m0
+	_, _ = b, x
+	if b.OldAuthKey != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 4)
+		x.xxx_hidden_OldAuthKey = b.OldAuthKey
+	}
+	if b.NewSalt != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 4)
+		x.xxx_hidden_NewSalt = b.NewSalt
+	}
+	if b.NewAuthKey != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 4)
+		x.xxx_hidden_NewAuthKey = b.NewAuthKey
+	}
+	x.xxx_hidden_NewKdf = b.NewKdf
+	return m0
+}
+
+// ReencryptedSecret — секрет, перешифрованный ключом от нового пароля.
+type ReencryptedSecret struct {
+	state                        protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_OldBlindIndex     *string                `protobuf:"bytes,1,opt,name=old_blind_index,json=oldBlindIndex"`
+	xxx_hidden_NewBlindIndex     *string                `protobuf:"bytes,2,opt,name=new_blind_index,json=newBlindIndex"`
+	xxx_hidden_Data              []byte                 `protobuf:"bytes,3,opt,name=data"`
+	xxx_hidden_ExpectedUpdatedAt *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=expected_updated_at,json=expectedUpdatedAt"`
+	XXX_raceDetectHookData       protoimpl.RaceDetectHookData
+	XXX_presence                 [1]uint32
+	unknownFields                protoimpl.UnknownFields
+	sizeCache                    protoimpl.SizeCache
+}
+
+func (x *ReencryptedSecret) Reset() {
+	*x = ReencryptedSecret{}
+	mi := &file_proto_auth_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReencryptedSecret) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReencryptedSecret) ProtoMessage() {}
+
+func (x *ReencryptedSecret) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ReencryptedSecret) GetOldBlindIndex() string {
+	if x != nil {
+		if x.xxx_hidden_OldBlindIndex != nil {
+			return *x.xxx_hidden_OldBlindIndex
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *ReencryptedSecret) GetNewBlindIndex() string {
+	if x != nil {
+		if x.xxx_hidden_NewBlindIndex != nil {
+			return *x.xxx_hidden_NewBlindIndex
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *ReencryptedSecret) GetData() []byte {
+	if x != nil {
+		return x.xxx_hidden_Data
+	}
+	return nil
+}
+
+func (x *ReencryptedSecret) GetExpectedUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_ExpectedUpdatedAt
+	}
+	return nil
+}
+
+func (x *ReencryptedSecret) SetOldBlindIndex(v string) {
+	x.xxx_hidden_OldBlindIndex = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 4)
+}
+
+func (x *ReencryptedSecret) SetNewBlindIndex(v string) {
+	x.xxx_hidden_NewBlindIndex = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 4)
+}
+
+func (x *ReencryptedSecret) SetData(v []byte) {
+	if v == nil {
+		v = []byte{}
+	}
+	x.xxx_hidden_Data = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 4)
+}
+
+func (x *ReencryptedSecret) SetExpectedUpdatedAt(v *timestamppb.Timestamp) {
+	x.xxx_hidden_ExpectedUpdatedAt = v
+}
+
+func (x *ReencryptedSecret) HasOldBlindIndex() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
+}
+
+func (x *ReencryptedSecret) HasNewBlindIndex() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+}
+
+func (x *ReencryptedSecret) HasData() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
+}
+
+func (x *ReencryptedSecret) HasExpectedUpdatedAt() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_ExpectedUpdatedAt != nil
+}
+
+func (x *ReencryptedSecret) ClearOldBlindIndex() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
+	x.xxx_hidden_OldBlindIndex = nil
+}
+
+func (x *ReencryptedSecret) ClearNewBlindIndex() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_NewBlindIndex = nil
+}
+
+func (x *ReencryptedSecret) ClearData() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
+	x.xxx_hidden_Data = nil
+}
+
+func (x *ReencryptedSecret) ClearExpectedUpdatedAt() {
+	x.xxx_hidden_ExpectedUpdatedAt = nil
+}
+
+type ReencryptedSecret_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// Blind index секрета, вычисленный ключом от текущего пароля.
+	OldBlindIndex *string
+	// Blind index, вычисленный ключом от нового пароля.
+	NewBlindIndex *string
+	// Данные, зашифрованные ключом от нового пароля.
+	Data []byte
+	// updated_at секрета на момент чтения клиентом: если секрет изменили позже,
+	// смена пароля отменяется, чтобы не затереть изменение старыми данными.
+	ExpectedUpdatedAt *timestamppb.Timestamp
+}
+
+func (b0 ReencryptedSecret_builder) Build() *ReencryptedSecret {
+	m0 := &ReencryptedSecret{}
+	b, x := &b0, m0
+	_, _ = b, x
+	if b.OldBlindIndex != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 4)
+		x.xxx_hidden_OldBlindIndex = b.OldBlindIndex
+	}
+	if b.NewBlindIndex != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 4)
+		x.xxx_hidden_NewBlindIndex = b.NewBlindIndex
+	}
+	if b.Data != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 4)
+		x.xxx_hidden_Data = b.Data
+	}
+	x.xxx_hidden_ExpectedUpdatedAt = b.ExpectedUpdatedAt
+	return m0
+}
+
+// ChangePasswordRequest — сообщение потока смены пароля: сначала header,
+// затем по одному secret на каждый секрет пользователя.
+type ChangePasswordRequest struct {
+	state           protoimpl.MessageState       `protogen:"opaque.v1"`
+	xxx_hidden_Part isChangePasswordRequest_Part `protobuf_oneof:"part"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ChangePasswordRequest) Reset() {
+	*x = ChangePasswordRequest{}
+	mi := &file_proto_auth_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChangePasswordRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChangePasswordRequest) ProtoMessage() {}
+
+func (x *ChangePasswordRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ChangePasswordRequest) GetHeader() *ChangePasswordHeader {
+	if x != nil {
+		if x, ok := x.xxx_hidden_Part.(*changePasswordRequest_Header); ok {
+			return x.Header
+		}
+	}
+	return nil
+}
+
+func (x *ChangePasswordRequest) GetSecret() *ReencryptedSecret {
+	if x != nil {
+		if x, ok := x.xxx_hidden_Part.(*changePasswordRequest_Secret); ok {
+			return x.Secret
+		}
+	}
+	return nil
+}
+
+func (x *ChangePasswordRequest) SetHeader(v *ChangePasswordHeader) {
+	if v == nil {
+		x.xxx_hidden_Part = nil
+		return
+	}
+	x.xxx_hidden_Part = &changePasswordRequest_Header{v}
+}
+
+func (x *ChangePasswordRequest) SetSecret(v *ReencryptedSecret) {
+	if v == nil {
+		x.xxx_hidden_Part = nil
+		return
+	}
+	x.xxx_hidden_Part = &changePasswordRequest_Secret{v}
+}
+
+func (x *ChangePasswordRequest) HasPart() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Part != nil
+}
+
+func (x *ChangePasswordRequest) HasHeader() bool {
+	if x == nil {
+		return false
+	}
+	_, ok := x.xxx_hidden_Part.(*changePasswordRequest_Header)
+	return ok
+}
+
+func (x *ChangePasswordRequest) HasSecret() bool {
+	if x == nil {
+		return false
+	}
+	_, ok := x.xxx_hidden_Part.(*changePasswordRequest_Secret)
+	return ok
+}
+
+func (x *ChangePasswordRequest) ClearPart() {
+	x.xxx_hidden_Part = nil
+}
+
+func (x *ChangePasswordRequest) ClearHeader() {
+	if _, ok := x.xxx_hidden_Part.(*changePasswordRequest_Header); ok {
+		x.xxx_hidden_Part = nil
+	}
+}
+
+func (x *ChangePasswordRequest) ClearSecret() {
+	if _, ok := x.xxx_hidden_Part.(*changePasswordRequest_Secret); ok {
+		x.xxx_hidden_Part = nil
+	}
+}
+
+const ChangePasswordRequest_Part_not_set_case case_ChangePasswordRequest_Part = 0
+const ChangePasswordRequest_Header_case case_ChangePasswordRequest_Part = 1
+const ChangePasswordRequest_Secret_case case_ChangePasswordRequest_Part = 2
+
+func (x *ChangePasswordRequest) WhichPart() case_ChangePasswordRequest_Part {
+	if x == nil {
+		return ChangePasswordRequest_Part_not_set_case
+	}
+	switch x.xxx_hidden_Part.(type) {
+	case *changePasswordRequest_Header:
+		return ChangePasswordRequest_Header_case
+	case *changePasswordRequest_Secret:
+		return ChangePasswordRequest_Secret_case
+	default:
+		return ChangePasswordRequest_Part_not_set_case
+	}
+}
+
+type ChangePasswordRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// Fields of oneof xxx_hidden_Part:
+	Header *ChangePasswordHeader
+	Secret *ReencryptedSecret
+	// -- end of xxx_hidden_Part
+}
+
+func (b0 ChangePasswordRequest_builder) Build() *ChangePasswordRequest {
+	m0 := &ChangePasswordRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	if b.Header != nil {
+		x.xxx_hidden_Part = &changePasswordRequest_Header{b.Header}
+	}
+	if b.Secret != nil {
+		x.xxx_hidden_Part = &changePasswordRequest_Secret{b.Secret}
+	}
+	return m0
+}
+
+type case_ChangePasswordRequest_Part protoreflect.FieldNumber
+
+func (x case_ChangePasswordRequest_Part) String() string {
+	md := file_proto_auth_proto_msgTypes[12].Descriptor()
+	if x == 0 {
+		return "not set"
+	}
+	return protoimpl.X.MessageFieldStringOf(md, protoreflect.FieldNumber(x))
+}
+
+type isChangePasswordRequest_Part interface {
+	isChangePasswordRequest_Part()
+}
+
+type changePasswordRequest_Header struct {
+	Header *ChangePasswordHeader `protobuf:"bytes,1,opt,name=header,oneof"`
+}
+
+type changePasswordRequest_Secret struct {
+	Secret *ReencryptedSecret `protobuf:"bytes,2,opt,name=secret,oneof"`
+}
+
+func (*changePasswordRequest_Header) isChangePasswordRequest_Part() {}
+
+func (*changePasswordRequest_Secret) isChangePasswordRequest_Part() {}
+
+// ChangePasswordResponse — ответ на успешную смену пароля.
+type ChangePasswordResponse struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Token       *string                `protobuf:"bytes,1,opt,name=token"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *ChangePasswordResponse) Reset() {
+	*x = ChangePasswordResponse{}
+	mi := &file_proto_auth_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChangePasswordResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChangePasswordResponse) ProtoMessage() {}
+
+func (x *ChangePasswordResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ChangePasswordResponse) GetToken() string {
+	if x != nil {
+		if x.xxx_hidden_Token != nil {
+			return *x.xxx_hidden_Token
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *ChangePasswordResponse) SetToken(v string) {
+	x.xxx_hidden_Token = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 1)
+}
+
+func (x *ChangePasswordResponse) HasToken() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
+}
+
+func (x *ChangePasswordResponse) ClearToken() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
+	x.xxx_hidden_Token = nil
+}
+
+type ChangePasswordResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// Новый токен. Все ранее выданные токены пользователя отозваны.
+	Token *string
+}
+
+func (b0 ChangePasswordResponse_builder) Build() *ChangePasswordResponse {
+	m0 := &ChangePasswordResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	if b.Token != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 1)
+		x.xxx_hidden_Token = b.Token
+	}
+	return m0
+}
+
 var File_proto_auth_proto protoreflect.FileDescriptor
 
 const file_proto_auth_proto_rawDesc = "" +
 	"\n" +
-	"\x10proto/auth.proto\x12\x04auth\">\n" +
+	"\x10proto/auth.proto\x12\x04auth\x1a\x1fgoogle/protobuf/timestamp.proto\">\n" +
 	"\vCredentials\x12\x14\n" +
 	"\x05login\x18\x01 \x01(\tR\x05login\x12\x19\n" +
 	"\bauth_key\x18\x02 \x01(\fR\aauthKey\"X\n" +
@@ -941,45 +1545,75 @@ const file_proto_auth_proto_rawDesc = "" +
 	"\x05token\x18\x01 \x01(\tR\x05token\"2\n" +
 	"\rLogoutRequest\x12!\n" +
 	"\fall_sessions\x18\x01 \x01(\bR\vallSessions\"\x10\n" +
-	"\x0eLogoutResponse2\xe6\x01\n" +
+	"\x0eLogoutResponse\"\x9f\x01\n" +
+	"\x14ChangePasswordHeader\x12 \n" +
+	"\fold_auth_key\x18\x01 \x01(\fR\n" +
+	"oldAuthKey\x12\x19\n" +
+	"\bnew_salt\x18\x02 \x01(\fR\anewSalt\x12 \n" +
+	"\fnew_auth_key\x18\x03 \x01(\fR\n" +
+	"newAuthKey\x12(\n" +
+	"\anew_kdf\x18\x04 \x01(\v2\x0f.auth.KDFParamsR\x06newKdf\"\xc3\x01\n" +
+	"\x11ReencryptedSecret\x12&\n" +
+	"\x0fold_blind_index\x18\x01 \x01(\tR\roldBlindIndex\x12&\n" +
+	"\x0fnew_blind_index\x18\x02 \x01(\tR\rnewBlindIndex\x12\x12\n" +
+	"\x04data\x18\x03 \x01(\fR\x04data\x12J\n" +
+	"\x13expected_updated_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\x11expectedUpdatedAt\"\x88\x01\n" +
+	"\x15ChangePasswordRequest\x124\n" +
+	"\x06header\x18\x01 \x01(\v2\x1a.auth.ChangePasswordHeaderH\x00R\x06header\x121\n" +
+	"\x06secret\x18\x02 \x01(\v2\x17.auth.ReencryptedSecretH\x00R\x06secretB\x06\n" +
+	"\x04part\".\n" +
+	"\x16ChangePasswordResponse\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token2\xb5\x02\n" +
 	"\x04Auth\x12?\n" +
 	"\n" +
 	"CreateUser\x12\x17.auth.CreateUserRequest\x1a\x18.auth.CreateUserResponse\x126\n" +
 	"\aGetSalt\x12\x14.auth.GetSaltRequest\x1a\x15.auth.GetSaltResponse\x120\n" +
 	"\x05Login\x12\x12.auth.LoginRequest\x1a\x13.auth.LoginResponse\x123\n" +
-	"\x06Logout\x12\x13.auth.LogoutRequest\x1a\x14.auth.LogoutResponseB)Z'github.com/F3dosik/GophKeeper/proto/genb\beditionsp\xe8\a"
+	"\x06Logout\x12\x13.auth.LogoutRequest\x1a\x14.auth.LogoutResponse\x12M\n" +
+	"\x0eChangePassword\x12\x1b.auth.ChangePasswordRequest\x1a\x1c.auth.ChangePasswordResponse(\x01B)Z'github.com/F3dosik/GophKeeper/proto/genb\beditionsp\xe8\a"
 
-var file_proto_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_proto_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_proto_auth_proto_goTypes = []any{
-	(*Credentials)(nil),        // 0: auth.Credentials
-	(*KDFParams)(nil),          // 1: auth.KDFParams
-	(*CreateUserRequest)(nil),  // 2: auth.CreateUserRequest
-	(*CreateUserResponse)(nil), // 3: auth.CreateUserResponse
-	(*GetSaltRequest)(nil),     // 4: auth.GetSaltRequest
-	(*GetSaltResponse)(nil),    // 5: auth.GetSaltResponse
-	(*LoginRequest)(nil),       // 6: auth.LoginRequest
-	(*LoginResponse)(nil),      // 7: auth.LoginResponse
-	(*LogoutRequest)(nil),      // 8: auth.LogoutRequest
-	(*LogoutResponse)(nil),     // 9: auth.LogoutResponse
+	(*Credentials)(nil),            // 0: auth.Credentials
+	(*KDFParams)(nil),              // 1: auth.KDFParams
+	(*CreateUserRequest)(nil),      // 2: auth.CreateUserRequest
+	(*CreateUserResponse)(nil),     // 3: auth.CreateUserResponse
+	(*GetSaltRequest)(nil),         // 4: auth.GetSaltRequest
+	(*GetSaltResponse)(nil),        // 5: auth.GetSaltResponse
+	(*LoginRequest)(nil),           // 6: auth.LoginRequest
+	(*LoginResponse)(nil),          // 7: auth.LoginResponse
+	(*LogoutRequest)(nil),          // 8: auth.LogoutRequest
+	(*LogoutResponse)(nil),         // 9: auth.LogoutResponse
+	(*ChangePasswordHeader)(nil),   // 10: auth.ChangePasswordHeader
+	(*ReencryptedSecret)(nil),      // 11: auth.ReencryptedSecret
+	(*ChangePasswordRequest)(nil),  // 12: auth.ChangePasswordRequest
+	(*ChangePasswordResponse)(nil), // 13: auth.ChangePasswordResponse
+	(*timestamppb.Timestamp)(nil),  // 14: google.protobuf.Timestamp
 }
 var file_proto_auth_proto_depIdxs = []int32{
-	0, // 0: auth.CreateUserRequest.credentials:type_name -> auth.Credentials
-	1, // 1: auth.CreateUserRequest.kdf:type_name -> auth.KDFParams
-	1, // 2: auth.GetSaltResponse.kdf:type_name -> auth.KDFParams
-	0, // 3: auth.LoginRequest.credentials:type_name -> auth.Credentials
-	2, // 4: auth.Auth.CreateUser:input_type -> auth.CreateUserRequest
-	4, // 5: auth.Auth.GetSalt:input_type -> auth.GetSaltRequest
-	6, // 6: auth.Auth.Login:input_type -> auth.LoginRequest
-	8, // 7: auth.Auth.Logout:input_type -> auth.LogoutRequest
-	3, // 8: auth.Auth.CreateUser:output_type -> auth.CreateUserResponse
-	5, // 9: auth.Auth.GetSalt:output_type -> auth.GetSaltResponse
-	7, // 10: auth.Auth.Login:output_type -> auth.LoginResponse
-	9, // 11: auth.Auth.Logout:output_type -> auth.LogoutResponse
-	8, // [8:12] is the sub-list for method output_type
-	4, // [4:8] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	0,  // 0: auth.CreateUserRequest.credentials:type_name -> auth.Credentials
+	1,  // 1: auth.CreateUserRequest.kdf:type_name -> auth.KDFParams
+	1,  // 2: auth.GetSaltResponse.kdf:type_name -> auth.KDFParams
+	0,  // 3: auth.LoginRequest.credentials:type_name -> auth.Credentials
+	1,  // 4: auth.ChangePasswordHeader.new_kdf:type_name -> auth.KDFParams
+	14, // 5: auth.ReencryptedSecret.expected_updated_at:type_name -> google.protobuf.Timestamp
+	10, // 6: auth.ChangePasswordRequest.header:type_name -> auth.ChangePasswordHeader
+	11, // 7: auth.ChangePasswordRequest.secret:type_name -> auth.ReencryptedSecret
+	2,  // 8: auth.Auth.CreateUser:input_type -> auth.CreateUserRequest
+	4,  // 9: auth.Auth.GetSalt:input_type -> auth.GetSaltRequest
+	6,  // 10: auth.Auth.Login:input_type -> auth.LoginRequest
+	8,  // 11: auth.Auth.Logout:input_type -> auth.LogoutRequest
+	12, // 12: auth.Auth.ChangePassword:input_type -> auth.ChangePasswordRequest
+	3,  // 13: auth.Auth.CreateUser:output_type -> auth.CreateUserResponse
+	5,  // 14: auth.Auth.GetSalt:output_type -> auth.GetSaltResponse
+	7,  // 15: auth.Auth.Login:output_type -> auth.LoginResponse
+	9,  // 16: auth.Auth.Logout:output_type -> auth.LogoutResponse
+	13, // 17: auth.Auth.ChangePassword:output_type -> auth.ChangePasswordResponse
+	13, // [13:18] is the sub-list for method output_type
+	8,  // [8:13] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_proto_auth_proto_init() }
@@ -987,13 +1621,17 @@ func file_proto_auth_proto_init() {
 	if File_proto_auth_proto != nil {
 		return
 	}
+	file_proto_auth_proto_msgTypes[12].OneofWrappers = []any{
+		(*changePasswordRequest_Header)(nil),
+		(*changePasswordRequest_Secret)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_auth_proto_rawDesc), len(file_proto_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

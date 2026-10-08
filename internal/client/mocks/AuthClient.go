@@ -15,6 +15,34 @@ type AuthClient struct {
 	mock.Mock
 }
 
+// ChangePassword provides a mock function with given fields: ctx, change, secrets
+func (_m *AuthClient) ChangePassword(ctx context.Context, change domain.PasswordChange, secrets []domain.ReencryptedSecret) (string, error) {
+	ret := _m.Called(ctx, change, secrets)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ChangePassword")
+	}
+
+	var r0 string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, domain.PasswordChange, []domain.ReencryptedSecret) (string, error)); ok {
+		return rf(ctx, change, secrets)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, domain.PasswordChange, []domain.ReencryptedSecret) string); ok {
+		r0 = rf(ctx, change, secrets)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, domain.PasswordChange, []domain.ReencryptedSecret) error); ok {
+		r1 = rf(ctx, change, secrets)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // CreateUser provides a mock function with given fields: ctx, creds, salt, kdf
 func (_m *AuthClient) CreateUser(ctx context.Context, creds domain.Credentials, salt []byte, kdf domain.KDFParams) error {
 	ret := _m.Called(ctx, creds, salt, kdf)

@@ -34,6 +34,13 @@ type AuthService interface {
 	// Logout отзывает токен с идентификатором jti (действующий до expiresAt) или,
 	// если allSessions == true, все токены пользователя userID.
 	Logout(ctx context.Context, userID, jti uuid.UUID, expiresAt time.Time, allSessions bool) error
+
+	// ChangePassword проверяет текущий пароль по change.OldAuthKey, сохраняет новые
+	// соль, параметры и хеш и заменяет все секреты пользователя перешифрованными из secrets.
+	// Всё выполняется атомарно; все прежние токены отзываются. Возвращает новый токен.
+	// Возвращает ErrInvalidCredentials при неверном текущем пароле и ErrSecretsChanged,
+	// если секреты изменились во время смены.
+	ChangePassword(ctx context.Context, userID uuid.UUID, change domain.PasswordChange, secrets domain.SecretIterator) (string, error)
 }
 
 // Контексты HKDF для ключей, выводимых из JWT_SECRET.
@@ -71,6 +78,8 @@ type AuthConfig struct {
 	Keys ServerKeys
 	// TokenTTL — время жизни выдаваемых токенов.
 	TokenTTL time.Duration
+	// SecretLimits — квоты на секреты; проверяются и при перешифровке во время смены пароля.
+	SecretLimits SecretLimits
 }
 
 // authService реализует AuthService.
@@ -165,4 +174,67 @@ func (s *authService) Logout(
 		return s.tokens.RevokeAll(ctx, userID)
 	}
 	return s.tokens.Revoke(ctx, jti, expiresAt)
+}
+
+// ChangePassword меняет пароль пользователя и перешифровывает его секреты.
+func (s *authService) ChangePassword(
+	ctx context.Context, userID uuid.UUID, change domain.PasswordChange, secrets domain.SecretIterator,
+) (string, error) {
+	if err := validateAuthKey(change.OldAuthKey); err != nil {
+		return "", err
+	}
+	if err := validateAuthKey(change.NewAuthKey); err != nil {
+		return "", err
+	}
+	if err := validateSalt(change.NewSalt); err != nil {
+		return "", err
+	}
+	if err := change.NewKDF.Validate(); err != nil {
+		return "", err
+	}
+
+	version, err := s.repo.ChangePassword(ctx, userID, domain.PasswordHashChange{
+		OldHash: crypto.HashAuthKey(change.OldAuthKey),
+		NewHash: crypto.HashAuthKey(change.NewAuthKey),
+		NewSalt: change.NewSalt,
+		NewKDF:  change.NewKDF,
+	}, s.validatedSecrets(secrets))
+	if err != nil {
+		return "", err
+	}
+
+	token, err := jwtutil.GenerateToken(userID, version, s.cfg.Keys.TokenSigning, s.cfg.TokenTTL)
+	if err != nil {
+		return "", fmt.Errorf("authService.ChangePassword: generate token: %w", err)
+	}
+	return token, nil
+}
+
+// validatedSecrets проверяет каждый перешифрованный секрет по мере получения:
+// формат blind index, размер данных и общее число секретов.
+func (s *authService) validatedSecrets(next domain.SecretIterator) domain.SecretIterator {
+	count := 0
+	return func() (*domain.ReencryptedSecret, error) {
+		secret, err := next()
+		if err != nil || secret == nil {
+			return secret, err
+		}
+		count++
+		if count > s.cfg.SecretLimits.MaxCount {
+			return nil, domain.ErrSecretQuotaExceeded
+		}
+		if err := validateBlindIndex(secret.OldBlindIndex); err != nil {
+			return nil, err
+		}
+		if err := validateBlindIndex(secret.NewBlindIndex); err != nil {
+			return nil, err
+		}
+		if len(secret.Data) == 0 {
+			return nil, fmt.Errorf("%w: secret data is empty", domain.ErrInvalidArgument)
+		}
+		if len(secret.Data) > s.cfg.SecretLimits.MaxSize {
+			return nil, domain.ErrSecretTooLarge
+		}
+		return secret, nil
+	}
 }

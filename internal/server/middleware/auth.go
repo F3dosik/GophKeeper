@@ -37,42 +37,71 @@ func AuthInterceptor(secretKey string, tokens domain.TokenRepository, logger *za
 		if publicMethods[info.FullMethod] {
 			return handler(ctx, req)
 		}
-
-		var token string
-		if md, ok := metadata.FromIncomingContext(ctx); ok {
-			values := md.Get(string(tokenKey))
-			if len(values) > 0 {
-				token = strings.TrimPrefix(values[0], "Bearer ")
-			}
-		}
-
-		if len(token) == 0 {
-			logger.Warnw("unauthenticated request",
-				"method", info.FullMethod,
-			)
-			return nil, status.Error(codes.Unauthenticated, "missing token")
-		}
-
-		claims, err := jwtutil.ParseToken(token, secretKey)
+		ctx, err = authenticate(ctx, info.FullMethod, secretKey, tokens, logger)
 		if err != nil {
-			logger.Warnw("invalid token",
-				"method", info.FullMethod,
-				"error", err,
-			)
-			return nil, status.Error(codes.Unauthenticated, "invalid token")
+			return nil, err
 		}
-
-		active, err := tokens.IsActive(ctx, claims.UserID, claims.TokenVersion, claims.TokenID)
-		if err != nil {
-			logger.Errorw("check token revocation", "method", info.FullMethod, "error", err)
-			return nil, status.Error(codes.Internal, "internal error")
-		}
-		if !active {
-			logger.Warnw("revoked token", "method", info.FullMethod, "user_id", claims.UserID)
-			return nil, status.Error(codes.Unauthenticated, "token revoked")
-		}
-
-		ctx = WithUserID(ctx, claims.UserID)
-		return handler(WithClaims(ctx, claims), req)
+		return handler(ctx, req)
 	}
+}
+
+// AuthStreamInterceptor — потоковый аналог AuthInterceptor: проверяет токен до начала
+// обработки потока и передаёт обработчику контекст с userID и claims.
+func AuthStreamInterceptor(secretKey string, tokens domain.TokenRepository, logger *zap.SugaredLogger) grpc.StreamServerInterceptor {
+	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		ctx, err := authenticate(ss.Context(), info.FullMethod, secretKey, tokens, logger)
+		if err != nil {
+			return err
+		}
+		return handler(srv, &contextStream{ServerStream: ss, ctx: ctx})
+	}
+}
+
+// contextStream подменяет контекст серверного потока.
+type contextStream struct {
+	grpc.ServerStream
+	ctx context.Context
+}
+
+// Context возвращает подменённый контекст.
+func (s *contextStream) Context() context.Context {
+	return s.ctx
+}
+
+// authenticate извлекает и проверяет токен запроса, включая отзыв, и возвращает
+// контекст с userID и claims.
+func authenticate(
+	ctx context.Context, method, secretKey string, tokens domain.TokenRepository, logger *zap.SugaredLogger,
+) (context.Context, error) {
+	var token string
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+		values := md.Get(string(tokenKey))
+		if len(values) > 0 {
+			token = strings.TrimPrefix(values[0], "Bearer ")
+		}
+	}
+
+	if len(token) == 0 {
+		logger.Warnw("unauthenticated request", "method", method)
+		return nil, status.Error(codes.Unauthenticated, "missing token")
+	}
+
+	claims, err := jwtutil.ParseToken(token, secretKey)
+	if err != nil {
+		logger.Warnw("invalid token", "method", method, "error", err)
+		return nil, status.Error(codes.Unauthenticated, "invalid token")
+	}
+
+	active, err := tokens.IsActive(ctx, claims.UserID, claims.TokenVersion, claims.TokenID)
+	if err != nil {
+		logger.Errorw("check token revocation", "method", method, "error", err)
+		return nil, status.Error(codes.Internal, "internal error")
+	}
+	if !active {
+		logger.Warnw("revoked token", "method", method, "user_id", claims.UserID)
+		return nil, status.Error(codes.Unauthenticated, "token revoked")
+	}
+
+	ctx = WithUserID(ctx, claims.UserID)
+	return WithClaims(ctx, claims), nil
 }

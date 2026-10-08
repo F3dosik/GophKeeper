@@ -27,13 +27,13 @@ func NewSecretHandler(secretService service.SecretService) pb.SecretsServer {
 // Возвращает codes.AlreadyExists если секрет с таким blind index уже существует.
 // Возвращает codes.InvalidArgument если blind index или data пустые.
 func (h *secretHandler) CreateSecret(ctx context.Context, req *pb.CreateSecretRequest) (*pb.CreateSecretResponse, error) {
-	userID, err := middleware.UserIDFromContext(ctx)
+	claims, err := middleware.ClaimsFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	if err := h.secretService.Create(
-		ctx, userID, req.GetItem().GetBlindIndex(), req.GetItem().GetData(),
+		ctx, claims.UserID, claims.TokenVersion, req.GetItem().GetBlindIndex(), req.GetItem().GetData(),
 	); err != nil {
 		return nil, toGRPCError(err)
 	}
@@ -45,13 +45,13 @@ func (h *secretHandler) CreateSecret(ctx context.Context, req *pb.CreateSecretRe
 // Возвращает codes.NotFound если секрет не найден.
 // Возвращает codes.InvalidArgument если blind index или data пустые.
 func (h *secretHandler) UpdateSecret(ctx context.Context, req *pb.UpdateSecretRequest) (*pb.UpdateSecretResponse, error) {
-	userID, err := middleware.UserIDFromContext(ctx)
+	claims, err := middleware.ClaimsFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	if err := h.secretService.Update(
-		ctx, userID, req.GetItem().GetBlindIndex(), req.GetItem().GetData(),
+		ctx, claims.UserID, claims.TokenVersion, req.GetItem().GetBlindIndex(), req.GetItem().GetData(),
 	); err != nil {
 		return nil, toGRPCError(err)
 	}

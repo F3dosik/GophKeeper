@@ -36,6 +36,7 @@ func Dial(serverAddr, tlsCertPath string, allowInsecure bool, tokens *TokenStore
 		grpc.WithTransportCredentials(creds),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxRecvMsgSize)),
 		grpc.WithUnaryInterceptor(authInterceptor(tokens)),
+		grpc.WithStreamInterceptor(authStreamInterceptor(tokens)),
 	)
 }
 

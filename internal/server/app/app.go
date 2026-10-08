@@ -44,14 +44,13 @@ func New(ctx context.Context, cfg *Config, logger *zap.SugaredLogger) (*App, err
 		pool.Close()
 		return nil, fmt.Errorf("app: %w", err)
 	}
+	secretLimits := service.SecretLimits{MaxSize: cfg.SecretMaxSize, MaxCount: cfg.SecretMaxCount}
 	authService := service.NewAuthService(userRepo, tokenRepo, service.AuthConfig{
-		Keys:     keys,
-		TokenTTL: cfg.TokenTTL,
+		Keys:         keys,
+		TokenTTL:     cfg.TokenTTL,
+		SecretLimits: secretLimits,
 	})
-	secretService := service.NewSecretService(secretRepo, service.SecretLimits{
-		MaxSize:  cfg.SecretMaxSize,
-		MaxCount: cfg.SecretMaxCount,
-	})
+	secretService := service.NewSecretService(secretRepo, secretLimits)
 
 	authHandler := grpchandler.NewAuthHandler(authService)
 	secretHandler := grpchandler.NewSecretHandler(secretService)
@@ -63,6 +62,10 @@ func New(ctx context.Context, cfg *Config, logger *zap.SugaredLogger) (*App, err
 				middleware.NewIPRateLimiter(cfg.AuthRateLimit, cfg.AuthRateBurst), logger,
 			),
 			middleware.AuthInterceptor(keys.TokenSigning, tokenRepo, logger),
+		),
+		grpc.ChainStreamInterceptor(
+			middleware.LoggingStreamInterceptor(logger),
+			middleware.AuthStreamInterceptor(keys.TokenSigning, tokenRepo, logger),
 		),
 		// Сообщения больше секрета максимального размера (плюс запас на служебные поля)
 		// отклоняются до разбора и не расходуют память сервера.

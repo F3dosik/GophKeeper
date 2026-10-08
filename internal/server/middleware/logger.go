@@ -34,3 +34,23 @@ func LoggingInterceptor(logger *zap.SugaredLogger) grpc.UnaryServerInterceptor {
 		return resp, err
 	}
 }
+
+// LoggingStreamInterceptor — потоковый аналог LoggingInterceptor: логирует метод,
+// IP клиента, длительность и ошибку после завершения потока.
+func LoggingStreamInterceptor(logger *zap.SugaredLogger) grpc.StreamServerInterceptor {
+	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		start := time.Now()
+		err := handler(srv, ss)
+
+		fields := []any{
+			"method", info.FullMethod,
+			"duration", time.Since(start),
+			"client_ip", clientIP(ss.Context()),
+		}
+		if err != nil {
+			fields = append(fields, "error", err)
+		}
+		logger.Infow("stream", fields...)
+		return err
+	}
+}

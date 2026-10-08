@@ -33,6 +33,40 @@ type Secret struct {
 	CreatedAt  time.Time
 }
 
+// PasswordChange — данные для смены пароля, которые клиент выводит из старого и нового пароля.
+type PasswordChange struct {
+	// OldAuthKey — ключ аутентификации от текущего пароля.
+	OldAuthKey []byte
+	// NewSalt и NewKDF — соль и параметры Argon2id нового пароля.
+	NewSalt []byte
+	NewKDF  KDFParams
+	// NewAuthKey — ключ аутентификации от нового пароля.
+	NewAuthKey []byte
+}
+
+// PasswordHashChange — то, что сохраняется в БД при смене пароля.
+type PasswordHashChange struct {
+	// OldHash — хеш ключа аутентификации от текущего пароля; смена выполняется,
+	// только если он совпадает с сохранённым.
+	OldHash []byte
+	NewHash []byte
+	NewSalt []byte
+	NewKDF  KDFParams
+}
+
+// ReencryptedSecret — секрет, перешифрованный клиентом ключом от нового пароля.
+type ReencryptedSecret struct {
+	OldBlindIndex string
+	NewBlindIndex string
+	Data          []byte
+	// ExpectedUpdatedAt — updated_at секрета на момент чтения клиентом.
+	ExpectedUpdatedAt time.Time
+}
+
+// SecretIterator возвращает следующий перешифрованный секрет или (nil, nil) в конце.
+// Позволяет обрабатывать секреты по мере получения, не держа их все в памяти.
+type SecretIterator func() (*ReencryptedSecret, error)
+
 // SecretPage — страница списка секретов.
 type SecretPage struct {
 	Secrets []*Secret

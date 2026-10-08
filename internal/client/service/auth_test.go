@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/F3dosik/GophKeeper/pkg/crypto"
 	"os"
 	"testing"
 
@@ -232,4 +233,47 @@ func TestAuthService_RejectsWeakServerKDF(t *testing.T) {
 	assert.ErrorIs(t, svc.Login(context.Background(), "user", "password"), domain.ErrInvalidArgument)
 	_, err := svc.Unlock(context.Background(), "user", "password")
 	assert.ErrorIs(t, err, domain.ErrInvalidArgument)
+}
+
+func TestAuthService_ChangePassword(t *testing.T) {
+	salt := []byte("saltsaltsaltsalt")
+	oldMaster := crypto.DeriveKey("old-password", salt, domain.LegacyKDFParams)
+	oldAuth, err := crypto.HKDF(oldMaster, crypto.InfoAuth)
+	require.NoError(t, err)
+
+	var sentChange domain.PasswordChange
+	reencrypted := []domain.ReencryptedSecret{{OldBlindIndex: "old", NewBlindIndex: "new", Data: []byte("x")}}
+
+	mockAuth := mocks.NewAuthClient(t)
+	mockAuth.On("GetSalt", mock.Anything, "user").Return(salt, domain.LegacyKDFParams, nil)
+	mockAuth.On("ChangePassword", mock.Anything, mock.Anything, reencrypted).
+		Run(func(args mock.Arguments) { sentChange = args.Get(1).(domain.PasswordChange) }).
+		Return("new-token", nil)
+
+	sessionPath := t.TempDir() + "/session"
+	tokens := grpcclient.NewTokenStore("old-token")
+	svc := service.NewAuthService(mockAuth, sessionPath, tokens)
+
+	var gotNewMaster []byte
+	err = svc.ChangePassword(context.Background(), "user", "old-password", "new-password",
+		func(newMasterKey []byte) ([]domain.ReencryptedSecret, error) {
+			gotNewMaster = newMasterKey
+			return reencrypted, nil
+		})
+	require.NoError(t, err)
+
+	assert.Equal(t, oldAuth, sentChange.OldAuthKey, "proves knowledge of the current password")
+	assert.Equal(t, domain.DefaultKDFParams, sentChange.NewKDF, "password change upgrades kdf params")
+	assert.NotEqual(t, salt, sentChange.NewSalt, "new password gets a new salt")
+
+	wantNewMaster := crypto.DeriveKey("new-password", sentChange.NewSalt, domain.DefaultKDFParams)
+	assert.Equal(t, wantNewMaster, gotNewMaster)
+	wantNewAuth, err := crypto.HKDF(wantNewMaster, crypto.InfoAuth)
+	require.NoError(t, err)
+	assert.Equal(t, wantNewAuth, sentChange.NewAuthKey)
+
+	assert.Equal(t, "new-token", tokens.Token())
+	sess, err := session.Load(sessionPath)
+	require.NoError(t, err)
+	assert.Equal(t, "new-token", sess.Token)
 }

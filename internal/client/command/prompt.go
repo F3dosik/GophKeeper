@@ -16,6 +16,8 @@ const (
 	// Промпты мастер-пароля.
 	promptMasterPassword        = "Введите мастер-пароль: "
 	promptMasterPasswordConfirm = "Повторите мастер-пароль: "
+	promptCurrentPassword       = "Текущий мастер-пароль: "
+	promptNewMasterPassword     = "Новый мастер-пароль: "
 
 	// Промпты SecretTypeCredentials.
 	promptSecretCredLogin    = "Введите логин: "
@@ -41,6 +43,8 @@ const (
 )
 
 var (
+	// ErrSamePassword возвращается, если новый пароль совпадает с текущим.
+	ErrSamePassword = errors.New("новый пароль совпадает с текущим")
 	// ErrPasswordsMismatch возвращается, когда пароль и подтверждение не совпадают.
 	ErrPasswordsMismatch = errors.New("пароли не совпадают")
 	// ErrWrongMasterPassword возвращается, когда мастер-пароль не прошёл проверку на сервере.
@@ -61,6 +65,25 @@ func promptPassword(prompt string) (string, error) {
 		return "", fmt.Errorf("read password: %w", err)
 	}
 	return string(pwd), nil
+}
+
+// promptNewPassword запрашивает новый пароль с подтверждением и проверяет его требования.
+func promptNewPassword(prompt string) (string, error) {
+	password, err := promptPassword(prompt)
+	if err != nil {
+		return "", err
+	}
+	if err := validatePassword(password); err != nil {
+		return "", err
+	}
+	confirm, err := promptPassword(promptMasterPasswordConfirm)
+	if err != nil {
+		return "", err
+	}
+	if password != confirm {
+		return "", ErrPasswordsMismatch
+	}
+	return password, nil
 }
 
 // validatePassword проверяет, что пароль удовлетворяет минимальным требованиям

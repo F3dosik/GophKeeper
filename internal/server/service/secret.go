@@ -13,12 +13,13 @@ type SecretService interface {
 	// Возвращает ErrSecretAlreadyExists если секрет с указанным blindIndex уже существует.
 	// Возвращает ErrInvalidArgument если blind index или data пустые.
 	// Возвращает ErrSecretTooLarge или ErrSecretQuotaExceeded при превышении квот.
-	Create(ctx context.Context, userID uuid.UUID, blindIndex string, data []byte) error
+	// tokenVersion — версия токена запроса; запись отклоняется, если она устарела.
+	Create(ctx context.Context, userID uuid.UUID, tokenVersion int, blindIndex string, data []byte) error
 
 	// Update изменяет существующую приватную информацию.
 	// Возвращает ErrSecretNotFound если секрет с указанным blindIndex не существует.
 	// Возвращает codes.InvalidArgument если blind index или data пустые.
-	Update(ctx context.Context, userID uuid.UUID, blindIndex string, data []byte) error
+	Update(ctx context.Context, userID uuid.UUID, tokenVersion int, blindIndex string, data []byte) error
 
 	// GetByBlindIndex получает секрет по userID и blindIndex.
 	// Возвращает ErrSecretNotFound если секрет с указанным blindIndex не существует.
@@ -55,7 +56,7 @@ func NewSecretService(repo domain.SecretRepository, limits SecretLimits) SecretS
 }
 
 // Create регистрирует новый секрет.
-func (s *secretService) Create(ctx context.Context, userID uuid.UUID, blindIndex string, data []byte) error {
+func (s *secretService) Create(ctx context.Context, userID uuid.UUID, tokenVersion int, blindIndex string, data []byte) error {
 	if err := validateBlindIndex(blindIndex); err != nil {
 		return err
 	}
@@ -78,11 +79,11 @@ func (s *secretService) Create(ctx context.Context, userID uuid.UUID, blindIndex
 		UserID:     userID,
 		BlindIndex: blindIndex,
 		Data:       data,
-	})
+	}, tokenVersion)
 }
 
 // Update изменяет существующую приватную информацию.
-func (s *secretService) Update(ctx context.Context, userID uuid.UUID, blindIndex string, data []byte) error {
+func (s *secretService) Update(ctx context.Context, userID uuid.UUID, tokenVersion int, blindIndex string, data []byte) error {
 	if err := validateBlindIndex(blindIndex); err != nil {
 		return err
 	}
@@ -96,7 +97,7 @@ func (s *secretService) Update(ctx context.Context, userID uuid.UUID, blindIndex
 		UserID:     userID,
 		BlindIndex: blindIndex,
 		Data:       data,
-	})
+	}, tokenVersion)
 }
 
 // GetByBlindIndex получает секрет по userID и blindIndex.

@@ -34,7 +34,15 @@ type AuthService interface {
 	// Logout отзывает токен на сервере и удаляет локальную сессию.
 	// allSessions == true отзывает все токены пользователя (выход на всех устройствах).
 	Logout(ctx context.Context, allSessions bool) error
+
+	// ChangePassword меняет пароль: генерирует новую соль, выводит ключи из нового пароля,
+	// получает от reencrypt перешифрованные новым мастер-ключом секреты и отправляет всё
+	// на сервер. Сохраняет новый токен. reencrypt может быть nil, если секретов нет.
+	ChangePassword(ctx context.Context, login, oldPassword, newPassword string, reencrypt Reencryptor) error
 }
+
+// Reencryptor перешифровывает все секреты пользователя ключами от newMasterKey.
+type Reencryptor func(newMasterKey []byte) ([]domain.ReencryptedSecret, error)
 
 // authService реализует AuthService.
 type authService struct {
@@ -164,5 +172,47 @@ func (s *authService) saveSession(login, token string) error {
 		return err
 	}
 	s.tokens.SetToken(token)
+	return nil
+}
+
+// ChangePassword меняет пароль и перешифровывает секреты.
+func (s *authService) ChangePassword(
+	ctx context.Context, login, oldPassword, newPassword string, reencrypt Reencryptor,
+) error {
+	_, oldAuthKey, err := s.userKeys(ctx, login, oldPassword)
+	if err != nil {
+		return fmt.Errorf("authService.ChangePassword: %w", err)
+	}
+
+	newSalt, err := crypto.GenerateSalt()
+	if err != nil {
+		return fmt.Errorf("authService.ChangePassword: %w", err)
+	}
+	newKDF := domain.DefaultKDFParams
+	newMasterKey, newAuthKey, err := deriveKeys(newPassword, newSalt, newKDF)
+	if err != nil {
+		return fmt.Errorf("authService.ChangePassword: %w", err)
+	}
+
+	var secrets []domain.ReencryptedSecret
+	if reencrypt != nil {
+		if secrets, err = reencrypt(newMasterKey); err != nil {
+			return fmt.Errorf("authService.ChangePassword: %w", err)
+		}
+	}
+
+	token, err := s.client.ChangePassword(ctx, domain.PasswordChange{
+		OldAuthKey: oldAuthKey,
+		NewSalt:    newSalt,
+		NewKDF:     newKDF,
+		NewAuthKey: newAuthKey,
+	}, secrets)
+	if err != nil {
+		return fmt.Errorf("authService.ChangePassword: %w", err)
+	}
+
+	if err := s.saveSession(login, token); err != nil {
+		return fmt.Errorf("authService.ChangePassword: %w", err)
+	}
 	return nil
 }

@@ -44,17 +44,17 @@ func (_m *SecretRepository) CountByUserID(ctx context.Context, userID uuid.UUID)
 	return r0, r1
 }
 
-// Create provides a mock function with given fields: ctx, secret
-func (_m *SecretRepository) Create(ctx context.Context, secret *domain.Secret) error {
-	ret := _m.Called(ctx, secret)
+// Create provides a mock function with given fields: ctx, secret, tokenVersion
+func (_m *SecretRepository) Create(ctx context.Context, secret *domain.Secret, tokenVersion int) error {
+	ret := _m.Called(ctx, secret, tokenVersion)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, *domain.Secret) error); ok {
-		r0 = rf(ctx, secret)
+	if rf, ok := ret.Get(0).(func(context.Context, *domain.Secret, int) error); ok {
+		r0 = rf(ctx, secret, tokenVersion)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -140,17 +140,17 @@ func (_m *SecretRepository) ListByUserID(ctx context.Context, userID uuid.UUID, 
 	return r0, r1
 }
 
-// Update provides a mock function with given fields: ctx, secret
-func (_m *SecretRepository) Update(ctx context.Context, secret *domain.Secret) error {
-	ret := _m.Called(ctx, secret)
+// Update provides a mock function with given fields: ctx, secret, tokenVersion
+func (_m *SecretRepository) Update(ctx context.Context, secret *domain.Secret, tokenVersion int) error {
+	ret := _m.Called(ctx, secret, tokenVersion)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, *domain.Secret) error); ok {
-		r0 = rf(ctx, secret)
+	if rf, ok := ret.Get(0).(func(context.Context, *domain.Secret, int) error); ok {
+		r0 = rf(ctx, secret, tokenVersion)
 	} else {
 		r0 = ret.Error(0)
 	}

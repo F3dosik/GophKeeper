@@ -16,17 +16,17 @@ type SecretService struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, userID, blindIndex, data
-func (_m *SecretService) Create(ctx context.Context, userID uuid.UUID, blindIndex string, data []byte) error {
-	ret := _m.Called(ctx, userID, blindIndex, data)
+// Create provides a mock function with given fields: ctx, userID, tokenVersion, blindIndex, data
+func (_m *SecretService) Create(ctx context.Context, userID uuid.UUID, tokenVersion int, blindIndex string, data []byte) error {
+	ret := _m.Called(ctx, userID, tokenVersion, blindIndex, data)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, string, []byte) error); ok {
-		r0 = rf(ctx, userID, blindIndex, data)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int, string, []byte) error); ok {
+		r0 = rf(ctx, userID, tokenVersion, blindIndex, data)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -112,17 +112,17 @@ func (_m *SecretService) ListPage(ctx context.Context, userID uuid.UUID, pageTok
 	return r0, r1
 }
 
-// Update provides a mock function with given fields: ctx, userID, blindIndex, data
-func (_m *SecretService) Update(ctx context.Context, userID uuid.UUID, blindIndex string, data []byte) error {
-	ret := _m.Called(ctx, userID, blindIndex, data)
+// Update provides a mock function with given fields: ctx, userID, tokenVersion, blindIndex, data
+func (_m *SecretService) Update(ctx context.Context, userID uuid.UUID, tokenVersion int, blindIndex string, data []byte) error {
+	ret := _m.Called(ctx, userID, tokenVersion, blindIndex, data)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, string, []byte) error); ok {
-		r0 = rf(ctx, userID, blindIndex, data)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int, string, []byte) error); ok {
+		r0 = rf(ctx, userID, tokenVersion, blindIndex, data)
 	} else {
 		r0 = ret.Error(0)
 	}

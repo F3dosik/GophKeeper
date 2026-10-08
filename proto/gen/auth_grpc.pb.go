@@ -19,10 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Auth_CreateUser_FullMethodName = "/auth.Auth/CreateUser"
-	Auth_GetSalt_FullMethodName    = "/auth.Auth/GetSalt"
-	Auth_Login_FullMethodName      = "/auth.Auth/Login"
-	Auth_Logout_FullMethodName     = "/auth.Auth/Logout"
+	Auth_CreateUser_FullMethodName     = "/auth.Auth/CreateUser"
+	Auth_GetSalt_FullMethodName        = "/auth.Auth/GetSalt"
+	Auth_Login_FullMethodName          = "/auth.Auth/Login"
+	Auth_Logout_FullMethodName         = "/auth.Auth/Logout"
+	Auth_ChangePassword_FullMethodName = "/auth.Auth/ChangePassword"
 )
 
 // AuthClient is the client API for Auth service.
@@ -44,6 +45,13 @@ type AuthClient interface {
 	// Требует JWT-токен в метаданных (authorization: Bearer ...).
 	// Ошибка: Unauthenticated — токен отсутствует, истёк или уже отозван.
 	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
+	// ChangePassword меняет пароль и перешифровывает все секреты в одной транзакции:
+	// при любой ошибке ничего не меняется. Клиент передаёт header, затем все свои секреты.
+	// Требует JWT-токен. После успеха все прежние токены пользователя отозваны.
+	// Ошибки: Unauthenticated — неверный текущий пароль или токен;
+	// Aborted — секреты изменились во время смены (нужно повторить);
+	// InvalidArgument — некорректные данные.
+	ChangePassword(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[ChangePasswordRequest, ChangePasswordResponse], error)
 }
 
 type authClient struct {
@@ -94,6 +102,19 @@ func (c *authClient) Logout(ctx context.Context, in *LogoutRequest, opts ...grpc
 	return out, nil
 }
 
+func (c *authClient) ChangePassword(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[ChangePasswordRequest, ChangePasswordResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &Auth_ServiceDesc.Streams[0], Auth_ChangePassword_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[ChangePasswordRequest, ChangePasswordResponse]{ClientStream: stream}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type Auth_ChangePasswordClient = grpc.ClientStreamingClient[ChangePasswordRequest, ChangePasswordResponse]
+
 // AuthServer is the server API for Auth service.
 // All implementations must embed UnimplementedAuthServer
 // for forward compatibility.
@@ -113,6 +134,13 @@ type AuthServer interface {
 	// Требует JWT-токен в метаданных (authorization: Bearer ...).
 	// Ошибка: Unauthenticated — токен отсутствует, истёк или уже отозван.
 	Logout(context.Context, *LogoutRequest) (*LogoutResponse, error)
+	// ChangePassword меняет пароль и перешифровывает все секреты в одной транзакции:
+	// при любой ошибке ничего не меняется. Клиент передаёт header, затем все свои секреты.
+	// Требует JWT-токен. После успеха все прежние токены пользователя отозваны.
+	// Ошибки: Unauthenticated — неверный текущий пароль или токен;
+	// Aborted — секреты изменились во время смены (нужно повторить);
+	// InvalidArgument — некорректные данные.
+	ChangePassword(grpc.ClientStreamingServer[ChangePasswordRequest, ChangePasswordResponse]) error
 	mustEmbedUnimplementedAuthServer()
 }
 
@@ -134,6 +162,9 @@ func (UnimplementedAuthServer) Login(context.Context, *LoginRequest) (*LoginResp
 }
 func (UnimplementedAuthServer) Logout(context.Context, *LogoutRequest) (*LogoutResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Logout not implemented")
+}
+func (UnimplementedAuthServer) ChangePassword(grpc.ClientStreamingServer[ChangePasswordRequest, ChangePasswordResponse]) error {
+	return status.Error(codes.Unimplemented, "method ChangePassword not implemented")
 }
 func (UnimplementedAuthServer) mustEmbedUnimplementedAuthServer() {}
 func (UnimplementedAuthServer) testEmbeddedByValue()              {}
@@ -228,6 +259,13 @@ func _Auth_Logout_Handler(srv interface{}, ctx context.Context, dec func(interfa
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Auth_ChangePassword_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(AuthServer).ChangePassword(&grpc.GenericServerStream[ChangePasswordRequest, ChangePasswordResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type Auth_ChangePasswordServer = grpc.ClientStreamingServer[ChangePasswordRequest, ChangePasswordResponse]
+
 // Auth_ServiceDesc is the grpc.ServiceDesc for Auth service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -252,6 +290,12 @@ var Auth_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Auth_Logout_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "ChangePassword",
+			Handler:       _Auth_ChangePassword_Handler,
+			ClientStreams: true,
+		},
+	},
 	Metadata: "proto/auth.proto",
 }

@@ -19,29 +19,32 @@ var (
 
 var testLimits = SecretLimits{MaxSize: 64, MaxCount: 3}
 
+// testTokenVersion — версия токена запроса, которая должна дойти до репозитория.
+const testTokenVersion = 7
+
 // testBlindIndex — корректный blind index (64 hex-символа).
 var testBlindIndex = strings.Repeat("ab", 32)
 
 func TestSecretService_Create_EmptyBlindIndex(t *testing.T) {
 	svc := NewSecretService(mocks.NewSecretRepository(t), testLimits)
-	err := svc.Create(context.Background(), testID, "", testData)
+	err := svc.Create(context.Background(), testID, testTokenVersion, "", testData)
 	assert.ErrorIs(t, err, domain.ErrInvalidArgument)
 }
 
 func TestSecretService_Create_EmptyData(t *testing.T) {
 	svc := NewSecretService(mocks.NewSecretRepository(t), testLimits)
-	err := svc.Create(context.Background(), testID, testBlindIndex, []byte{})
+	err := svc.Create(context.Background(), testID, testTokenVersion, testBlindIndex, []byte{})
 	assert.ErrorIs(t, err, domain.ErrInvalidArgument)
 }
 
 func TestSecretService_Create_AlreadyExists(t *testing.T) {
 	mockRepo := mocks.NewSecretRepository(t)
 	mockRepo.On("CountByUserID", mock.Anything, testID).Return(0, nil)
-	mockRepo.On("Create", mock.Anything, mock.Anything).
+	mockRepo.On("Create", mock.Anything, mock.Anything, testTokenVersion).
 		Return(domain.ErrSecretAlreadyExists)
 
 	svc := NewSecretService(mockRepo, testLimits)
-	err := svc.Create(context.Background(), testID, testBlindIndex, testData)
+	err := svc.Create(context.Background(), testID, testTokenVersion, testBlindIndex, testData)
 	assert.ErrorIs(t, err, domain.ErrSecretAlreadyExists)
 }
 
@@ -52,17 +55,17 @@ func TestSecretService_Create_Success(t *testing.T) {
 		UserID:     testID,
 		BlindIndex: testBlindIndex,
 		Data:       testData,
-	}).Return(nil)
+	}, testTokenVersion).Return(nil)
 
 	svc := NewSecretService(mockRepo, testLimits)
-	err := svc.Create(context.Background(), testID, testBlindIndex, testData)
+	err := svc.Create(context.Background(), testID, testTokenVersion, testBlindIndex, testData)
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
 }
 
 func TestSecretService_Create_TooLarge(t *testing.T) {
 	svc := NewSecretService(mocks.NewSecretRepository(t), testLimits)
-	err := svc.Create(context.Background(), testID, testBlindIndex, make([]byte, testLimits.MaxSize+1))
+	err := svc.Create(context.Background(), testID, testTokenVersion, testBlindIndex, make([]byte, testLimits.MaxSize+1))
 	assert.ErrorIs(t, err, domain.ErrSecretTooLarge)
 }
 
@@ -71,35 +74,35 @@ func TestSecretService_Create_QuotaExceeded(t *testing.T) {
 	mockRepo.On("CountByUserID", mock.Anything, testID).Return(testLimits.MaxCount, nil)
 
 	svc := NewSecretService(mockRepo, testLimits)
-	err := svc.Create(context.Background(), testID, testBlindIndex, testData)
+	err := svc.Create(context.Background(), testID, testTokenVersion, testBlindIndex, testData)
 	assert.ErrorIs(t, err, domain.ErrSecretQuotaExceeded)
 }
 
 func TestSecretService_Update_TooLarge(t *testing.T) {
 	svc := NewSecretService(mocks.NewSecretRepository(t), testLimits)
-	err := svc.Update(context.Background(), testID, testBlindIndex, make([]byte, testLimits.MaxSize+1))
+	err := svc.Update(context.Background(), testID, testTokenVersion, testBlindIndex, make([]byte, testLimits.MaxSize+1))
 	assert.ErrorIs(t, err, domain.ErrSecretTooLarge)
 }
 
 func TestSecretService_Update_EmptyBlindIndex(t *testing.T) {
 	svc := NewSecretService(mocks.NewSecretRepository(t), testLimits)
-	err := svc.Update(context.Background(), testID, "", testData)
+	err := svc.Update(context.Background(), testID, testTokenVersion, "", testData)
 	assert.ErrorIs(t, err, domain.ErrInvalidArgument)
 }
 
 func TestSecretService_Update_EmptyData(t *testing.T) {
 	svc := NewSecretService(mocks.NewSecretRepository(t), testLimits)
-	err := svc.Update(context.Background(), testID, testBlindIndex, []byte{})
+	err := svc.Update(context.Background(), testID, testTokenVersion, testBlindIndex, []byte{})
 	assert.ErrorIs(t, err, domain.ErrInvalidArgument)
 }
 
 func TestSecretService_Update_NotFound(t *testing.T) {
 	mockRepo := mocks.NewSecretRepository(t)
-	mockRepo.On("Update", mock.Anything, mock.Anything).
+	mockRepo.On("Update", mock.Anything, mock.Anything, testTokenVersion).
 		Return(domain.ErrSecretNotFound)
 
 	svc := NewSecretService(mockRepo, testLimits)
-	err := svc.Update(context.Background(), testID, testBlindIndex, testData)
+	err := svc.Update(context.Background(), testID, testTokenVersion, testBlindIndex, testData)
 	assert.ErrorIs(t, err, domain.ErrSecretNotFound)
 }
 
@@ -109,10 +112,10 @@ func TestSecretService_Update_Success(t *testing.T) {
 		UserID:     testID,
 		BlindIndex: testBlindIndex,
 		Data:       testData,
-	}).Return(nil)
+	}, testTokenVersion).Return(nil)
 
 	svc := NewSecretService(mockRepo, testLimits)
-	err := svc.Update(context.Background(), testID, testBlindIndex, testData)
+	err := svc.Update(context.Background(), testID, testTokenVersion, testBlindIndex, testData)
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
 }

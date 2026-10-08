@@ -3,6 +3,10 @@ package grpchandler
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"io"
+	"time"
 
 	"github.com/F3dosik/GophKeeper/internal/domain"
 	"github.com/F3dosik/GophKeeper/internal/server/middleware"
@@ -97,4 +101,68 @@ func fromPBKDF(p *pb.KDFParams) domain.KDFParams {
 func toPBKDF(p domain.KDFParams) *pb.KDFParams {
 	threads := uint32(p.Threads)
 	return pb.KDFParams_builder{Time: &p.Time, MemoryKib: &p.MemoryKiB, Threads: &threads}.Build()
+}
+
+// changePasswordTimeout ограничивает время смены пароля: транзакция держит блокировку
+// строки пользователя, пока клиент передаёт секреты, и не должна висеть бесконечно.
+const changePasswordTimeout = 5 * time.Minute
+
+// ChangePassword принимает поток: header, затем перешифрованные секреты, — и передаёт
+// секреты сервису по мере получения, не накапливая их в памяти.
+func (h *authHandler) ChangePassword(stream pb.Auth_ChangePasswordServer) error {
+	ctx, cancel := context.WithTimeout(stream.Context(), changePasswordTimeout)
+	defer cancel()
+
+	claims, err := middleware.ClaimsFromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	first, err := stream.Recv()
+	if err != nil {
+		return err
+	}
+	header := first.GetHeader()
+	if header == nil {
+		return status.Error(codes.InvalidArgument, "first message must be a header")
+	}
+
+	// recvErr сохраняет ошибку транспорта, чтобы вернуть её клиенту как есть,
+	// а не как внутреннюю ошибку сервиса.
+	var recvErr error
+	next := func() (*domain.ReencryptedSecret, error) {
+		msg, err := stream.Recv()
+		if errors.Is(err, io.EOF) {
+			return nil, nil
+		}
+		if err != nil {
+			recvErr = err
+			return nil, err
+		}
+		secret := msg.GetSecret()
+		if secret == nil {
+			return nil, fmt.Errorf("%w: expected a secret after the header", domain.ErrInvalidArgument)
+		}
+		return &domain.ReencryptedSecret{
+			OldBlindIndex:     secret.GetOldBlindIndex(),
+			NewBlindIndex:     secret.GetNewBlindIndex(),
+			Data:              secret.GetData(),
+			ExpectedUpdatedAt: secret.GetExpectedUpdatedAt().AsTime(),
+		}, nil
+	}
+
+	token, err := h.authService.ChangePassword(ctx, claims.UserID, domain.PasswordChange{
+		OldAuthKey: header.GetOldAuthKey(),
+		NewSalt:    header.GetNewSalt(),
+		NewKDF:     fromPBKDF(header.GetNewKdf()),
+		NewAuthKey: header.GetNewAuthKey(),
+	}, next)
+	if recvErr != nil {
+		return recvErr
+	}
+	if err != nil {
+		return toGRPCError(err)
+	}
+
+	return stream.SendAndClose(pb.ChangePasswordResponse_builder{Token: &token}.Build())
 }

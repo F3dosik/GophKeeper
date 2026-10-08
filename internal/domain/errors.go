@@ -35,6 +35,10 @@ var (
 	// ErrSecretQuotaExceeded возвращается, если у пользователя достигнут лимит количества секретов.
 	ErrSecretQuotaExceeded = errors.New("secret quota exceeded")
 
+	// ErrSecretsChanged возвращается, если секреты пользователя изменились во время
+	// смены пароля (создан, изменён или удалён секрет). Смену нужно повторить.
+	ErrSecretsChanged = errors.New("secrets changed during password change")
+
 	// ErrResourceExhausted возвращается клиенту, когда сервер отклонил запрос из-за лимита
 	// (частоты запросов или квоты хранилища).
 	ErrResourceExhausted = errors.New("limit exceeded")

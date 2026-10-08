@@ -3,6 +3,8 @@ package service
 import (
 	"bytes"
 	"context"
+	"github.com/F3dosik/GophKeeper/internal/server/jwtutil"
+	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
 	"time"
@@ -162,4 +164,88 @@ func TestAuthService_RejectsInvalidInput(t *testing.T) {
 
 	_, err = svc.Login(ctx, "user", []byte("short"))
 	assert.ErrorIs(t, err, domain.ErrInvalidArgument)
+}
+
+// iterate возвращает SecretIterator по срезу.
+func iterate(secrets ...*domain.ReencryptedSecret) domain.SecretIterator {
+	i := 0
+	return func() (*domain.ReencryptedSecret, error) {
+		if i == len(secrets) {
+			return nil, nil
+		}
+		i++
+		return secrets[i-1], nil
+	}
+}
+
+// drain вычитывает итератор до конца, как это делает репозиторий.
+func drain(next domain.SecretIterator) error {
+	for {
+		secret, err := next()
+		if err != nil || secret == nil {
+			return err
+		}
+	}
+}
+
+func TestAuthService_ChangePassword(t *testing.T) {
+	ctx := context.Background()
+	userID := uuid.New()
+	change := domain.PasswordChange{
+		OldAuthKey: testAuthKey, NewAuthKey: testWrongKey, NewSalt: testSalt, NewKDF: domain.DefaultKDFParams,
+	}
+	valid := &domain.ReencryptedSecret{
+		OldBlindIndex: strings.Repeat("a", 64), NewBlindIndex: strings.Repeat("b", 64), Data: []byte("x"),
+	}
+	cfg := testAuthConfig(t)
+	cfg.SecretLimits = SecretLimits{MaxSize: 16, MaxCount: 2}
+
+	t.Run("success stores hashes and issues token with new version", func(t *testing.T) {
+		repo := mocks.NewUserRepository(t)
+		repo.On("ChangePassword", mock.Anything, userID, domain.PasswordHashChange{
+			OldHash: crypto.HashAuthKey(testAuthKey),
+			NewHash: crypto.HashAuthKey(testWrongKey),
+			NewSalt: testSalt,
+			NewKDF:  domain.DefaultKDFParams,
+		}, mock.Anything).Return(5, nil).Run(func(args mock.Arguments) {
+			require.NoError(t, drain(args.Get(3).(domain.SecretIterator)))
+		})
+
+		token, err := NewAuthService(repo, mocks.NewTokenRepository(t), cfg).
+			ChangePassword(ctx, userID, change, iterate(valid))
+		require.NoError(t, err)
+
+		claims, err := jwtutil.ParseToken(token, cfg.Keys.TokenSigning)
+		require.NoError(t, err)
+		assert.Equal(t, 5, claims.TokenVersion)
+	})
+
+	t.Run("invalid header is rejected before touching the db", func(t *testing.T) {
+		svc := NewAuthService(mocks.NewUserRepository(t), mocks.NewTokenRepository(t), cfg)
+		bad := change
+		bad.NewKDF = domain.KDFParams{Time: 1, MemoryKiB: 8, Threads: 1}
+		_, err := svc.ChangePassword(ctx, userID, bad, iterate())
+		assert.ErrorIs(t, err, domain.ErrInvalidArgument)
+	})
+
+	invalidSecrets := map[string]struct {
+		secrets []*domain.ReencryptedSecret
+		want    error
+	}{
+		"bad blind index": {[]*domain.ReencryptedSecret{{OldBlindIndex: "x", NewBlindIndex: valid.NewBlindIndex, Data: []byte("x")}}, domain.ErrInvalidArgument},
+		"empty data":      {[]*domain.ReencryptedSecret{{OldBlindIndex: valid.OldBlindIndex, NewBlindIndex: valid.NewBlindIndex}}, domain.ErrInvalidArgument},
+		"too large":       {[]*domain.ReencryptedSecret{{OldBlindIndex: valid.OldBlindIndex, NewBlindIndex: valid.NewBlindIndex, Data: make([]byte, 17)}}, domain.ErrSecretTooLarge},
+		"too many":        {[]*domain.ReencryptedSecret{valid, valid, valid}, domain.ErrSecretQuotaExceeded},
+	}
+	for name, tc := range invalidSecrets {
+		t.Run(name, func(t *testing.T) {
+			repo := mocks.NewUserRepository(t)
+			repo.On("ChangePassword", mock.Anything, userID, mock.Anything, mock.Anything).
+				Return(0, nil).Run(func(args mock.Arguments) {
+				assert.ErrorIs(t, drain(args.Get(3).(domain.SecretIterator)), tc.want)
+			})
+			_, _ = NewAuthService(repo, mocks.NewTokenRepository(t), cfg).
+				ChangePassword(ctx, userID, change, iterate(tc.secrets...))
+		})
+	}
 }

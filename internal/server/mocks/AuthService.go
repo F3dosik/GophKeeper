@@ -18,6 +18,34 @@ type AuthService struct {
 	mock.Mock
 }
 
+// ChangePassword provides a mock function with given fields: ctx, userID, change, secrets
+func (_m *AuthService) ChangePassword(ctx context.Context, userID uuid.UUID, change domain.PasswordChange, secrets domain.SecretIterator) (string, error) {
+	ret := _m.Called(ctx, userID, change, secrets)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ChangePassword")
+	}
+
+	var r0 string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, domain.PasswordChange, domain.SecretIterator) (string, error)); ok {
+		return rf(ctx, userID, change, secrets)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, domain.PasswordChange, domain.SecretIterator) string); ok {
+		r0 = rf(ctx, userID, change, secrets)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, domain.PasswordChange, domain.SecretIterator) error); ok {
+		r1 = rf(ctx, userID, change, secrets)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Create provides a mock function with given fields: ctx, login, authKey, salt, kdf
 func (_m *AuthService) Create(ctx context.Context, login string, authKey []byte, salt []byte, kdf domain.KDFParams) error {
 	ret := _m.Called(ctx, login, authKey, salt, kdf)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/F3dosik/GophKeeper/internal/client/session"
 	"github.com/F3dosik/GophKeeper/internal/domain"
 
 	"github.com/spf13/cobra"
@@ -20,6 +21,7 @@ func (c *Commands) newAuthCmd() *cobra.Command {
 		c.newRegisterCmd(),
 		c.newLoginCmd(),
 		c.newLogoutCmd(),
+		c.newPasswdCmd(),
 	)
 	return cmd
 }
@@ -33,22 +35,9 @@ func (c *Commands) newRegisterCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			login := args[0]
 
-			password, err := promptPassword(promptMasterPassword)
+			password, err := promptNewPassword(promptMasterPassword)
 			if err != nil {
 				return err
-			}
-
-			if err := validatePassword(password); err != nil {
-				return err
-			}
-
-			confirm, err := promptPassword(promptMasterPasswordConfirm)
-			if err != nil {
-				return err
-			}
-
-			if password != confirm {
-				return fmt.Errorf("пароли не совпадают")
 			}
 
 			if err := c.authService.CreateUser(cmd.Context(), login, password); err != nil {
@@ -117,4 +106,53 @@ func (c *Commands) newLogoutCmd() *cobra.Command {
 	}
 	cmd.Flags().BoolVar(&all, "all", false, "отозвать токены на всех устройствах")
 	return cmd
+}
+
+// newPasswdCmd создаёт команду смены мастер-пароля.
+// Все секреты перешифровываются ключом от нового пароля; на сервер они уходят
+// одной транзакцией, поэтому при сбое пароль и данные остаются прежними.
+func (c *Commands) newPasswdCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "passwd",
+		Short: "Смена мастер-пароля с перешифровкой всех секретов",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			sess, err := session.Load(c.cfg.SessionPath)
+			if err != nil {
+				return fmt.Errorf("не выполнен вход, запустите 'gophkeeper auth login': %w", err)
+			}
+
+			oldPassword, err := promptPassword(promptCurrentPassword)
+			if err != nil {
+				return err
+			}
+			secretSvc, err := c.newSecretService(cmd.Context(), sess.Login, oldPassword)
+			if err != nil {
+				return err
+			}
+
+			newPassword, err := promptNewPassword(promptNewMasterPassword)
+			if err != nil {
+				return err
+			}
+			if newPassword == oldPassword {
+				return ErrSamePassword
+			}
+
+			reencrypt := func(newMasterKey []byte) ([]domain.ReencryptedSecret, error) {
+				return secretSvc.Reencrypt(cmd.Context(), newMasterKey)
+			}
+			err = c.authService.ChangePassword(cmd.Context(), sess.Login, oldPassword, newPassword, reencrypt)
+			if errors.Is(err, domain.ErrSecretsChanged) {
+				return fmt.Errorf("секреты изменились во время смены пароля (например, с другого устройства), " +
+					"пароль не изменён; повторите 'gophkeeper auth passwd'")
+			}
+			if err != nil {
+				return err
+			}
+
+			fmt.Println("Пароль изменён. На остальных устройствах выполните 'gophkeeper auth login'.")
+			return nil
+		},
+	}
 }
