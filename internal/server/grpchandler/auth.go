@@ -199,3 +199,16 @@ func (h *authHandler) ChangePassword(stream pb.Auth_ChangePasswordServer) error 
 
 	return stream.SendAndClose(pb.ChangePasswordResponse_builder{Token: &token}.Build())
 }
+
+// DeleteAccount удаляет учётку текущего пользователя. Кроме токена требует ключ
+// аутентификации от пароля, чтобы украденный токен не позволял удалить учётку.
+func (h *authHandler) DeleteAccount(ctx context.Context, req *pb.DeleteAccountRequest) (*pb.DeleteAccountResponse, error) {
+	claims, err := middleware.ClaimsFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := h.authService.DeleteAccount(ctx, claims.UserID, req.GetAuthKey()); err != nil {
+		return nil, toGRPCError(err)
+	}
+	return pb.DeleteAccountResponse_builder{}.Build(), nil
+}

@@ -201,3 +201,30 @@ func TestAuthHandler_Login_PasswordChangeRequired(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, resp.GetPasswordChangeRequired())
 }
+
+func TestAuthHandler_DeleteAccount(t *testing.T) {
+	mockService := mocks.NewAuthService(t)
+	mockService.On("DeleteAccount", mock.Anything, testUserID, testAuthKey).Return(nil)
+	handler := NewAuthHandler(mockService, openRegistration)
+
+	_, err := handler.DeleteAccount(claimsContext(), pb.DeleteAccountRequest_builder{AuthKey: testAuthKey}.Build())
+	assert.NoError(t, err)
+
+	_, err = handler.DeleteAccount(context.Background(), pb.DeleteAccountRequest_builder{AuthKey: testAuthKey}.Build())
+	assert.Equal(t, codes.Unauthenticated, status.Code(err), "requires an authenticated request")
+}
+
+func TestAdminHandler_DeleteUser(t *testing.T) {
+	mockService := mocks.NewAuthService(t)
+	mockService.On("DeleteUser", mock.Anything, "bob").Return(nil)
+	mockService.On("DeleteUser", mock.Anything, "ghost").Return(domain.ErrUserNotFound)
+	handler := NewAdminHandler(mockService)
+
+	login := "bob"
+	_, err := handler.DeleteUser(context.Background(), pb.DeleteUserRequest_builder{Login: &login}.Build())
+	assert.NoError(t, err)
+
+	login = "ghost"
+	_, err = handler.DeleteUser(context.Background(), pb.DeleteUserRequest_builder{Login: &login}.Build())
+	assert.Equal(t, codes.NotFound, status.Code(err))
+}

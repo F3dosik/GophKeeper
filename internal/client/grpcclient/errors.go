@@ -29,6 +29,8 @@ func fromGRPCError(err error) error {
 		return fmt.Errorf("%w: %s", domain.ErrPermissionDenied, st.Message())
 	case codes.Aborted:
 		return domain.ErrSecretsChanged
+	case codes.Unimplemented:
+		return fmt.Errorf("%w: %s", domain.ErrNotSupported, st.Message())
 	case codes.ResourceExhausted:
 		return fmt.Errorf("%w: %s", domain.ErrResourceExhausted, st.Message())
 	default:

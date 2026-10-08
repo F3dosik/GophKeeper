@@ -120,6 +120,7 @@ func startTestServer(pool *pgxpool.Pool) (stop func(), addr string, err error) {
 		),
 	)
 	pb.RegisterAuthServer(server, authHandler)
+	pb.RegisterAdminServer(server, grpchandler.NewAdminHandler(authService))
 	pb.RegisterSecretsServer(server, secretHandler)
 
 	lis, err := net.Listen("tcp", "127.0.0.1:0")

@@ -303,3 +303,42 @@ func TestAuthService_Login_TemporaryPassword(t *testing.T) {
 		assert.ErrorIs(t, err, domain.ErrInvalidCredentials)
 	})
 }
+
+func TestAuthService_DeleteAccount(t *testing.T) {
+	userID := uuid.New()
+
+	t.Run("passes password hash to repository", func(t *testing.T) {
+		repo := mocks.NewUserRepository(t)
+		repo.On("DeleteWithPassword", mock.Anything, userID, crypto.HashAuthKey(testAuthKey)).Return(nil)
+
+		err := NewAuthService(repo, mocks.NewTokenRepository(t), testAuthConfig(t)).
+			DeleteAccount(context.Background(), userID, testAuthKey)
+		assert.NoError(t, err)
+	})
+
+	t.Run("wrong password", func(t *testing.T) {
+		repo := mocks.NewUserRepository(t)
+		repo.On("DeleteWithPassword", mock.Anything, userID, mock.Anything).Return(domain.ErrInvalidCredentials)
+
+		err := NewAuthService(repo, mocks.NewTokenRepository(t), testAuthConfig(t)).
+			DeleteAccount(context.Background(), userID, testWrongKey)
+		assert.ErrorIs(t, err, domain.ErrInvalidCredentials)
+	})
+
+	t.Run("malformed key is rejected before the db", func(t *testing.T) {
+		err := NewAuthService(mocks.NewUserRepository(t), mocks.NewTokenRepository(t), testAuthConfig(t)).
+			DeleteAccount(context.Background(), userID, []byte("short"))
+		assert.ErrorIs(t, err, domain.ErrInvalidArgument)
+	})
+}
+
+func TestAuthService_DeleteUser(t *testing.T) {
+	repo := mocks.NewUserRepository(t)
+	repo.On("DeleteByLogin", mock.Anything, "bob").Return(nil)
+	repo.On("DeleteByLogin", mock.Anything, "ghost").Return(domain.ErrUserNotFound)
+	svc := NewAuthService(repo, mocks.NewTokenRepository(t), testAuthConfig(t))
+
+	assert.NoError(t, svc.DeleteUser(context.Background(), "bob"))
+	assert.ErrorIs(t, svc.DeleteUser(context.Background(), "ghost"), domain.ErrUserNotFound)
+	assert.ErrorIs(t, svc.DeleteUser(context.Background(), ""), domain.ErrInvalidArgument)
+}

@@ -62,6 +62,42 @@ func (_m *UserRepository) Create(ctx context.Context, user *domain.User) error {
 	return r0
 }
 
+// DeleteByLogin provides a mock function with given fields: ctx, login
+func (_m *UserRepository) DeleteByLogin(ctx context.Context, login string) error {
+	ret := _m.Called(ctx, login)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteByLogin")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = rf(ctx, login)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DeleteWithPassword provides a mock function with given fields: ctx, userID, passwordHash
+func (_m *UserRepository) DeleteWithPassword(ctx context.Context, userID uuid.UUID, passwordHash []byte) error {
+	ret := _m.Called(ctx, userID, passwordHash)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteWithPassword")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, []byte) error); ok {
+		r0 = rf(ctx, userID, passwordHash)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // GetByLogin provides a mock function with given fields: ctx, login
 func (_m *UserRepository) GetByLogin(ctx context.Context, login string) (*domain.User, error) {
 	ret := _m.Called(ctx, login)

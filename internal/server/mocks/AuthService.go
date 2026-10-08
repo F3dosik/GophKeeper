@@ -76,6 +76,42 @@ func (_m *AuthService) Create(ctx context.Context, reg domain.Registration) (*ti
 	return r0, r1
 }
 
+// DeleteAccount provides a mock function with given fields: ctx, userID, authKey
+func (_m *AuthService) DeleteAccount(ctx context.Context, userID uuid.UUID, authKey []byte) error {
+	ret := _m.Called(ctx, userID, authKey)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteAccount")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, []byte) error); ok {
+		r0 = rf(ctx, userID, authKey)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DeleteUser provides a mock function with given fields: ctx, login
+func (_m *AuthService) DeleteUser(ctx context.Context, login string) error {
+	ret := _m.Called(ctx, login)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteUser")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = rf(ctx, login)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // GetSalt provides a mock function with given fields: ctx, login
 func (_m *AuthService) GetSalt(ctx context.Context, login string) ([]byte, domain.KDFParams, error) {
 	ret := _m.Called(ctx, login)

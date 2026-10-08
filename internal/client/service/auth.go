@@ -52,6 +52,11 @@ type AuthService interface {
 	// на сервер. Сохраняет новый токен. reencrypt может быть nil, если секретов нет.
 	// newKDF — параметры Argon2id для нового пароля.
 	ChangePassword(ctx context.Context, login, oldPassword, newPassword string, newKDF domain.KDFParams, reencrypt Reencryptor) error
+
+	// DeleteAccount безвозвратно удаляет учётку login вместе со всеми секретами,
+	// подтверждая пароль на сервере, и удаляет локальную сессию.
+	// Возвращает domain.ErrInvalidCredentials при неверном пароле.
+	DeleteAccount(ctx context.Context, login, password string) error
 }
 
 // Reencryptor перешифровывает все секреты пользователя ключами от newMasterKey.
@@ -285,5 +290,22 @@ func (s *authService) ChangePassword(
 	if err := s.saveSession(login, token); err != nil {
 		return fmt.Errorf("authService.ChangePassword: %w", err)
 	}
+	return nil
+}
+
+// DeleteAccount удаляет учётку пользователя и локальную сессию.
+func (s *authService) DeleteAccount(ctx context.Context, login, password string) error {
+	_, authKey, err := s.userKeys(ctx, login, password)
+	if err != nil {
+		return fmt.Errorf("authService.DeleteAccount: %w", err)
+	}
+	if err := s.client.DeleteAccount(ctx, authKey); err != nil {
+		return fmt.Errorf("authService.DeleteAccount: %w", err)
+	}
+
+	if err := os.Remove(s.sessionPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("authService.DeleteAccount: учётка удалена, но не удалось удалить сессию: %w", err)
+	}
+	s.tokens.SetToken("")
 	return nil
 }

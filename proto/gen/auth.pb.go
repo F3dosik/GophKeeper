@@ -1606,6 +1606,130 @@ func (b0 ChangePasswordResponse_builder) Build() *ChangePasswordResponse {
 	return m0
 }
 
+// DeleteAccountRequest — запрос удаления своей учётки.
+type DeleteAccountRequest struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_AuthKey     []byte                 `protobuf:"bytes,1,opt,name=auth_key,json=authKey"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *DeleteAccountRequest) Reset() {
+	*x = DeleteAccountRequest{}
+	mi := &file_proto_auth_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteAccountRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteAccountRequest) ProtoMessage() {}
+
+func (x *DeleteAccountRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *DeleteAccountRequest) GetAuthKey() []byte {
+	if x != nil {
+		return x.xxx_hidden_AuthKey
+	}
+	return nil
+}
+
+func (x *DeleteAccountRequest) SetAuthKey(v []byte) {
+	if v == nil {
+		v = []byte{}
+	}
+	x.xxx_hidden_AuthKey = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 1)
+}
+
+func (x *DeleteAccountRequest) HasAuthKey() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
+}
+
+func (x *DeleteAccountRequest) ClearAuthKey() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
+	x.xxx_hidden_AuthKey = nil
+}
+
+type DeleteAccountRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// Ключ аутентификации от текущего пароля: одного токена для удаления недостаточно.
+	AuthKey []byte
+}
+
+func (b0 DeleteAccountRequest_builder) Build() *DeleteAccountRequest {
+	m0 := &DeleteAccountRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	if b.AuthKey != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 1)
+		x.xxx_hidden_AuthKey = b.AuthKey
+	}
+	return m0
+}
+
+// DeleteAccountResponse — пустой ответ при успешном удалении.
+type DeleteAccountResponse struct {
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteAccountResponse) Reset() {
+	*x = DeleteAccountResponse{}
+	mi := &file_proto_auth_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteAccountResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteAccountResponse) ProtoMessage() {}
+
+func (x *DeleteAccountResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+type DeleteAccountResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 DeleteAccountResponse_builder) Build() *DeleteAccountResponse {
+	m0 := &DeleteAccountResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
+}
+
 var File_proto_auth_proto protoreflect.FileDescriptor
 
 const file_proto_auth_proto_rawDesc = "" +
@@ -1656,16 +1780,20 @@ const file_proto_auth_proto_rawDesc = "" +
 	"\x06secret\x18\x02 \x01(\v2\x17.auth.ReencryptedSecretH\x00R\x06secretB\x06\n" +
 	"\x04part\".\n" +
 	"\x16ChangePasswordResponse\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token2\xb5\x02\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\"1\n" +
+	"\x14DeleteAccountRequest\x12\x19\n" +
+	"\bauth_key\x18\x01 \x01(\fR\aauthKey\"\x17\n" +
+	"\x15DeleteAccountResponse2\xff\x02\n" +
 	"\x04Auth\x12?\n" +
 	"\n" +
 	"CreateUser\x12\x17.auth.CreateUserRequest\x1a\x18.auth.CreateUserResponse\x126\n" +
 	"\aGetSalt\x12\x14.auth.GetSaltRequest\x1a\x15.auth.GetSaltResponse\x120\n" +
 	"\x05Login\x12\x12.auth.LoginRequest\x1a\x13.auth.LoginResponse\x123\n" +
 	"\x06Logout\x12\x13.auth.LogoutRequest\x1a\x14.auth.LogoutResponse\x12M\n" +
-	"\x0eChangePassword\x12\x1b.auth.ChangePasswordRequest\x1a\x1c.auth.ChangePasswordResponse(\x01B)Z'github.com/F3dosik/GophKeeper/proto/genb\beditionsp\xe8\a"
+	"\x0eChangePassword\x12\x1b.auth.ChangePasswordRequest\x1a\x1c.auth.ChangePasswordResponse(\x01\x12H\n" +
+	"\rDeleteAccount\x12\x1a.auth.DeleteAccountRequest\x1a\x1b.auth.DeleteAccountResponseB)Z'github.com/F3dosik/GophKeeper/proto/genb\beditionsp\xe8\a"
 
-var file_proto_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_proto_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_proto_auth_proto_goTypes = []any{
 	(*Credentials)(nil),            // 0: auth.Credentials
 	(*KDFParams)(nil),              // 1: auth.KDFParams
@@ -1681,16 +1809,18 @@ var file_proto_auth_proto_goTypes = []any{
 	(*ReencryptedSecret)(nil),      // 11: auth.ReencryptedSecret
 	(*ChangePasswordRequest)(nil),  // 12: auth.ChangePasswordRequest
 	(*ChangePasswordResponse)(nil), // 13: auth.ChangePasswordResponse
-	(*timestamppb.Timestamp)(nil),  // 14: google.protobuf.Timestamp
+	(*DeleteAccountRequest)(nil),   // 14: auth.DeleteAccountRequest
+	(*DeleteAccountResponse)(nil),  // 15: auth.DeleteAccountResponse
+	(*timestamppb.Timestamp)(nil),  // 16: google.protobuf.Timestamp
 }
 var file_proto_auth_proto_depIdxs = []int32{
 	0,  // 0: auth.CreateUserRequest.credentials:type_name -> auth.Credentials
 	1,  // 1: auth.CreateUserRequest.kdf:type_name -> auth.KDFParams
-	14, // 2: auth.CreateUserResponse.temporary_expires_at:type_name -> google.protobuf.Timestamp
+	16, // 2: auth.CreateUserResponse.temporary_expires_at:type_name -> google.protobuf.Timestamp
 	1,  // 3: auth.GetSaltResponse.kdf:type_name -> auth.KDFParams
 	0,  // 4: auth.LoginRequest.credentials:type_name -> auth.Credentials
 	1,  // 5: auth.ChangePasswordHeader.new_kdf:type_name -> auth.KDFParams
-	14, // 6: auth.ReencryptedSecret.expected_updated_at:type_name -> google.protobuf.Timestamp
+	16, // 6: auth.ReencryptedSecret.expected_updated_at:type_name -> google.protobuf.Timestamp
 	10, // 7: auth.ChangePasswordRequest.header:type_name -> auth.ChangePasswordHeader
 	11, // 8: auth.ChangePasswordRequest.secret:type_name -> auth.ReencryptedSecret
 	2,  // 9: auth.Auth.CreateUser:input_type -> auth.CreateUserRequest
@@ -1698,13 +1828,15 @@ var file_proto_auth_proto_depIdxs = []int32{
 	6,  // 11: auth.Auth.Login:input_type -> auth.LoginRequest
 	8,  // 12: auth.Auth.Logout:input_type -> auth.LogoutRequest
 	12, // 13: auth.Auth.ChangePassword:input_type -> auth.ChangePasswordRequest
-	3,  // 14: auth.Auth.CreateUser:output_type -> auth.CreateUserResponse
-	5,  // 15: auth.Auth.GetSalt:output_type -> auth.GetSaltResponse
-	7,  // 16: auth.Auth.Login:output_type -> auth.LoginResponse
-	9,  // 17: auth.Auth.Logout:output_type -> auth.LogoutResponse
-	13, // 18: auth.Auth.ChangePassword:output_type -> auth.ChangePasswordResponse
-	14, // [14:19] is the sub-list for method output_type
-	9,  // [9:14] is the sub-list for method input_type
+	14, // 14: auth.Auth.DeleteAccount:input_type -> auth.DeleteAccountRequest
+	3,  // 15: auth.Auth.CreateUser:output_type -> auth.CreateUserResponse
+	5,  // 16: auth.Auth.GetSalt:output_type -> auth.GetSaltResponse
+	7,  // 17: auth.Auth.Login:output_type -> auth.LoginResponse
+	9,  // 18: auth.Auth.Logout:output_type -> auth.LogoutResponse
+	13, // 19: auth.Auth.ChangePassword:output_type -> auth.ChangePasswordResponse
+	15, // 20: auth.Auth.DeleteAccount:output_type -> auth.DeleteAccountResponse
+	15, // [15:21] is the sub-list for method output_type
+	9,  // [9:15] is the sub-list for method input_type
 	9,  // [9:9] is the sub-list for extension type_name
 	9,  // [9:9] is the sub-list for extension extendee
 	0,  // [0:9] is the sub-list for field type_name
@@ -1725,7 +1857,7 @@ func file_proto_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_auth_proto_rawDesc), len(file_proto_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

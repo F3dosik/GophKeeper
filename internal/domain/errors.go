@@ -51,6 +51,10 @@ var (
 	// (codes.PermissionDenied); подробности — в тексте ошибки.
 	ErrPermissionDenied = errors.New("permission denied")
 
+	// ErrNotSupported возвращается клиенту, если сервер не поддерживает метод
+	// (codes.Unimplemented): например, административный метод вызван на публичном порту.
+	ErrNotSupported = errors.New("not supported by this server")
+
 	// ErrResourceExhausted возвращается клиенту, когда сервер отклонил запрос из-за лимита
 	// (частоты запросов или квоты хранилища).
 	ErrResourceExhausted = errors.New("limit exceeded")

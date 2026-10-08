@@ -331,3 +331,37 @@ func TestAuthService_RejectsInvalidKDFBeforeWork(t *testing.T) {
 	err = svc.ChangePassword(context.Background(), "user", "old", "new", bad, nil)
 	assert.ErrorIs(t, err, domain.ErrInvalidArgument)
 }
+
+func TestAuthService_DeleteAccount(t *testing.T) {
+	salt := []byte("saltsaltsaltsalt")
+	newSvc := func(t *testing.T, deleteErr error) (service.AuthService, string, *grpcclient.TokenStore) {
+		t.Helper()
+		masterKey := crypto.DeriveKey("password", salt, domain.LegacyKDFParams)
+		authKey, err := crypto.HKDF(masterKey, crypto.InfoAuth)
+		require.NoError(t, err)
+
+		mockAuth := mocks.NewAuthClient(t)
+		mockAuth.On("GetSalt", mock.Anything, "user").Return(salt, domain.LegacyKDFParams, nil)
+		mockAuth.On("DeleteAccount", mock.Anything, authKey).Return(deleteErr)
+
+		path := t.TempDir() + "/session"
+		require.NoError(t, session.Save(path, &session.Session{Login: "user", Token: "t"}))
+		tokens := grpcclient.NewTokenStore("t")
+		return service.NewAuthService(mockAuth, path, tokens), path, tokens
+	}
+
+	t.Run("removes session after deletion", func(t *testing.T) {
+		svc, path, tokens := newSvc(t, nil)
+		require.NoError(t, svc.DeleteAccount(context.Background(), "user", "password"))
+		_, err := os.Stat(path)
+		assert.True(t, os.IsNotExist(err))
+		assert.Empty(t, tokens.Token())
+	})
+
+	t.Run("wrong password keeps session", func(t *testing.T) {
+		svc, path, _ := newSvc(t, domain.ErrInvalidCredentials)
+		assert.ErrorIs(t, svc.DeleteAccount(context.Background(), "user", "password"), domain.ErrInvalidCredentials)
+		_, err := os.Stat(path)
+		assert.NoError(t, err)
+	})
+}

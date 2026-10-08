@@ -44,9 +44,10 @@ func main() {
 
 	authClient := grpcclient.NewAuthClient(pb.NewAuthClient(conn))
 	secretsClient := grpcclient.NewSecretsClient(pb.NewSecretsClient(conn))
+	adminClient := grpcclient.NewAdminClient(pb.NewAdminClient(conn))
 	authSvc := service.NewAuthService(authClient, cfg.SessionPath, tokens)
 
-	if command.New(authSvc, secretsClient, cfg).Execute() != nil {
+	if command.New(authSvc, secretsClient, adminClient, cfg).Execute() != nil {
 		os.Exit(1)
 	}
 }

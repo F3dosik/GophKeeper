@@ -23,6 +23,15 @@ type UserRepository interface {
 	// Возвращает ErrInvalidCredentials, если change.OldHash не совпадает с сохранённым,
 	// и ErrSecretsChanged, если набор секретов не совпал с переданным.
 	ChangePassword(ctx context.Context, userID uuid.UUID, change PasswordHashChange, secrets SecretIterator) (int, error)
+
+	// DeleteWithPassword удаляет пользователя (и каскадом его секреты), если хеш его
+	// пароля равен passwordHash. Возвращает ErrInvalidCredentials, если не совпал
+	// или пользователя нет.
+	DeleteWithPassword(ctx context.Context, userID uuid.UUID, passwordHash []byte) error
+
+	// DeleteByLogin удаляет пользователя (и каскадом его секреты) по логину.
+	// Возвращает ErrUserNotFound, если пользователя нет.
+	DeleteByLogin(ctx context.Context, login string) error
 }
 
 // TokenRepository хранит состояние отзыва JWT-токенов.
