@@ -17,7 +17,8 @@ func setValidEnv(t *testing.T) {
 	t.Setenv("JWT_SECRET", testJWTSecret)
 	t.Setenv("SERVER_PORT", "")
 	t.Setenv("LOG_LEVEL", "")
-	for _, key := range []string{"AUTH_RATE_LIMIT", "AUTH_RATE_BURST", "SECRET_MAX_SIZE", "SECRET_MAX_COUNT"} {
+	for _, key := range []string{"AUTH_RATE_LIMIT", "AUTH_RATE_BURST", "SECRET_MAX_SIZE", "SECRET_MAX_COUNT",
+		"REGISTRATION_ENABLED", "ADMIN_PORT", "TEMP_PASSWORD_TTL"} {
 		t.Setenv(key, "")
 	}
 }
@@ -34,9 +35,12 @@ func TestLoad_Defaults(t *testing.T) {
 	assert.Equal(t, testJWTSecret, cfg.JWTSecret)
 	assert.Equal(t, time.Hour, cfg.TokenTTL)
 	assert.Equal(t, 30, cfg.AuthRateLimit)
-	assert.Equal(t, 10, cfg.AuthRateBurst)
+	assert.Equal(t, 20, cfg.AuthRateBurst)
 	assert.Equal(t, 1<<20, cfg.SecretMaxSize)
 	assert.Equal(t, 1000, cfg.SecretMaxCount)
+	assert.True(t, cfg.RegistrationEnabled, "registration is open by default")
+	assert.Empty(t, cfg.AdminPort, "admin server is off by default")
+	assert.Equal(t, 24*time.Hour, cfg.TempPasswordTTL)
 }
 
 func TestLoad_FromEnv(t *testing.T) {
@@ -117,6 +121,7 @@ func TestValidate_Limits(t *testing.T) {
 		{"zero secret size", func(c *app.Config) { c.SecretMaxSize = 0 }, "SECRET_MAX_SIZE"},
 		{"zero secret count", func(c *app.Config) { c.SecretMaxCount = 0 }, "SECRET_MAX_COUNT"},
 		{"secret size above client limit", func(c *app.Config) { c.SecretMaxSize = 33 << 20 }, "must not exceed"},
+		{"admin port equals server port", func(c *app.Config) { c.AdminPort = c.ServerPort }, "ADMIN_PORT"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -142,4 +147,17 @@ func TestLoad_ValidationErrorPropagates(t *testing.T) {
 func TestConfig_TLSEnabled(t *testing.T) {
 	assert.False(t, (&app.Config{}).TLSEnabled())
 	assert.True(t, (&app.Config{TLSCertFile: "cert.pem", TLSKeyFile: "key.pem"}).TLSEnabled())
+}
+
+func TestLoad_RegistrationSettings(t *testing.T) {
+	setValidEnv(t)
+	t.Setenv("REGISTRATION_ENABLED", "false")
+	t.Setenv("ADMIN_PORT", "50052")
+	t.Setenv("TEMP_PASSWORD_TTL", "2h")
+
+	cfg, err := app.Load()
+	require.NoError(t, err)
+	assert.False(t, cfg.RegistrationEnabled)
+	assert.Equal(t, ":50052", cfg.AdminPort)
+	assert.Equal(t, 2*time.Hour, cfg.TempPasswordTTL)
 }

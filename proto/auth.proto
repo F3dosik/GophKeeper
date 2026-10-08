@@ -36,10 +36,16 @@ message CreateUserRequest {
     bytes salt = 2;
     // Параметры Argon2id, с которыми клиент вывел ключ. Обязательны.
     KDFParams kdf = 3;
+    // true — пароль временный: годен ограниченное время и должен быть сменён при
+    // первом входе. Разрешено только на административном порту.
+    bool temporary = 4;
 }
 
-// CreateUserResponse — пустой ответ при успешной регистрации.
-message CreateUserResponse {}
+// CreateUserResponse — ответ при успешной регистрации.
+message CreateUserResponse {
+    // Для временного пароля — время, до которого им можно войти.
+    google.protobuf.Timestamp temporary_expires_at = 1;
+}
 
 // GetSaltRequest — запрос соли пользователя по его логину.
 // Клиент запрашивает соль перед Login, чтобы получить тот же auth_key, что и при регистрации.
@@ -66,6 +72,9 @@ message LoginRequest {
 message LoginResponse {
     // JWT-токен, который клиент передаёт в метаданных последующих запросов.
     string token = 1;
+    // true — пароль временный и должен быть сменён. Токен в этом случае короткоживущий
+    // и разрешает только ChangePassword и Logout.
+    bool password_change_required = 2;
 }
 
 // LogoutRequest — запрос на выход.
@@ -122,7 +131,8 @@ message ChangePasswordResponse {
 // Auth — сервис аутентификации и регистрации пользователей.
 service Auth {
     // CreateUser регистрирует нового пользователя.
-    // Ошибки: AlreadyExists — логин занят; InvalidArgument — невалидные данные.
+    // Ошибки: AlreadyExists — логин занят; InvalidArgument — невалидные данные;
+    // PermissionDenied — регистрация на этом порту отключена.
     rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
 
     // GetSalt возвращает соль пользователя, сохранённую при регистрации.

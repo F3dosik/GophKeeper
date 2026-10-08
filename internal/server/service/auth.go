@@ -17,8 +17,8 @@ import (
 type AuthService interface {
 	// Create регистрирует нового пользователя.
 	// Возвращает ErrUserAlreadyExists если логин занят.
-	// kdf — параметры Argon2id, с которыми клиент вывел authKey.
-	Create(ctx context.Context, login string, authKey, salt []byte, kdf domain.KDFParams) error
+	// Для временного пароля (reg.Temporary) возвращает время, до которого им можно войти.
+	Create(ctx context.Context, reg domain.Registration) (*time.Time, error)
 
 	// GetSalt возвращает соль пользователя по логину.
 	// Для несуществующего логина возвращает детерминированную фиктивную соль,
@@ -29,7 +29,9 @@ type AuthService interface {
 	// Login проверяет credentials и возвращает JWT токен.
 	// Возвращает ErrInvalidCredentials если authKey неверный или логин не существует
 	// (единый код ответа скрывает факт наличия пользователя).
-	Login(ctx context.Context, login string, authKey []byte) (string, error)
+	// Для временного пароля возвращает токен, разрешающий только смену пароля, и
+	// PasswordChangeRequired; истёкший временный пароль даёт ErrInvalidCredentials.
+	Login(ctx context.Context, login string, authKey []byte) (domain.LoginResult, error)
 
 	// Logout отзывает токен с идентификатором jti (действующий до expiresAt) или,
 	// если allSessions == true, все токены пользователя userID.
@@ -80,7 +82,13 @@ type AuthConfig struct {
 	TokenTTL time.Duration
 	// SecretLimits — квоты на секреты; проверяются и при перешифровке во время смены пароля.
 	SecretLimits SecretLimits
+	// TempPasswordTTL — срок действия временного пароля.
+	TempPasswordTTL time.Duration
 }
+
+// passwordChangeTokenTTL — срок жизни токена, выдаваемого по временному паролю:
+// его хватает только на то, чтобы ввести новый пароль.
+const passwordChangeTokenTTL = 10 * time.Minute
 
 // authService реализует AuthService.
 type authService struct {
@@ -97,25 +105,37 @@ func NewAuthService(repo domain.UserRepository, tokens domain.TokenRepository, c
 
 // Create регистрирует нового пользователя.
 // В БД сохраняется SHA-256 от authKey, а не сам ключ: утечка БД не позволяет войти под пользователем.
-func (s *authService) Create(ctx context.Context, login string, authKey, salt []byte, kdf domain.KDFParams) error {
-	if err := validateLogin(login); err != nil {
-		return err
+func (s *authService) Create(ctx context.Context, reg domain.Registration) (*time.Time, error) {
+	if err := validateLogin(reg.Login); err != nil {
+		return nil, err
 	}
-	if err := validateAuthKey(authKey); err != nil {
-		return err
+	if err := validateAuthKey(reg.AuthKey); err != nil {
+		return nil, err
 	}
-	if err := validateSalt(salt); err != nil {
-		return err
+	if err := validateSalt(reg.Salt); err != nil {
+		return nil, err
 	}
-	if err := kdf.Validate(); err != nil {
-		return err
+	if err := reg.KDF.Validate(); err != nil {
+		return nil, err
 	}
-	return s.repo.Create(ctx, &domain.User{
-		KDF:          kdf,
-		Login:        login,
-		PasswordHash: crypto.HashAuthKey(authKey),
-		PasswordSalt: salt,
+
+	var expiresAt *time.Time
+	if reg.Temporary {
+		t := time.Now().Add(s.cfg.TempPasswordTTL).UTC()
+		expiresAt = &t
+	}
+
+	err := s.repo.Create(ctx, &domain.User{
+		Login:             reg.Login,
+		PasswordHash:      crypto.HashAuthKey(reg.AuthKey),
+		PasswordSalt:      reg.Salt,
+		KDF:               reg.KDF,
+		PasswordExpiresAt: expiresAt,
 	})
+	if err != nil {
+		return nil, err
+	}
+	return expiresAt, nil
 }
 
 // GetSalt возвращает соль пользователя по логину.
@@ -140,30 +160,46 @@ func (s *authService) GetSalt(ctx context.Context, login string) ([]byte, domain
 // Login проверяет credentials и возвращает JWT токен.
 // Отсутствие пользователя и неверный authKey возвращают одинаковый ErrInvalidCredentials,
 // чтобы скрыть факт существования логина.
-func (s *authService) Login(ctx context.Context, login string, authKey []byte) (string, error) {
+func (s *authService) Login(ctx context.Context, login string, authKey []byte) (domain.LoginResult, error) {
 	if err := validateLogin(login); err != nil {
-		return "", err
+		return domain.LoginResult{}, err
 	}
 	if err := validateAuthKey(authKey); err != nil {
-		return "", err
+		return domain.LoginResult{}, err
 	}
 	user, err := s.repo.GetByLogin(ctx, login)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
-			return "", domain.ErrInvalidCredentials
+			return domain.LoginResult{}, domain.ErrInvalidCredentials
 		}
-		return "", err
+		return domain.LoginResult{}, err
 	}
 
 	if subtle.ConstantTimeCompare(user.PasswordHash, crypto.HashAuthKey(authKey)) != 1 {
-		return "", domain.ErrInvalidCredentials
-	}
-	token, err := jwtutil.GenerateToken(user.ID, user.TokenVersion, s.cfg.Keys.TokenSigning, s.cfg.TokenTTL)
-	if err != nil {
-		return "", fmt.Errorf("authService.Login: generate token: %w", err)
+		return domain.LoginResult{}, domain.ErrInvalidCredentials
 	}
 
-	return token, nil
+	if user.PasswordExpiresAt != nil {
+		// Истёкший временный пароль неотличим от неверного: администратору нужно
+		// пересоздать учётку.
+		if time.Now().After(*user.PasswordExpiresAt) {
+			return domain.LoginResult{}, domain.ErrInvalidCredentials
+		}
+		token, err := jwtutil.GeneratePasswordChangeToken(
+			user.ID, user.TokenVersion, s.cfg.Keys.TokenSigning, min(passwordChangeTokenTTL, s.cfg.TokenTTL),
+		)
+		if err != nil {
+			return domain.LoginResult{}, fmt.Errorf("authService.Login: generate token: %w", err)
+		}
+		return domain.LoginResult{Token: token, PasswordChangeRequired: true}, nil
+	}
+
+	token, err := jwtutil.GenerateToken(user.ID, user.TokenVersion, s.cfg.Keys.TokenSigning, s.cfg.TokenTTL)
+	if err != nil {
+		return domain.LoginResult{}, fmt.Errorf("authService.Login: generate token: %w", err)
+	}
+
+	return domain.LoginResult{Token: token}, nil
 }
 
 // Logout отзывает текущий токен или все токены пользователя.

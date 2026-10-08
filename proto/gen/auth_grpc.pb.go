@@ -33,7 +33,8 @@ const (
 // Auth — сервис аутентификации и регистрации пользователей.
 type AuthClient interface {
 	// CreateUser регистрирует нового пользователя.
-	// Ошибки: AlreadyExists — логин занят; InvalidArgument — невалидные данные.
+	// Ошибки: AlreadyExists — логин занят; InvalidArgument — невалидные данные;
+	// PermissionDenied — регистрация на этом порту отключена.
 	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*CreateUserResponse, error)
 	// GetSalt возвращает соль пользователя, сохранённую при регистрации.
 	// Ошибка: NotFound — пользователь не найден.
@@ -122,7 +123,8 @@ type Auth_ChangePasswordClient = grpc.ClientStreamingClient[ChangePasswordReques
 // Auth — сервис аутентификации и регистрации пользователей.
 type AuthServer interface {
 	// CreateUser регистрирует нового пользователя.
-	// Ошибки: AlreadyExists — логин занят; InvalidArgument — невалидные данные.
+	// Ошибки: AlreadyExists — логин занят; InvalidArgument — невалидные данные;
+	// PermissionDenied — регистрация на этом порту отключена.
 	CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error)
 	// GetSalt возвращает соль пользователя, сохранённую при регистрации.
 	// Ошибка: NotFound — пользователь не найден.

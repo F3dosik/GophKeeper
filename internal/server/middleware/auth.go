@@ -26,6 +26,12 @@ var publicMethods = map[string]bool{
 	pb.Auth_Login_FullMethodName:      true,
 }
 
+// passwordChangeMethods — методы, доступные с токеном временного пароля.
+var passwordChangeMethods = map[string]bool{
+	pb.Auth_ChangePassword_FullMethodName: true,
+	pb.Auth_Logout_FullMethodName:         true,
+}
+
 // AuthInterceptor возвращает gRPC унарный interceptor для аутентификации запросов.
 // Пропускает публичные методы без проверки токена.
 // Извлекает JWT токен из metadata заголовка "authorization",
@@ -100,6 +106,10 @@ func authenticate(
 	if !active {
 		logger.Warnw("revoked token", "method", method, "user_id", claims.UserID)
 		return nil, status.Error(codes.Unauthenticated, "token revoked")
+	}
+
+	if claims.PasswordChangeOnly && !passwordChangeMethods[method] {
+		return nil, status.Error(codes.PermissionDenied, domain.ErrPasswordChangeRequired.Error())
 	}
 
 	ctx = WithUserID(ctx, claims.UserID)

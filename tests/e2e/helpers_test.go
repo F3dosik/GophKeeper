@@ -73,6 +73,7 @@ func (k *clientKit) initSecretsService(ctx context.Context, t *testing.T) {
 func (k *clientKit) registerAndLogin(ctx context.Context, t *testing.T) {
 	t.Helper()
 	require.NoError(t, k.Auth.CreateUser(ctx, k.Login, k.Password))
-	require.NoError(t, k.Auth.Login(ctx, k.Login, k.Password))
+	_, err := k.Auth.Login(ctx, k.Login, k.Password)
+	require.NoError(t, err)
 	k.initSecretsService(ctx, t)
 }

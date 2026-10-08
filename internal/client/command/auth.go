@@ -28,12 +28,28 @@ func (c *Commands) newAuthCmd() *cobra.Command {
 
 // newRegisterCmd создаёт команду регистрации нового пользователя.
 func (c *Commands) newRegisterCmd() *cobra.Command {
-	return &cobra.Command{
+	var temporary bool
+	cmd := &cobra.Command{
 		Use:   "register <login>",
 		Short: "Регистрация нового пользователя",
-		Args:  cobra.ExactArgs(1),
+		Long: "Регистрация нового пользователя.\n\n" +
+			"С флагом --temporary пароль генерируется автоматически, действует ограниченное время\n" +
+			"и должен быть сменён при первом входе. Так администратор заводит учётку для другого\n" +
+			"человека; работает только через административный порт сервера (ADMIN_PORT).",
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			login := args[0]
+
+			if temporary {
+				password, expiresAt, err := c.authService.CreateTemporaryUser(cmd.Context(), login)
+				if err != nil {
+					return err
+				}
+				fmt.Printf("Временный пароль для %s: %s\n", login, password)
+				fmt.Printf("Действует до %s. При первом входе пользователь задаст свой пароль.\n",
+					expiresAt.Local().Format("2006-01-02 15:04"))
+				return nil
+			}
 
 			password, err := promptNewPassword(promptMasterPassword)
 			if err != nil {
@@ -48,6 +64,9 @@ func (c *Commands) newRegisterCmd() *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&temporary, "temporary", false,
+		"создать учётку с временным паролем (только через административный порт)")
+	return cmd
 }
 
 // newLoginCmd создаёт команду входа в систему.
@@ -64,8 +83,26 @@ func (c *Commands) newLoginCmd() *cobra.Command {
 				return err
 			}
 
-			if err := c.authService.Login(cmd.Context(), login, password); err != nil {
+			changeRequired, err := c.authService.Login(cmd.Context(), login, password)
+			if err != nil {
 				return err
+			}
+
+			if changeRequired {
+				fmt.Println("Пароль временный, задайте свой.")
+				newPassword, err := promptNewPassword(promptNewMasterPassword)
+				if err != nil {
+					return err
+				}
+				if newPassword == password {
+					return ErrSamePassword
+				}
+				// Секретов у учётки с временным паролем быть не может, перешифровывать нечего.
+				if err := c.authService.ChangePassword(cmd.Context(), login, password, newPassword, nil); err != nil {
+					return err
+				}
+				fmt.Println("Пароль изменён, вход выполнен.")
+				return nil
 			}
 
 			fmt.Println("Вход выполнен успешно.")

@@ -33,10 +33,10 @@ func TestAuthClient_CreateUser(t *testing.T) {
 		}), mock.Anything).Return(&pb.CreateUserResponse{}, nil)
 
 		client := grpcclient.NewAuthClient(mockPB)
-		err := client.CreateUser(context.Background(), domain.Credentials{
+		_, err := client.CreateUser(context.Background(), domain.Credentials{
 			Login:   "user",
 			AuthKey: hash,
-		}, testSalt, domain.DefaultKDFParams)
+		}, testSalt, domain.DefaultKDFParams, false)
 
 		require.NoError(t, err)
 	})
@@ -47,7 +47,7 @@ func TestAuthClient_CreateUser(t *testing.T) {
 			Return(nil, status.Error(codes.AlreadyExists, "user already exists"))
 
 		client := grpcclient.NewAuthClient(mockPB)
-		err := client.CreateUser(context.Background(), domain.Credentials{}, testSalt, domain.DefaultKDFParams)
+		_, err := client.CreateUser(context.Background(), domain.Credentials{}, testSalt, domain.DefaultKDFParams, false)
 
 		assert.ErrorIs(t, err, domain.ErrAlreadyExists)
 	})
@@ -58,7 +58,7 @@ func TestAuthClient_CreateUser(t *testing.T) {
 			Return(nil, status.Error(codes.InvalidArgument, "invalid argument"))
 
 		client := grpcclient.NewAuthClient(mockPB)
-		err := client.CreateUser(context.Background(), domain.Credentials{}, []byte{}, domain.DefaultKDFParams)
+		_, err := client.CreateUser(context.Background(), domain.Credentials{}, []byte{}, domain.DefaultKDFParams, false)
 
 		assert.ErrorIs(t, err, domain.ErrInvalidArgument)
 	})
@@ -69,7 +69,7 @@ func TestAuthClient_CreateUser(t *testing.T) {
 			Return(nil, status.Error(codes.Internal, "internal error"))
 
 		client := grpcclient.NewAuthClient(mockPB)
-		err := client.CreateUser(context.Background(), domain.Credentials{}, testSalt, domain.DefaultKDFParams)
+		_, err := client.CreateUser(context.Background(), domain.Credentials{}, testSalt, domain.DefaultKDFParams, false)
 
 		assert.Error(t, err)
 	})
@@ -126,13 +126,14 @@ func TestAuthClient_Login(t *testing.T) {
 		)
 
 		client := grpcclient.NewAuthClient(mockPB)
-		token, err := client.Login(context.Background(), domain.Credentials{
+		token, changeRequired, err := client.Login(context.Background(), domain.Credentials{
 			Login:   "user",
 			AuthKey: hash,
 		})
 
 		require.NoError(t, err)
 		assert.Equal(t, jwtToken, token)
+		assert.False(t, changeRequired)
 	})
 
 	t.Run("invalid credentials", func(t *testing.T) {
@@ -141,7 +142,7 @@ func TestAuthClient_Login(t *testing.T) {
 			Return(nil, status.Error(codes.Unauthenticated, "invalid credentials"))
 
 		client := grpcclient.NewAuthClient(mockPB)
-		_, err := client.Login(context.Background(), domain.Credentials{})
+		_, _, err := client.Login(context.Background(), domain.Credentials{})
 
 		assert.ErrorIs(t, err, domain.ErrInvalidCredentials)
 	})
@@ -152,7 +153,7 @@ func TestAuthClient_Login(t *testing.T) {
 			Return(nil, status.Error(codes.NotFound, "user not found"))
 
 		client := grpcclient.NewAuthClient(mockPB)
-		_, err := client.Login(context.Background(), domain.Credentials{})
+		_, _, err := client.Login(context.Background(), domain.Credentials{})
 
 		assert.ErrorIs(t, err, domain.ErrNotFound)
 	})
@@ -163,7 +164,7 @@ func TestAuthClient_Login(t *testing.T) {
 			Return(nil, status.Error(codes.Internal, "internal error"))
 
 		client := grpcclient.NewAuthClient(mockPB)
-		_, err := client.Login(context.Background(), domain.Credentials{})
+		_, _, err := client.Login(context.Background(), domain.Credentials{})
 
 		assert.Error(t, err)
 	})

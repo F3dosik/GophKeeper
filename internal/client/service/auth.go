@@ -5,9 +5,13 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
+	"math/big"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/F3dosik/GophKeeper/internal/client/grpcclient"
 	"github.com/F3dosik/GophKeeper/internal/client/session"
@@ -21,9 +25,16 @@ type AuthService interface {
 	// Генерирует соль, деривирует мастер-ключ через Argon2id и отправляет на сервер.
 	CreateUser(ctx context.Context, login, password string) error
 
+	// CreateTemporaryUser регистрирует пользователя со сгенерированным временным паролем
+	// (доступно только на административном порту сервера). Возвращает пароль и время,
+	// до которого им можно войти; при первом входе пароль нужно сменить.
+	CreateTemporaryUser(ctx context.Context, login string) (password string, expiresAt time.Time, err error)
+
 	// Login аутентифицирует пользователя и сохраняет сессию (логин + JWT токен) в файл.
 	// Запрашивает соль с сервера, деривирует ключ аутентификации и получает токен.
-	Login(ctx context.Context, login, password string) error
+	// Для временного пароля возвращает passwordChangeRequired == true: сессия не
+	// сохраняется, а полученный токен годится только для ChangePassword.
+	Login(ctx context.Context, login, password string) (passwordChangeRequired bool, err error)
 
 	// Unlock проверяет мастер-пароль на сервере и возвращает masterKey для деривации
 	// ключей шифрования. Используется перед операциями с секретами: без проверки неверный
@@ -64,43 +75,91 @@ func NewAuthService(client grpcclient.AuthClient, sessionPath string, tokens *gr
 // Генерирует случайную соль, деривирует мастер-ключ через Argon2id и отправляет на сервер
 // производный от него ключ аутентификации (сам masterKey клиент не покидает).
 func (s *authService) CreateUser(ctx context.Context, login, password string) error {
+	if _, err := s.register(ctx, login, password, false); err != nil {
+		return fmt.Errorf("authService.CreateUser: %w", err)
+	}
+	return nil
+}
+
+// CreateTemporaryUser регистрирует пользователя со случайным временным паролем.
+func (s *authService) CreateTemporaryUser(ctx context.Context, login string) (string, time.Time, error) {
+	password, err := generateTemporaryPassword()
+	if err != nil {
+		return "", time.Time{}, fmt.Errorf("authService.CreateTemporaryUser: %w", err)
+	}
+	expiresAt, err := s.register(ctx, login, password, true)
+	if err != nil {
+		return "", time.Time{}, fmt.Errorf("authService.CreateTemporaryUser: %w", err)
+	}
+	if expiresAt == nil {
+		return "", time.Time{}, errors.New("authService.CreateTemporaryUser: server did not mark the password as temporary")
+	}
+	return password, *expiresAt, nil
+}
+
+// register выводит ключи из пароля с новой солью и регистрирует пользователя.
+func (s *authService) register(ctx context.Context, login, password string, temporary bool) (*time.Time, error) {
 	salt, err := crypto.GenerateSalt()
 	if err != nil {
-		return fmt.Errorf("authService: %w", err)
+		return nil, err
 	}
 
 	kdf := domain.DefaultKDFParams
 	_, authKey, err := deriveKeys(password, salt, kdf)
 	if err != nil {
-		return fmt.Errorf("authService.CreateUser: %w", err)
+		return nil, err
 	}
-	if err := s.client.CreateUser(
-		ctx, domain.Credentials{Login: login, AuthKey: authKey}, salt, kdf,
-	); err != nil {
-		return fmt.Errorf("authService.CreateUser: %w", err)
-	}
+	return s.client.CreateUser(ctx, domain.Credentials{Login: login, AuthKey: authKey}, salt, kdf, temporary)
+}
 
-	return nil
+// temporaryPasswordAlphabet — символы временного пароля без похожих (0/O, 1/l/I).
+const temporaryPasswordAlphabet = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+// generateTemporaryPassword возвращает пароль вида xxxx-xxxx-xxxx-xxxx
+// (16 случайных символов из 55, около 92 бит энтропии).
+func generateTemporaryPassword() (string, error) {
+	const groups, groupLen = 4, 4
+	var b strings.Builder
+	for g := range groups {
+		if g > 0 {
+			b.WriteByte('-')
+		}
+		for range groupLen {
+			n, err := rand.Int(rand.Reader, big.NewInt(int64(len(temporaryPasswordAlphabet))))
+			if err != nil {
+				return "", err
+			}
+			b.WriteByte(temporaryPasswordAlphabet[n.Int64()])
+		}
+	}
+	return b.String(), nil
 }
 
 // Login аутентифицирует пользователя на сервере.
 // Запрашивает соль по логину, деривирует ключ аутентификации, получает JWT токен
 // и сохраняет сессию (логин + токен) в файл для последующих вызовов.
-func (s *authService) Login(ctx context.Context, login, password string) error {
+func (s *authService) Login(ctx context.Context, login, password string) (bool, error) {
 	_, authKey, err := s.userKeys(ctx, login, password)
 	if err != nil {
-		return fmt.Errorf("authService.Login: %w", err)
+		return false, fmt.Errorf("authService.Login: %w", err)
 	}
-	token, err := s.client.Login(ctx, domain.Credentials{Login: login, AuthKey: authKey})
+	token, changeRequired, err := s.client.Login(ctx, domain.Credentials{Login: login, AuthKey: authKey})
 	if err != nil {
-		return fmt.Errorf("authService.Login: %w", err)
+		return false, fmt.Errorf("authService.Login: %w", err)
+	}
+
+	if changeRequired {
+		// Токен нужен только для смены пароля в этом же процессе; в файл сессии он
+		// не попадает, чтобы прерванная смена не оставила полувход.
+		s.tokens.SetToken(token)
+		return true, nil
 	}
 
 	if err := s.saveSession(login, token); err != nil {
-		return fmt.Errorf("authService.Login: %w", err)
+		return false, fmt.Errorf("authService.Login: %w", err)
 	}
 
-	return nil
+	return false, nil
 }
 
 // Unlock получает соль пользователя, деривирует masterKey через Argon2id и проверяет
@@ -112,9 +171,12 @@ func (s *authService) Unlock(ctx context.Context, login, password string) ([]byt
 	if err != nil {
 		return nil, fmt.Errorf("authService.Unlock: %w", err)
 	}
-	token, err := s.client.Login(ctx, domain.Credentials{Login: login, AuthKey: authKey})
+	token, changeRequired, err := s.client.Login(ctx, domain.Credentials{Login: login, AuthKey: authKey})
 	if err != nil {
 		return nil, fmt.Errorf("authService.Unlock: %w", err)
+	}
+	if changeRequired {
+		return nil, fmt.Errorf("authService.Unlock: %w", domain.ErrPasswordChangeRequired)
 	}
 	if err := s.saveSession(login, token); err != nil {
 		return nil, fmt.Errorf("authService.Unlock: %w", err)

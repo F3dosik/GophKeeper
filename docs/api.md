@@ -109,6 +109,7 @@ CreateUserRequest — запрос регистрации нового поль�
 | credentials | [Credentials](#auth-Credentials) |  | Учётные данные будущего пользователя. |
 | salt | [bytes](#bytes) |  | Случайная соль (16 байт), сгенерированная клиентом, — используется при деривации ключа. |
 | kdf | [KDFParams](#auth-KDFParams) |  | Параметры Argon2id, с которыми клиент вывел ключ. Обязательны. |
+| temporary | [bool](#bool) |  | true — пароль временный: годен ограниченное время и должен быть сменён при первом входе. Разрешено только на административном порту. |
 
 
 
@@ -118,7 +119,12 @@ CreateUserRequest — запрос регистрации нового поль�
 <a name="auth-CreateUserResponse"></a>
 
 ### CreateUserResponse
-CreateUserResponse — пустой ответ при успешной регистрации.
+CreateUserResponse — ответ при успешной регистрации.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| temporary_expires_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  | Для временного пароля — время, до которого им можно войти. |
 
 
 
@@ -218,6 +224,7 @@ LoginResponse — ответ на успешный вход.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | token | [string](#string) |  | JWT-токен, который клиент передаёт в метаданных последующих запросов. |
+| password_change_required | [bool](#bool) |  | true — пароль временный и должен быть сменён. Токен в этом случае короткоживущий и разрешает только ChangePassword и Logout. |
 
 
 
@@ -280,7 +287,7 @@ Auth — сервис аутентификации и регистрации п�
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
-| CreateUser | [CreateUserRequest](#auth-CreateUserRequest) | [CreateUserResponse](#auth-CreateUserResponse) | CreateUser регистрирует нового пользователя. Ошибки: AlreadyExists — логин занят; InvalidArgument — невалидные данные. |
+| CreateUser | [CreateUserRequest](#auth-CreateUserRequest) | [CreateUserResponse](#auth-CreateUserResponse) | CreateUser регистрирует нового пользователя. Ошибки: AlreadyExists — логин занят; InvalidArgument — невалидные данные; PermissionDenied — регистрация на этом порту отключена. |
 | GetSalt | [GetSaltRequest](#auth-GetSaltRequest) | [GetSaltResponse](#auth-GetSaltResponse) | GetSalt возвращает соль пользователя, сохранённую при регистрации. Ошибка: NotFound — пользователь не найден. |
 | Login | [LoginRequest](#auth-LoginRequest) | [LoginResponse](#auth-LoginResponse) | Login выполняет вход и возвращает JWT-токен. Ошибки: NotFound — пользователь не найден; Unauthenticated — неверные учётные данные. |
 | Logout | [LogoutRequest](#auth-LogoutRequest) | [LogoutResponse](#auth-LogoutResponse) | Logout отзывает текущий токен или все токены пользователя. Требует JWT-токен в метаданных (authorization: Bearer ...). Ошибка: Unauthenticated — токен отсутствует, истёк или уже отозван. |

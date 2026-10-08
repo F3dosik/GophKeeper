@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"time"
 
 	"github.com/F3dosik/GophKeeper/internal/domain"
 	pb "github.com/F3dosik/GophKeeper/proto/gen"
@@ -16,15 +17,18 @@ type AuthClient interface {
 	// CreateUser регистрирует нового пользователя на сервере.
 	// salt должен быть сгенерирован клиентом перед деривацией ключей.
 	// kdf — параметры Argon2id, с которыми выведен ключ аутентификации.
-	CreateUser(ctx context.Context, creds domain.Credentials, salt []byte, kdf domain.KDFParams) error
+	// temporary — пароль временный (только на административном порту); тогда
+	// возвращается время, до которого им можно войти.
+	CreateUser(ctx context.Context, creds domain.Credentials, salt []byte, kdf domain.KDFParams, temporary bool) (*time.Time, error)
 
 	// GetSalt возвращает соль пользователя по логину.
 	// Используется для деривации ключей перед аутентификацией.
 	// Вместе с солью возвращает параметры Argon2id пользователя.
 	GetSalt(ctx context.Context, login string) ([]byte, domain.KDFParams, error)
 
-	// Login аутентифицирует пользователя и возвращает JWT токен.
-	Login(ctx context.Context, creds domain.Credentials) (string, error)
+	// Login аутентифицирует пользователя и возвращает JWT токен. Для временного пароля
+	// возвращает passwordChangeRequired == true и токен, пригодный только для смены пароля.
+	Login(ctx context.Context, creds domain.Credentials) (token string, passwordChangeRequired bool, err error)
 
 	// Logout отзывает на сервере текущий токен или, если allSessions == true,
 	// все токены пользователя.
@@ -44,14 +48,24 @@ func NewAuthClient(client pb.AuthClient) AuthClient {
 	return &authClient{client: client}
 }
 
-func (c *authClient) CreateUser(ctx context.Context, creds domain.Credentials, salt []byte, kdf domain.KDFParams) error {
+func (c *authClient) CreateUser(
+	ctx context.Context, creds domain.Credentials, salt []byte, kdf domain.KDFParams, temporary bool,
+) (*time.Time, error) {
 	req := pb.CreateUserRequest_builder{
 		Credentials: toPBCredentials(creds),
 		Salt:        salt,
 		Kdf:         toPBKDF(kdf),
+		Temporary:   &temporary,
 	}.Build()
-	_, err := c.client.CreateUser(ctx, req)
-	return fromGRPCError(err)
+	resp, err := c.client.CreateUser(ctx, req)
+	if err != nil {
+		return nil, fromGRPCError(err)
+	}
+	if !resp.HasTemporaryExpiresAt() {
+		return nil, nil
+	}
+	expiresAt := resp.GetTemporaryExpiresAt().AsTime()
+	return &expiresAt, nil
 }
 
 func (c *authClient) GetSalt(ctx context.Context, login string) ([]byte, domain.KDFParams, error) {
@@ -63,15 +77,15 @@ func (c *authClient) GetSalt(ctx context.Context, login string) ([]byte, domain.
 	return resp.GetSalt(), fromPBKDF(resp.GetKdf()), nil
 }
 
-func (c *authClient) Login(ctx context.Context, creds domain.Credentials) (string, error) {
+func (c *authClient) Login(ctx context.Context, creds domain.Credentials) (string, bool, error) {
 	req := pb.LoginRequest_builder{
 		Credentials: toPBCredentials(creds),
 	}.Build()
 	resp, err := c.client.Login(ctx, req)
 	if err != nil {
-		return "", fromGRPCError(err)
+		return "", false, fromGRPCError(err)
 	}
-	return resp.GetToken(), nil
+	return resp.GetToken(), resp.GetPasswordChangeRequired(), nil
 }
 
 func (c *authClient) Logout(ctx context.Context, allSessions bool) error {

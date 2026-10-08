@@ -7,6 +7,7 @@ import (
 	"github.com/F3dosik/GophKeeper/pkg/crypto"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/F3dosik/GophKeeper/internal/client/grpcclient"
 	"github.com/F3dosik/GophKeeper/internal/client/mocks"
@@ -23,7 +24,7 @@ func TestAuthService_CreateUser(t *testing.T) {
 		mockAuth := mocks.NewAuthClient(t)
 		mockAuth.On("CreateUser", mock.Anything, mock.MatchedBy(func(creds domain.Credentials) bool {
 			return creds.Login == "user" && len(creds.AuthKey) == 32
-		}), mock.AnythingOfType("[]uint8"), domain.DefaultKDFParams).Return(nil)
+		}), mock.AnythingOfType("[]uint8"), domain.DefaultKDFParams, false).Return(nil, nil)
 
 		svc := service.NewAuthService(mockAuth, t.TempDir()+"/token", nil)
 		err := svc.CreateUser(context.Background(), "user", "password")
@@ -34,8 +35,8 @@ func TestAuthService_CreateUser(t *testing.T) {
 
 	t.Run("already exists", func(t *testing.T) {
 		mockAuth := mocks.NewAuthClient(t)
-		mockAuth.On("CreateUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			Return(domain.ErrAlreadyExists)
+		mockAuth.On("CreateUser", mock.Anything, mock.Anything, mock.Anything, mock.Anything, false).
+			Return(nil, domain.ErrAlreadyExists)
 
 		svc := service.NewAuthService(mockAuth, t.TempDir()+"/token", nil)
 		err := svc.CreateUser(context.Background(), "user", "password")
@@ -51,11 +52,11 @@ func TestAuthService_Login(t *testing.T) {
 			Return([]byte("saltsaltsaltsalt"), domain.LegacyKDFParams, nil)
 		mockAuth.On("Login", mock.Anything, mock.MatchedBy(func(creds domain.Credentials) bool {
 			return creds.Login == "user" && len(creds.AuthKey) == 32
-		})).Return("jwt-token", nil)
+		})).Return("jwt-token", false, nil)
 
 		tokenPath := t.TempDir() + "/token"
 		svc := service.NewAuthService(mockAuth, tokenPath, nil)
-		err := svc.Login(context.Background(), "user", "password")
+		_, err := svc.Login(context.Background(), "user", "password")
 
 		require.NoError(t, err)
 
@@ -72,7 +73,7 @@ func TestAuthService_Login(t *testing.T) {
 			Return(nil, domain.KDFParams{}, domain.ErrNotFound)
 
 		svc := service.NewAuthService(mockAuth, t.TempDir()+"/token", nil)
-		err := svc.Login(context.Background(), "user", "password")
+		_, err := svc.Login(context.Background(), "user", "password")
 
 		assert.ErrorIs(t, err, domain.ErrNotFound)
 	})
@@ -82,10 +83,10 @@ func TestAuthService_Login(t *testing.T) {
 		mockAuth.On("GetSalt", mock.Anything, "user").
 			Return([]byte("saltsaltsaltsalt"), domain.LegacyKDFParams, nil)
 		mockAuth.On("Login", mock.Anything, mock.Anything).
-			Return("", domain.ErrInvalidCredentials)
+			Return("", false, domain.ErrInvalidCredentials)
 
 		svc := service.NewAuthService(mockAuth, t.TempDir()+"/token", nil)
-		err := svc.Login(context.Background(), "user", "password")
+		_, err := svc.Login(context.Background(), "user", "password")
 
 		assert.ErrorIs(t, err, domain.ErrInvalidCredentials)
 	})
@@ -95,11 +96,11 @@ func TestAuthService_Login(t *testing.T) {
 		mockAuth.On("GetSalt", mock.Anything, "user").
 			Return([]byte("saltsaltsaltsalt"), domain.LegacyKDFParams, nil)
 		mockAuth.On("Login", mock.Anything, mock.Anything).
-			Return("jwt-token", nil)
+			Return("jwt-token", false, nil)
 
 		tokenPath := t.TempDir() + "/token"
 		svc := service.NewAuthService(mockAuth, tokenPath, nil)
-		err := svc.Login(context.Background(), "user", "password")
+		_, err := svc.Login(context.Background(), "user", "password")
 		require.NoError(t, err)
 
 		info, err := os.Stat(tokenPath)
@@ -117,7 +118,7 @@ func TestAuthService_Unlock(t *testing.T) {
 		mockAuth.On("Login", mock.Anything, mock.MatchedBy(func(creds domain.Credentials) bool {
 			sentAuthKey = creds.AuthKey
 			return creds.Login == "user" && len(creds.AuthKey) == 32
-		})).Return("jwt-token", nil)
+		})).Return("jwt-token", false, nil)
 
 		sessionPath := t.TempDir() + "/session"
 		tokens := grpcclient.NewTokenStore("old-token")
@@ -140,7 +141,7 @@ func TestAuthService_Unlock(t *testing.T) {
 		mockAuth.On("GetSalt", mock.Anything, "user").
 			Return([]byte("saltsaltsaltsalt"), domain.LegacyKDFParams, nil)
 		mockAuth.On("Login", mock.Anything, mock.Anything).
-			Return("", domain.ErrInvalidCredentials)
+			Return("", false, domain.ErrInvalidCredentials)
 
 		svc := service.NewAuthService(mockAuth, t.TempDir()+"/session", nil)
 		masterKey, err := svc.Unlock(context.Background(), "user", "wrong")
@@ -230,8 +231,9 @@ func TestAuthService_RejectsWeakServerKDF(t *testing.T) {
 
 	svc := service.NewAuthService(mockAuth, t.TempDir()+"/session", nil)
 
-	assert.ErrorIs(t, svc.Login(context.Background(), "user", "password"), domain.ErrInvalidArgument)
-	_, err := svc.Unlock(context.Background(), "user", "password")
+	_, err := svc.Login(context.Background(), "user", "password")
+	assert.ErrorIs(t, err, domain.ErrInvalidArgument)
+	_, err = svc.Unlock(context.Background(), "user", "password")
 	assert.ErrorIs(t, err, domain.ErrInvalidArgument)
 }
 
@@ -276,4 +278,43 @@ func TestAuthService_ChangePassword(t *testing.T) {
 	sess, err := session.Load(sessionPath)
 	require.NoError(t, err)
 	assert.Equal(t, "new-token", sess.Token)
+}
+
+func TestAuthService_CreateTemporaryUser(t *testing.T) {
+	expiresAt := time.Date(2026, 10, 10, 12, 0, 0, 0, time.UTC)
+	mockAuth := mocks.NewAuthClient(t)
+	mockAuth.On("CreateUser", mock.Anything, mock.Anything, mock.Anything, domain.DefaultKDFParams, true).
+		Return(&expiresAt, nil)
+
+	svc := service.NewAuthService(mockAuth, t.TempDir()+"/session", nil)
+	password, gotExpiresAt, err := svc.CreateTemporaryUser(context.Background(), "bob")
+	require.NoError(t, err)
+
+	assert.Regexp(t, `^[a-zA-Z2-9]{4}(-[a-zA-Z2-9]{4}){3}$`, password)
+	assert.NotRegexp(t, `[01lIoO]`, password, "ambiguous characters must not be used")
+	assert.Equal(t, expiresAt, gotExpiresAt)
+
+	other, _, err := svc.CreateTemporaryUser(context.Background(), "bob")
+	require.NoError(t, err)
+	assert.NotEqual(t, password, other)
+}
+
+func TestAuthService_Login_PasswordChangeRequired(t *testing.T) {
+	mockAuth := mocks.NewAuthClient(t)
+	mockAuth.On("GetSalt", mock.Anything, "bob").Return([]byte("saltsaltsaltsalt"), domain.DefaultKDFParams, nil)
+	mockAuth.On("Login", mock.Anything, mock.Anything).Return("restricted", true, nil)
+
+	sessionPath := t.TempDir() + "/session"
+	tokens := grpcclient.NewTokenStore("")
+	svc := service.NewAuthService(mockAuth, sessionPath, tokens)
+
+	changeRequired, err := svc.Login(context.Background(), "bob", "temp")
+	require.NoError(t, err)
+	assert.True(t, changeRequired)
+	assert.Equal(t, "restricted", tokens.Token(), "the token is needed for ChangePassword in this process")
+	_, statErr := os.Stat(sessionPath)
+	assert.True(t, os.IsNotExist(statErr), "a restricted token must not be saved to the session")
+
+	_, err = svc.Unlock(context.Background(), "bob", "temp")
+	assert.ErrorIs(t, err, domain.ErrPasswordChangeRequired)
 }

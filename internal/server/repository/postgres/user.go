@@ -24,11 +24,12 @@ func NewUserRepository(pool *pgxpool.Pool) domain.UserRepository {
 func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
 	err := repository.WithRetry(ctx, isRetriable, func() error {
 		return r.pool.QueryRow(ctx, `
-		INSERT INTO users (login, password_hash, password_salt, kdf_time, kdf_memory_kib, kdf_threads)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO users (login, password_hash, password_salt, kdf_time, kdf_memory_kib, kdf_threads,
+		                   password_expires_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, created_at
 	`, user.Login, user.PasswordHash, user.PasswordSalt,
-			int64(user.KDF.Time), int64(user.KDF.MemoryKiB), int16(user.KDF.Threads),
+			int64(user.KDF.Time), int64(user.KDF.MemoryKiB), int16(user.KDF.Threads), user.PasswordExpiresAt,
 		).Scan(&user.ID, &user.CreatedAt)
 	})
 
@@ -52,11 +53,11 @@ func (r *userRepository) GetByLogin(ctx context.Context, login string) (*domain.
 	err := repository.WithRetry(ctx, isRetriable, func() error {
 		return r.pool.QueryRow(ctx, `
 			SELECT id, password_hash, password_salt, kdf_time, kdf_memory_kib, kdf_threads,
-			       token_version, created_at
+			       token_version, password_expires_at, created_at
 			FROM users
 			WHERE login = $1
 		`, login).Scan(&user.ID, &user.PasswordHash, &user.PasswordSalt, &kdfTime, &kdfMemory, &kdfThreads,
-			&user.TokenVersion, &user.CreatedAt)
+			&user.TokenVersion, &user.PasswordExpiresAt, &user.CreatedAt)
 	})
 	user.KDF = domain.KDFParams{Time: uint32(kdfTime), MemoryKiB: uint32(kdfMemory), Threads: uint8(kdfThreads)}
 
@@ -92,7 +93,7 @@ func (r *userRepository) ChangePassword(
 		UPDATE users
 		SET password_hash = $3, password_salt = $4,
 		    kdf_time = $5, kdf_memory_kib = $6, kdf_threads = $7,
-		    token_version = token_version + 1
+		    token_version = token_version + 1, password_expires_at = NULL
 		WHERE id = $1 AND password_hash = $2
 		RETURNING token_version
 	`, userID, change.OldHash, change.NewHash, change.NewSalt,

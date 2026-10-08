@@ -56,10 +56,11 @@ func TestAuthService_Login_Success(t *testing.T) {
 		}, nil)
 	svc := NewAuthService(mockRepo, mocks.NewTokenRepository(t), testAuthConfig(t))
 
-	token, err := svc.Login(context.Background(), "user", testAuthKey)
+	result, err := svc.Login(context.Background(), "user", testAuthKey)
 
 	assert.NoError(t, err)
-	assert.NotEmpty(t, token)
+	assert.NotEmpty(t, result.Token)
+	assert.False(t, result.PasswordChangeRequired)
 	mockRepo.AssertExpectations(t)
 }
 
@@ -100,7 +101,7 @@ func TestAuthService_Create_Success(t *testing.T) {
 	}).Return(nil)
 
 	svc := NewAuthService(mockRepo, mocks.NewTokenRepository(t), testAuthConfig(t))
-	err := svc.Create(context.Background(), "user", testAuthKey, testSalt, domain.DefaultKDFParams)
+	_, err := svc.Create(context.Background(), domain.Registration{Login: "user", AuthKey: testAuthKey, Salt: testSalt, KDF: domain.DefaultKDFParams})
 
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
@@ -112,7 +113,7 @@ func TestAuthService_Create_AlreadyExists(t *testing.T) {
 		Return(domain.ErrUserAlreadyExists)
 
 	svc := NewAuthService(mockRepo, mocks.NewTokenRepository(t), testAuthConfig(t))
-	err := svc.Create(context.Background(), "user", testAuthKey, testSalt, domain.DefaultKDFParams)
+	_, err := svc.Create(context.Background(), domain.Registration{Login: "user", AuthKey: testAuthKey, Salt: testSalt, KDF: domain.DefaultKDFParams})
 
 	assert.ErrorIs(t, err, domain.ErrUserAlreadyExists)
 }
@@ -153,11 +154,16 @@ func TestAuthService_RejectsInvalidInput(t *testing.T) {
 	ctx := context.Background()
 
 	kdf := domain.DefaultKDFParams
-	assert.ErrorIs(t, svc.Create(ctx, "", testAuthKey, testSalt, kdf), domain.ErrInvalidArgument)
-	assert.ErrorIs(t, svc.Create(ctx, "user", nil, testSalt, kdf), domain.ErrInvalidArgument)
-	assert.ErrorIs(t, svc.Create(ctx, "user", testAuthKey, make([]byte, 1<<20), kdf), domain.ErrInvalidArgument)
-	assert.ErrorIs(t, svc.Create(ctx, "user", testAuthKey, testSalt, domain.KDFParams{Time: 1, MemoryKiB: 8, Threads: 1}),
-		domain.ErrInvalidArgument, "weak kdf params must be rejected")
+	invalid := map[string]domain.Registration{
+		"empty login": {Login: "", AuthKey: testAuthKey, Salt: testSalt, KDF: kdf},
+		"no auth key": {Login: "user", Salt: testSalt, KDF: kdf},
+		"huge salt":   {Login: "user", AuthKey: testAuthKey, Salt: make([]byte, 1<<20), KDF: kdf},
+		"weak kdf":    {Login: "user", AuthKey: testAuthKey, Salt: testSalt, KDF: domain.KDFParams{Time: 1, MemoryKiB: 8, Threads: 1}},
+	}
+	for name, reg := range invalid {
+		_, err := svc.Create(ctx, reg)
+		assert.ErrorIs(t, err, domain.ErrInvalidArgument, name)
+	}
 
 	_, _, err := svc.GetSalt(ctx, strings.Repeat("a", 1<<20))
 	assert.ErrorIs(t, err, domain.ErrInvalidArgument)
@@ -248,4 +254,52 @@ func TestAuthService_ChangePassword(t *testing.T) {
 				ChangePassword(ctx, userID, change, iterate(tc.secrets...))
 		})
 	}
+}
+
+func TestAuthService_Create_Temporary(t *testing.T) {
+	cfg := testAuthConfig(t)
+	cfg.TempPasswordTTL = 24 * time.Hour
+
+	mockRepo := mocks.NewUserRepository(t)
+	mockRepo.On("Create", mock.Anything, mock.MatchedBy(func(u *domain.User) bool {
+		return u.PasswordExpiresAt != nil && time.Until(*u.PasswordExpiresAt) > 23*time.Hour
+	})).Return(nil)
+
+	svc := NewAuthService(mockRepo, mocks.NewTokenRepository(t), cfg)
+	expiresAt, err := svc.Create(context.Background(), domain.Registration{
+		Login: "user", AuthKey: testAuthKey, Salt: testSalt, KDF: domain.DefaultKDFParams, Temporary: true,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, expiresAt)
+}
+
+func TestAuthService_Login_TemporaryPassword(t *testing.T) {
+	user := func(expiresAt time.Time) *domain.User {
+		return &domain.User{ID: uuid.New(), PasswordHash: crypto.HashAuthKey(testAuthKey), PasswordExpiresAt: &expiresAt}
+	}
+
+	t.Run("valid temporary password gives a restricted token", func(t *testing.T) {
+		cfg := testAuthConfig(t)
+		mockRepo := mocks.NewUserRepository(t)
+		mockRepo.On("GetByLogin", mock.Anything, "user").Return(user(time.Now().Add(time.Hour)), nil)
+
+		result, err := NewAuthService(mockRepo, mocks.NewTokenRepository(t), cfg).
+			Login(context.Background(), "user", testAuthKey)
+		require.NoError(t, err)
+		assert.True(t, result.PasswordChangeRequired)
+
+		claims, err := jwtutil.ParseToken(result.Token, cfg.Keys.TokenSigning)
+		require.NoError(t, err)
+		assert.True(t, claims.PasswordChangeOnly)
+		assert.LessOrEqual(t, time.Until(claims.ExpiresAt.Time), passwordChangeTokenTTL)
+	})
+
+	t.Run("expired temporary password is rejected", func(t *testing.T) {
+		mockRepo := mocks.NewUserRepository(t)
+		mockRepo.On("GetByLogin", mock.Anything, "user").Return(user(time.Now().Add(-time.Minute)), nil)
+
+		_, err := NewAuthService(mockRepo, mocks.NewTokenRepository(t), testAuthConfig(t)).
+			Login(context.Background(), "user", testAuthKey)
+		assert.ErrorIs(t, err, domain.ErrInvalidCredentials)
+	})
 }

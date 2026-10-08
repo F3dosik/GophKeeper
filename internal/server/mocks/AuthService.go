@@ -46,22 +46,34 @@ func (_m *AuthService) ChangePassword(ctx context.Context, userID uuid.UUID, cha
 	return r0, r1
 }
 
-// Create provides a mock function with given fields: ctx, login, authKey, salt, kdf
-func (_m *AuthService) Create(ctx context.Context, login string, authKey []byte, salt []byte, kdf domain.KDFParams) error {
-	ret := _m.Called(ctx, login, authKey, salt, kdf)
+// Create provides a mock function with given fields: ctx, reg
+func (_m *AuthService) Create(ctx context.Context, reg domain.Registration) (*time.Time, error) {
+	ret := _m.Called(ctx, reg)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, []byte, []byte, domain.KDFParams) error); ok {
-		r0 = rf(ctx, login, authKey, salt, kdf)
+	var r0 *time.Time
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, domain.Registration) (*time.Time, error)); ok {
+		return rf(ctx, reg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, domain.Registration) *time.Time); ok {
+		r0 = rf(ctx, reg)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*time.Time)
+		}
 	}
 
-	return r0
+	if rf, ok := ret.Get(1).(func(context.Context, domain.Registration) error); ok {
+		r1 = rf(ctx, reg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // GetSalt provides a mock function with given fields: ctx, login
@@ -102,22 +114,22 @@ func (_m *AuthService) GetSalt(ctx context.Context, login string) ([]byte, domai
 }
 
 // Login provides a mock function with given fields: ctx, login, authKey
-func (_m *AuthService) Login(ctx context.Context, login string, authKey []byte) (string, error) {
+func (_m *AuthService) Login(ctx context.Context, login string, authKey []byte) (domain.LoginResult, error) {
 	ret := _m.Called(ctx, login, authKey)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Login")
 	}
 
-	var r0 string
+	var r0 domain.LoginResult
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, []byte) (string, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, []byte) (domain.LoginResult, error)); ok {
 		return rf(ctx, login, authKey)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, []byte) string); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, []byte) domain.LoginResult); ok {
 		r0 = rf(ctx, login, authKey)
 	} else {
-		r0 = ret.Get(0).(string)
+		r0 = ret.Get(0).(domain.LoginResult)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, string, []byte) error); ok {

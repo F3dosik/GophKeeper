@@ -64,7 +64,8 @@ func TestE2E_ChangePassword_RevokesOtherDevices(t *testing.T) {
 
 	phone := newClientKit(t)
 	phone.Login, phone.Password = laptop.Login, laptop.Password
-	require.NoError(t, phone.Auth.Login(ctx, phone.Login, phone.Password))
+	_, err := phone.Auth.Login(ctx, phone.Login, phone.Password)
+	require.NoError(t, err)
 	phoneToken := phone.Tokens.Token()
 
 	require.NoError(t, laptop.Auth.ChangePassword(ctx, laptop.Login, laptop.Password, newPassword, nil))

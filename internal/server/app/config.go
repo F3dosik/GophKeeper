@@ -17,10 +17,12 @@ const (
 	defaultTokenTTL = time.Hour
 
 	defaultAuthRateLimit  = 30      // запросов к Auth в минуту с одного IP
-	defaultAuthRateBurst  = 10      // запросов к Auth подряд с одного IP
+	defaultAuthRateBurst  = 20      // запросов к Auth подряд с одного IP (10 операций с секретами)
 	defaultSecretMaxSize  = 1 << 20 // 1 MiB зашифрованных данных на секрет
 	defaultSecretMaxCount = 1000    // секретов на пользователя
 	maxSecretMaxSize      = 32 << 20
+
+	defaultTempPasswordTTL = 24 * time.Hour
 )
 
 // Config содержит конфигурацию сервера.
@@ -44,6 +46,15 @@ type Config struct {
 	// SecretMaxCount — максимальное количество секретов у пользователя.
 	SecretMaxSize  int `env:"SECRET_MAX_SIZE"`
 	SecretMaxCount int `env:"SECRET_MAX_COUNT"`
+
+	// RegistrationEnabled разрешает регистрацию на публичном порту (по умолчанию true).
+	RegistrationEnabled bool `env:"REGISTRATION_ENABLED" envDefault:"true"`
+	// AdminPort — порт административного сервера, на котором регистрация разрешена
+	// всегда, включая временные пароли. Пустой — административный сервер не запускается.
+	// Порт должен быть доступен только с машины сервера.
+	AdminPort string `env:"ADMIN_PORT"`
+	// TempPasswordTTL — срок действия временного пароля.
+	TempPasswordTTL time.Duration `env:"TEMP_PASSWORD_TTL"`
 }
 
 // TLSEnabled сообщает, настроен ли TLS.
@@ -103,6 +114,14 @@ func parseConfig() (*Config, error) {
 		config.SecretMaxCount = defaultSecretMaxCount
 	}
 
+	if config.AdminPort != "" && !strings.HasPrefix(config.AdminPort, ":") {
+		config.AdminPort = ":" + config.AdminPort
+	}
+
+	if config.TempPasswordTTL == 0 {
+		config.TempPasswordTTL = defaultTempPasswordTTL
+	}
+
 	return &config, nil
 }
 
@@ -140,6 +159,14 @@ func (c *Config) Validate() error {
 
 	if c.SecretMaxSize <= 0 || c.SecretMaxCount <= 0 {
 		return fmt.Errorf("SECRET_MAX_SIZE and SECRET_MAX_COUNT must be positive")
+	}
+
+	if c.TempPasswordTTL < 0 {
+		return fmt.Errorf("TEMP_PASSWORD_TTL must be positive")
+	}
+
+	if c.AdminPort != "" && c.AdminPort == c.ServerPort {
+		return fmt.Errorf("ADMIN_PORT must differ from SERVER_PORT")
 	}
 
 	// Клиент принимает ответы до 64 MiB; страница списка содержит хотя бы один секрет.

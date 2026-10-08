@@ -284,6 +284,7 @@ type CreateUserRequest struct {
 	xxx_hidden_Credentials *Credentials           `protobuf:"bytes,1,opt,name=credentials"`
 	xxx_hidden_Salt        []byte                 `protobuf:"bytes,2,opt,name=salt"`
 	xxx_hidden_Kdf         *KDFParams             `protobuf:"bytes,3,opt,name=kdf"`
+	xxx_hidden_Temporary   bool                   `protobuf:"varint,4,opt,name=temporary"`
 	XXX_raceDetectHookData protoimpl.RaceDetectHookData
 	XXX_presence           [1]uint32
 	unknownFields          protoimpl.UnknownFields
@@ -336,6 +337,13 @@ func (x *CreateUserRequest) GetKdf() *KDFParams {
 	return nil
 }
 
+func (x *CreateUserRequest) GetTemporary() bool {
+	if x != nil {
+		return x.xxx_hidden_Temporary
+	}
+	return false
+}
+
 func (x *CreateUserRequest) SetCredentials(v *Credentials) {
 	x.xxx_hidden_Credentials = v
 }
@@ -345,11 +353,16 @@ func (x *CreateUserRequest) SetSalt(v []byte) {
 		v = []byte{}
 	}
 	x.xxx_hidden_Salt = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 3)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 4)
 }
 
 func (x *CreateUserRequest) SetKdf(v *KDFParams) {
 	x.xxx_hidden_Kdf = v
+}
+
+func (x *CreateUserRequest) SetTemporary(v bool) {
+	x.xxx_hidden_Temporary = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 4)
 }
 
 func (x *CreateUserRequest) HasCredentials() bool {
@@ -373,6 +386,13 @@ func (x *CreateUserRequest) HasKdf() bool {
 	return x.xxx_hidden_Kdf != nil
 }
 
+func (x *CreateUserRequest) HasTemporary() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
+}
+
 func (x *CreateUserRequest) ClearCredentials() {
 	x.xxx_hidden_Credentials = nil
 }
@@ -386,6 +406,11 @@ func (x *CreateUserRequest) ClearKdf() {
 	x.xxx_hidden_Kdf = nil
 }
 
+func (x *CreateUserRequest) ClearTemporary() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
+	x.xxx_hidden_Temporary = false
+}
+
 type CreateUserRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
@@ -395,6 +420,9 @@ type CreateUserRequest_builder struct {
 	Salt []byte
 	// Параметры Argon2id, с которыми клиент вывел ключ. Обязательны.
 	Kdf *KDFParams
+	// true — пароль временный: годен ограниченное время и должен быть сменён при
+	// первом входе. Разрешено только на административном порту.
+	Temporary *bool
 }
 
 func (b0 CreateUserRequest_builder) Build() *CreateUserRequest {
@@ -403,18 +431,23 @@ func (b0 CreateUserRequest_builder) Build() *CreateUserRequest {
 	_, _ = b, x
 	x.xxx_hidden_Credentials = b.Credentials
 	if b.Salt != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 3)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 4)
 		x.xxx_hidden_Salt = b.Salt
 	}
 	x.xxx_hidden_Kdf = b.Kdf
+	if b.Temporary != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 4)
+		x.xxx_hidden_Temporary = *b.Temporary
+	}
 	return m0
 }
 
-// CreateUserResponse — пустой ответ при успешной регистрации.
+// CreateUserResponse — ответ при успешной регистрации.
 type CreateUserResponse struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                         protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_TemporaryExpiresAt *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=temporary_expires_at,json=temporaryExpiresAt"`
+	unknownFields                 protoimpl.UnknownFields
+	sizeCache                     protoimpl.SizeCache
 }
 
 func (x *CreateUserResponse) Reset() {
@@ -442,15 +475,40 @@ func (x *CreateUserResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
+func (x *CreateUserResponse) GetTemporaryExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_TemporaryExpiresAt
+	}
+	return nil
+}
+
+func (x *CreateUserResponse) SetTemporaryExpiresAt(v *timestamppb.Timestamp) {
+	x.xxx_hidden_TemporaryExpiresAt = v
+}
+
+func (x *CreateUserResponse) HasTemporaryExpiresAt() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_TemporaryExpiresAt != nil
+}
+
+func (x *CreateUserResponse) ClearTemporaryExpiresAt() {
+	x.xxx_hidden_TemporaryExpiresAt = nil
+}
+
 type CreateUserResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
+	// Для временного пароля — время, до которого им можно войти.
+	TemporaryExpiresAt *timestamppb.Timestamp
 }
 
 func (b0 CreateUserResponse_builder) Build() *CreateUserResponse {
 	m0 := &CreateUserResponse{}
 	b, x := &b0, m0
 	_, _ = b, x
+	x.xxx_hidden_TemporaryExpiresAt = b.TemporaryExpiresAt
 	return m0
 }
 
@@ -713,12 +771,13 @@ func (b0 LoginRequest_builder) Build() *LoginRequest {
 
 // LoginResponse — ответ на успешный вход.
 type LoginResponse struct {
-	state                  protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Token       *string                `protobuf:"bytes,1,opt,name=token"`
-	XXX_raceDetectHookData protoimpl.RaceDetectHookData
-	XXX_presence           [1]uint32
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	state                             protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Token                  *string                `protobuf:"bytes,1,opt,name=token"`
+	xxx_hidden_PasswordChangeRequired bool                   `protobuf:"varint,2,opt,name=password_change_required,json=passwordChangeRequired"`
+	XXX_raceDetectHookData            protoimpl.RaceDetectHookData
+	XXX_presence                      [1]uint32
+	unknownFields                     protoimpl.UnknownFields
+	sizeCache                         protoimpl.SizeCache
 }
 
 func (x *LoginResponse) Reset() {
@@ -756,9 +815,21 @@ func (x *LoginResponse) GetToken() string {
 	return ""
 }
 
+func (x *LoginResponse) GetPasswordChangeRequired() bool {
+	if x != nil {
+		return x.xxx_hidden_PasswordChangeRequired
+	}
+	return false
+}
+
 func (x *LoginResponse) SetToken(v string) {
 	x.xxx_hidden_Token = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 1)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 2)
+}
+
+func (x *LoginResponse) SetPasswordChangeRequired(v bool) {
+	x.xxx_hidden_PasswordChangeRequired = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 2)
 }
 
 func (x *LoginResponse) HasToken() bool {
@@ -768,9 +839,21 @@ func (x *LoginResponse) HasToken() bool {
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
 }
 
+func (x *LoginResponse) HasPasswordChangeRequired() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+}
+
 func (x *LoginResponse) ClearToken() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
 	x.xxx_hidden_Token = nil
+}
+
+func (x *LoginResponse) ClearPasswordChangeRequired() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_PasswordChangeRequired = false
 }
 
 type LoginResponse_builder struct {
@@ -778,6 +861,9 @@ type LoginResponse_builder struct {
 
 	// JWT-токен, который клиент передаёт в метаданных последующих запросов.
 	Token *string
+	// true — пароль временный и должен быть сменён. Токен в этом случае короткоживущий
+	// и разрешает только ChangePassword и Logout.
+	PasswordChangeRequired *bool
 }
 
 func (b0 LoginResponse_builder) Build() *LoginResponse {
@@ -785,8 +871,12 @@ func (b0 LoginResponse_builder) Build() *LoginResponse {
 	b, x := &b0, m0
 	_, _ = b, x
 	if b.Token != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 1)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 2)
 		x.xxx_hidden_Token = b.Token
+	}
+	if b.PasswordChangeRequired != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 2)
+		x.xxx_hidden_PasswordChangeRequired = *b.PasswordChangeRequired
 	}
 	return m0
 }
@@ -1528,21 +1618,24 @@ const file_proto_auth_proto_rawDesc = "" +
 	"\x04time\x18\x01 \x01(\rR\x04time\x12\x1d\n" +
 	"\n" +
 	"memory_kib\x18\x02 \x01(\rR\tmemoryKib\x12\x18\n" +
-	"\athreads\x18\x03 \x01(\rR\athreads\"\x7f\n" +
+	"\athreads\x18\x03 \x01(\rR\athreads\"\x9d\x01\n" +
 	"\x11CreateUserRequest\x123\n" +
 	"\vcredentials\x18\x01 \x01(\v2\x11.auth.CredentialsR\vcredentials\x12\x12\n" +
 	"\x04salt\x18\x02 \x01(\fR\x04salt\x12!\n" +
-	"\x03kdf\x18\x03 \x01(\v2\x0f.auth.KDFParamsR\x03kdf\"\x14\n" +
-	"\x12CreateUserResponse\"&\n" +
+	"\x03kdf\x18\x03 \x01(\v2\x0f.auth.KDFParamsR\x03kdf\x12\x1c\n" +
+	"\ttemporary\x18\x04 \x01(\bR\ttemporary\"b\n" +
+	"\x12CreateUserResponse\x12L\n" +
+	"\x14temporary_expires_at\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\x12temporaryExpiresAt\"&\n" +
 	"\x0eGetSaltRequest\x12\x14\n" +
 	"\x05login\x18\x01 \x01(\tR\x05login\"H\n" +
 	"\x0fGetSaltResponse\x12\x12\n" +
 	"\x04salt\x18\x01 \x01(\fR\x04salt\x12!\n" +
 	"\x03kdf\x18\x02 \x01(\v2\x0f.auth.KDFParamsR\x03kdf\"C\n" +
 	"\fLoginRequest\x123\n" +
-	"\vcredentials\x18\x01 \x01(\v2\x11.auth.CredentialsR\vcredentials\"%\n" +
+	"\vcredentials\x18\x01 \x01(\v2\x11.auth.CredentialsR\vcredentials\"_\n" +
 	"\rLoginResponse\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token\"2\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x128\n" +
+	"\x18password_change_required\x18\x02 \x01(\bR\x16passwordChangeRequired\"2\n" +
 	"\rLogoutRequest\x12!\n" +
 	"\fall_sessions\x18\x01 \x01(\bR\vallSessions\"\x10\n" +
 	"\x0eLogoutResponse\"\x9f\x01\n" +
@@ -1593,27 +1686,28 @@ var file_proto_auth_proto_goTypes = []any{
 var file_proto_auth_proto_depIdxs = []int32{
 	0,  // 0: auth.CreateUserRequest.credentials:type_name -> auth.Credentials
 	1,  // 1: auth.CreateUserRequest.kdf:type_name -> auth.KDFParams
-	1,  // 2: auth.GetSaltResponse.kdf:type_name -> auth.KDFParams
-	0,  // 3: auth.LoginRequest.credentials:type_name -> auth.Credentials
-	1,  // 4: auth.ChangePasswordHeader.new_kdf:type_name -> auth.KDFParams
-	14, // 5: auth.ReencryptedSecret.expected_updated_at:type_name -> google.protobuf.Timestamp
-	10, // 6: auth.ChangePasswordRequest.header:type_name -> auth.ChangePasswordHeader
-	11, // 7: auth.ChangePasswordRequest.secret:type_name -> auth.ReencryptedSecret
-	2,  // 8: auth.Auth.CreateUser:input_type -> auth.CreateUserRequest
-	4,  // 9: auth.Auth.GetSalt:input_type -> auth.GetSaltRequest
-	6,  // 10: auth.Auth.Login:input_type -> auth.LoginRequest
-	8,  // 11: auth.Auth.Logout:input_type -> auth.LogoutRequest
-	12, // 12: auth.Auth.ChangePassword:input_type -> auth.ChangePasswordRequest
-	3,  // 13: auth.Auth.CreateUser:output_type -> auth.CreateUserResponse
-	5,  // 14: auth.Auth.GetSalt:output_type -> auth.GetSaltResponse
-	7,  // 15: auth.Auth.Login:output_type -> auth.LoginResponse
-	9,  // 16: auth.Auth.Logout:output_type -> auth.LogoutResponse
-	13, // 17: auth.Auth.ChangePassword:output_type -> auth.ChangePasswordResponse
-	13, // [13:18] is the sub-list for method output_type
-	8,  // [8:13] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	14, // 2: auth.CreateUserResponse.temporary_expires_at:type_name -> google.protobuf.Timestamp
+	1,  // 3: auth.GetSaltResponse.kdf:type_name -> auth.KDFParams
+	0,  // 4: auth.LoginRequest.credentials:type_name -> auth.Credentials
+	1,  // 5: auth.ChangePasswordHeader.new_kdf:type_name -> auth.KDFParams
+	14, // 6: auth.ReencryptedSecret.expected_updated_at:type_name -> google.protobuf.Timestamp
+	10, // 7: auth.ChangePasswordRequest.header:type_name -> auth.ChangePasswordHeader
+	11, // 8: auth.ChangePasswordRequest.secret:type_name -> auth.ReencryptedSecret
+	2,  // 9: auth.Auth.CreateUser:input_type -> auth.CreateUserRequest
+	4,  // 10: auth.Auth.GetSalt:input_type -> auth.GetSaltRequest
+	6,  // 11: auth.Auth.Login:input_type -> auth.LoginRequest
+	8,  // 12: auth.Auth.Logout:input_type -> auth.LogoutRequest
+	12, // 13: auth.Auth.ChangePassword:input_type -> auth.ChangePasswordRequest
+	3,  // 14: auth.Auth.CreateUser:output_type -> auth.CreateUserResponse
+	5,  // 15: auth.Auth.GetSalt:output_type -> auth.GetSaltResponse
+	7,  // 16: auth.Auth.Login:output_type -> auth.LoginResponse
+	9,  // 17: auth.Auth.Logout:output_type -> auth.LogoutResponse
+	13, // 18: auth.Auth.ChangePassword:output_type -> auth.ChangePasswordResponse
+	14, // [14:19] is the sub-list for method output_type
+	9,  // [9:14] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_proto_auth_proto_init() }

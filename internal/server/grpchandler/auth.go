@@ -14,6 +14,7 @@ import (
 	pb "github.com/F3dosik/GophKeeper/proto/gen"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // authHandler реализует интерфейс pb.AuthServer.
@@ -21,28 +22,57 @@ import (
 type authHandler struct {
 	pb.UnimplementedAuthServer
 	authService service.AuthService
+	opts        AuthHandlerOptions
+}
+
+// AuthHandlerOptions задаёт, какие регистрации принимает обработчик. Публичный и
+// административный порты сервера используют разные настройки.
+type AuthHandlerOptions struct {
+	// AllowRegistration разрешает CreateUser.
+	AllowRegistration bool
+	// AllowTemporary разрешает регистрацию с временным паролем. Включается только на
+	// административном порту, доступном с самой машины сервера.
+	AllowTemporary bool
 }
 
 // NewAuthHandler создаёт новый экземпляр обработчика аутентификации.
 // Возвращает pb.AuthServer, чтобы тип был именуемым вне пакета и легко подменялся
 // в тестах и при регистрации в gRPC-сервере.
-func NewAuthHandler(authService service.AuthService) pb.AuthServer {
-	return &authHandler{authService: authService}
+func NewAuthHandler(authService service.AuthService, opts AuthHandlerOptions) pb.AuthServer {
+	return &authHandler{authService: authService, opts: opts}
 }
 
 // CreateUser обрабатывает запрос регистрации нового пользователя.
-// Возвращает codes.AlreadyExists если пользователь с таким логином уже существует.
+// Возвращает codes.AlreadyExists если пользователь с таким логином уже существует
+// и codes.PermissionDenied если регистрация (или временный пароль) здесь не разрешена.
 func (h *authHandler) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
+	if !h.opts.AllowRegistration {
+		return nil, toGRPCError(domain.ErrRegistrationDisabled)
+	}
+	if req.GetTemporary() && !h.opts.AllowTemporary {
+		return nil, toGRPCError(fmt.Errorf("%w: temporary passwords are only allowed on the admin port",
+			domain.ErrRegistrationDisabled))
+	}
 	if !req.HasKdf() {
 		return nil, status.Error(codes.InvalidArgument, "kdf params are required, update the client")
 	}
-	if err := h.authService.Create(
-		ctx, req.GetCredentials().GetLogin(),
-		req.GetCredentials().GetAuthKey(), req.GetSalt(), fromPBKDF(req.GetKdf()),
-	); err != nil {
+
+	expiresAt, err := h.authService.Create(ctx, domain.Registration{
+		Login:     req.GetCredentials().GetLogin(),
+		AuthKey:   req.GetCredentials().GetAuthKey(),
+		Salt:      req.GetSalt(),
+		KDF:       fromPBKDF(req.GetKdf()),
+		Temporary: req.GetTemporary(),
+	})
+	if err != nil {
 		return nil, toGRPCError(err)
 	}
-	return pb.CreateUserResponse_builder{}.Build(), nil
+
+	resp := pb.CreateUserResponse_builder{}
+	if expiresAt != nil {
+		resp.TemporaryExpiresAt = timestamppb.New(*expiresAt)
+	}
+	return resp.Build(), nil
 }
 
 // GetSalt обрабатывает запрос получения соли пользователя по логину.
@@ -60,7 +90,7 @@ func (h *authHandler) GetSalt(ctx context.Context, req *pb.GetSaltRequest) (*pb.
 // Возвращает codes.Unauthenticated если authKey неверный или логин не существует
 // (единый код ответа скрывает факт наличия пользователя).
 func (h *authHandler) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
-	token, err := h.authService.Login(
+	result, err := h.authService.Login(
 		ctx, req.GetCredentials().GetLogin(),
 		req.GetCredentials().GetAuthKey(),
 	)
@@ -68,7 +98,10 @@ func (h *authHandler) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
 		return nil, toGRPCError(err)
 	}
 
-	return pb.LoginResponse_builder{Token: &token}.Build(), nil
+	return pb.LoginResponse_builder{
+		Token:                  &result.Token,
+		PasswordChangeRequired: &result.PasswordChangeRequired,
+	}.Build(), nil
 }
 
 // Logout отзывает токен, с которым выполнен запрос, или все токены пользователя.

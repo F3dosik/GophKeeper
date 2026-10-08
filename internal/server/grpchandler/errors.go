@@ -27,6 +27,8 @@ func toGRPCError(err error) error {
 		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Is(err, domain.ErrSecretQuotaExceeded):
 		return status.Error(codes.ResourceExhausted, err.Error())
+	case errors.Is(err, domain.ErrRegistrationDisabled):
+		return status.Error(codes.PermissionDenied, err.Error())
 	case errors.Is(err, domain.ErrSecretsChanged):
 		return status.Error(codes.Aborted, err.Error())
 	default:

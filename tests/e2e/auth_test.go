@@ -18,7 +18,8 @@ func TestE2E_RegisterAndLogin(t *testing.T) {
 	kit := newClientKit(t)
 
 	require.NoError(t, kit.Auth.CreateUser(ctx, kit.Login, kit.Password))
-	require.NoError(t, kit.Auth.Login(ctx, kit.Login, kit.Password))
+	_, err := kit.Auth.Login(ctx, kit.Login, kit.Password)
+	require.NoError(t, err)
 
 	sess, err := session.Load(kit.SessionPath)
 	require.NoError(t, err)
@@ -32,7 +33,7 @@ func TestE2E_Login_WrongPassword(t *testing.T) {
 
 	require.NoError(t, kit.Auth.CreateUser(ctx, kit.Login, kit.Password))
 
-	err := kit.Auth.Login(ctx, kit.Login, "wrong-password")
+	_, err := kit.Auth.Login(ctx, kit.Login, "wrong-password")
 	assert.Error(t, err)
 
 	_, statErr := os.Stat(kit.SessionPath)

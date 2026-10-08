@@ -20,7 +20,10 @@ type User struct {
 	KDF KDFParams
 	// TokenVersion — версия токенов пользователя; токены с другой версией недействительны.
 	TokenVersion int
-	CreatedAt    time.Time
+	// PasswordExpiresAt задан для временного пароля, выданного администратором:
+	// до этого времени им можно войти, после входа пароль нужно сменить.
+	PasswordExpiresAt *time.Time
+	CreatedAt         time.Time
 }
 
 // Secret представляет зашифрованный секрет пользователя.
@@ -31,6 +34,23 @@ type Secret struct {
 	Data       []byte
 	UpdatedAt  time.Time
 	CreatedAt  time.Time
+}
+
+// Registration — данные регистрации пользователя.
+type Registration struct {
+	Login   string
+	AuthKey []byte
+	Salt    []byte
+	KDF     KDFParams
+	// Temporary — пароль временный: ограничен по времени и должен быть сменён при входе.
+	Temporary bool
+}
+
+// LoginResult — результат входа.
+type LoginResult struct {
+	Token string
+	// PasswordChangeRequired — пароль временный; Token разрешает только смену пароля.
+	PasswordChangeRequired bool
 }
 
 // PasswordChange — данные для смены пароля, которые клиент выводит из старого и нового пароля.
