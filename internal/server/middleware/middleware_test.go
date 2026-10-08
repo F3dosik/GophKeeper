@@ -133,3 +133,21 @@ func TestLoggingInterceptor(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "ok", resp)
 }
+
+// Токен временного пароля разрешает только смену пароля и выход.
+func TestAuthInterceptor_PasswordChangeOnlyToken(t *testing.T) {
+	userID := uuid.New()
+	token, err := jwtutil.GeneratePasswordChangeToken(userID, 0, testSecret, time.Minute)
+	require.NoError(t, err)
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs("authorization", "Bearer "+token))
+
+	tokens := mocks.NewTokenRepository(t)
+	tokens.On("IsActive", mock.Anything, userID, 0, mock.Anything).Return(true, nil)
+	interceptor := middleware.AuthInterceptor(testSecret, tokens, zap.NewNop().Sugar())
+
+	_, err = interceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: pb.Secrets_ListSecrets_FullMethodName}, fakeHandler)
+	assert.Equal(t, codes.PermissionDenied, status.Code(err))
+
+	_, err = interceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: pb.Auth_Logout_FullMethodName}, fakeHandler)
+	assert.NoError(t, err)
+}

@@ -21,6 +21,7 @@ coverage.out
 certs/*.pem
 certs/*.key
 certs/*.crt
+ca/
 
 # Go
 vendor/

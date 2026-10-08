@@ -3,8 +3,10 @@ package command
 import (
 	"errors"
 	"fmt"
+	"math"
 	"os"
 
+	"github.com/F3dosik/GophKeeper/internal/client/session"
 	"github.com/F3dosik/GophKeeper/internal/domain"
 
 	"github.com/spf13/cobra"
@@ -20,38 +22,49 @@ func (c *Commands) newAuthCmd() *cobra.Command {
 		c.newRegisterCmd(),
 		c.newLoginCmd(),
 		c.newLogoutCmd(),
+		c.newPasswdCmd(),
 	)
 	return cmd
 }
 
 // newRegisterCmd создаёт команду регистрации нового пользователя.
 func (c *Commands) newRegisterCmd() *cobra.Command {
-	return &cobra.Command{
+	var (
+		temporary bool
+		kdf       kdfFlags
+	)
+	cmd := &cobra.Command{
 		Use:   "register <login>",
 		Short: "Регистрация нового пользователя",
-		Args:  cobra.ExactArgs(1),
+		Long: "Регистрация нового пользователя.\n\n" +
+			"С флагом --temporary пароль генерируется автоматически, действует ограниченное время\n" +
+			"и должен быть сменён при первом входе. Так администратор заводит учётку для другого\n" +
+			"человека; работает только через административный порт сервера (ADMIN_PORT).",
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			login := args[0]
-
-			password, err := promptPassword(promptMasterPassword)
+			params, err := kdf.params()
 			if err != nil {
 				return err
 			}
 
-			if err := validatePassword(password); err != nil {
-				return err
+			if temporary {
+				password, expiresAt, err := c.authService.CreateTemporaryUser(cmd.Context(), login, params)
+				if err != nil {
+					return err
+				}
+				fmt.Printf("Временный пароль для %s: %s\n", login, password)
+				fmt.Printf("Действует до %s. При первом входе пользователь задаст свой пароль.\n",
+					expiresAt.Local().Format("2006-01-02 15:04"))
+				return nil
 			}
 
-			confirm, err := promptPassword(promptMasterPasswordConfirm)
+			password, err := promptNewPassword(promptMasterPassword)
 			if err != nil {
 				return err
 			}
 
-			if password != confirm {
-				return fmt.Errorf("пароли не совпадают")
-			}
-
-			if err := c.authService.CreateUser(cmd.Context(), login, password); err != nil {
+			if err := c.authService.CreateUser(cmd.Context(), login, password, params); err != nil {
 				return err
 			}
 
@@ -59,6 +72,10 @@ func (c *Commands) newRegisterCmd() *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&temporary, "temporary", false,
+		"создать учётку с временным паролем (только через административный порт)")
+	kdf.register(cmd)
+	return cmd
 }
 
 // newLoginCmd создаёт команду входа в систему.
@@ -75,8 +92,27 @@ func (c *Commands) newLoginCmd() *cobra.Command {
 				return err
 			}
 
-			if err := c.authService.Login(cmd.Context(), login, password); err != nil {
+			changeRequired, err := c.authService.Login(cmd.Context(), login, password)
+			if err != nil {
 				return err
+			}
+
+			if changeRequired {
+				fmt.Println("Пароль временный, задайте свой.")
+				newPassword, err := promptNewPassword(promptNewMasterPassword)
+				if err != nil {
+					return err
+				}
+				if newPassword == password {
+					return ErrSamePassword
+				}
+				// Секретов у учётки с временным паролем быть не может, перешифровывать нечего.
+				err = c.authService.ChangePassword(cmd.Context(), login, password, newPassword, domain.DefaultKDFParams, nil)
+				if err != nil {
+					return err
+				}
+				fmt.Println("Пароль изменён, вход выполнен.")
+				return nil
 			}
 
 			fmt.Println("Вход выполнен успешно.")
@@ -117,4 +153,95 @@ func (c *Commands) newLogoutCmd() *cobra.Command {
 	}
 	cmd.Flags().BoolVar(&all, "all", false, "отозвать токены на всех устройствах")
 	return cmd
+}
+
+// newPasswdCmd создаёт команду смены мастер-пароля.
+// Все секреты перешифровываются ключом от нового пароля; на сервер они уходят
+// одной транзакцией, поэтому при сбое пароль и данные остаются прежними.
+func (c *Commands) newPasswdCmd() *cobra.Command {
+	var kdf kdfFlags
+	cmd := &cobra.Command{
+		Use:   "passwd",
+		Short: "Смена мастер-пароля с перешифровкой всех секретов",
+		Long: "Смена мастер-пароля с перешифровкой всех секретов.\n\n" +
+			"Новый пароль получает параметры Argon2id из --kdf-time и --kdf-memory, поэтому смена\n" +
+			"пароля — также способ изменить стоимость деривации ключа. Новый пароль должен\n" +
+			"отличаться от текущего.",
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			params, err := kdf.params()
+			if err != nil {
+				return err
+			}
+
+			sess, err := session.Load(c.cfg.SessionPath)
+			if err != nil {
+				return fmt.Errorf("не выполнен вход, запустите 'gophkeeper auth login': %w", err)
+			}
+
+			oldPassword, err := promptPassword(promptCurrentPassword)
+			if err != nil {
+				return err
+			}
+			secretSvc, err := c.newSecretService(cmd.Context(), sess.Login, oldPassword)
+			if err != nil {
+				return err
+			}
+
+			newPassword, err := promptNewPassword(promptNewMasterPassword)
+			if err != nil {
+				return err
+			}
+			if newPassword == oldPassword {
+				return ErrSamePassword
+			}
+
+			reencrypt := func(newMasterKey []byte) ([]domain.ReencryptedSecret, error) {
+				return secretSvc.Reencrypt(cmd.Context(), newMasterKey)
+			}
+			err = c.authService.ChangePassword(cmd.Context(), sess.Login, oldPassword, newPassword, params, reencrypt)
+			if errors.Is(err, domain.ErrSecretsChanged) {
+				return fmt.Errorf("секреты изменились во время смены пароля (например, с другого устройства), " +
+					"пароль не изменён; повторите 'gophkeeper auth passwd'")
+			}
+			if err != nil {
+				return err
+			}
+
+			fmt.Println("Пароль изменён. На остальных устройствах выполните 'gophkeeper auth login'.")
+			return nil
+		},
+	}
+	kdf.register(cmd)
+	return cmd
+}
+
+// kdfFlags — флаги параметров Argon2id для команд, задающих новый пароль.
+type kdfFlags struct {
+	time      uint32
+	memoryMiB uint32
+}
+
+// register добавляет флаги к команде; по умолчанию — domain.DefaultKDFParams.
+func (f *kdfFlags) register(cmd *cobra.Command) {
+	cmd.Flags().Uint32Var(&f.time, "kdf-time", domain.DefaultKDFParams.Time,
+		"число проходов Argon2id (1–10): больше — медленнее вход и дороже перебор пароля")
+	cmd.Flags().Uint32Var(&f.memoryMiB, "kdf-memory", domain.DefaultKDFParams.MemoryKiB/1024,
+		"память Argon2id в MiB (19–1024)")
+}
+
+// params возвращает проверенные параметры Argon2id.
+func (f *kdfFlags) params() (domain.KDFParams, error) {
+	params := domain.KDFParams{
+		Time:      f.time,
+		MemoryKiB: f.memoryMiB * 1024,
+		Threads:   domain.DefaultKDFParams.Threads,
+	}
+	if f.memoryMiB > math.MaxUint32/1024 {
+		params.MemoryKiB = math.MaxUint32
+	}
+	if err := params.Validate(); err != nil {
+		return domain.KDFParams{}, err
+	}
+	return params, nil
 }

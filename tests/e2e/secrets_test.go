@@ -5,6 +5,7 @@ package e2e
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/F3dosik/GophKeeper/internal/domain"
@@ -87,4 +88,26 @@ func TestE2E_Secret_Isolation(t *testing.T) {
 	list, err := bob.Secrets.ListSecrets(ctx)
 	require.NoError(t, err)
 	assert.Empty(t, list, "bob's list must be empty")
+}
+
+// Список больше одной страницы (100 секретов) клиент собирает целиком.
+func TestE2E_Secret_ListPaginates(t *testing.T) {
+	ctx := context.Background()
+	kit := newClientKit(t)
+	kit.registerAndLogin(ctx, t)
+
+	const total = 105
+	for i := range total {
+		require.NoError(t, kit.Secrets.CreateSecret(ctx, credsPayload(t, fmt.Sprintf("site-%03d", i), "u", "p")))
+	}
+
+	list, err := kit.Secrets.ListSecrets(ctx)
+	require.NoError(t, err)
+	require.Len(t, list, total)
+
+	names := make(map[string]bool, total)
+	for _, s := range list {
+		names[s.Name] = true
+	}
+	assert.Len(t, names, total, "every secret must appear exactly once")
 }

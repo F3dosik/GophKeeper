@@ -10,6 +10,11 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+// maxRecvMsgSize — лимит размера ответа сервера. Страница списка ограничена ~4 MiB,
+// но всегда содержит хотя бы один секрет, а секрет может быть до SECRET_MAX_SIZE
+// (сервер проверяет, что он не больше 32 MiB).
+const maxRecvMsgSize = 64 << 20
+
 // ErrInsecureWithCert возвращается, если одновременно запрошены режим без TLS и CA-сертификат.
 var ErrInsecureWithCert = errors.New("insecure mode and TLS certificate are mutually exclusive")
 
@@ -29,7 +34,9 @@ func Dial(serverAddr, tlsCertPath string, allowInsecure bool, tokens *TokenStore
 	}
 	return grpc.NewClient(serverAddr,
 		grpc.WithTransportCredentials(creds),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxRecvMsgSize)),
 		grpc.WithUnaryInterceptor(authInterceptor(tokens)),
+		grpc.WithStreamInterceptor(authStreamInterceptor(tokens)),
 	)
 }
 

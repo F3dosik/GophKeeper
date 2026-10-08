@@ -27,13 +27,13 @@ func NewSecretHandler(secretService service.SecretService) pb.SecretsServer {
 // Возвращает codes.AlreadyExists если секрет с таким blind index уже существует.
 // Возвращает codes.InvalidArgument если blind index или data пустые.
 func (h *secretHandler) CreateSecret(ctx context.Context, req *pb.CreateSecretRequest) (*pb.CreateSecretResponse, error) {
-	userID, err := middleware.UserIDFromContext(ctx)
+	claims, err := middleware.ClaimsFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	if err := h.secretService.Create(
-		ctx, userID, req.GetItem().GetBlindIndex(), req.GetItem().GetData(),
+		ctx, claims.UserID, claims.TokenVersion, req.GetItem().GetBlindIndex(), req.GetItem().GetData(),
 	); err != nil {
 		return nil, toGRPCError(err)
 	}
@@ -45,13 +45,13 @@ func (h *secretHandler) CreateSecret(ctx context.Context, req *pb.CreateSecretRe
 // Возвращает codes.NotFound если секрет не найден.
 // Возвращает codes.InvalidArgument если blind index или data пустые.
 func (h *secretHandler) UpdateSecret(ctx context.Context, req *pb.UpdateSecretRequest) (*pb.UpdateSecretResponse, error) {
-	userID, err := middleware.UserIDFromContext(ctx)
+	claims, err := middleware.ClaimsFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	if err := h.secretService.Update(
-		ctx, userID, req.GetItem().GetBlindIndex(), req.GetItem().GetData(),
+		ctx, claims.UserID, claims.TokenVersion, req.GetItem().GetBlindIndex(), req.GetItem().GetData(),
 	); err != nil {
 		return nil, toGRPCError(err)
 	}
@@ -93,20 +93,20 @@ func (h *secretHandler) DeleteSecret(ctx context.Context, req *pb.DeleteSecretRe
 	return pb.DeleteSecretResponse_builder{}.Build(), nil
 }
 
-// ListSecrets обрабатывает запрос получения всех секретов пользователя.
+// ListSecrets обрабатывает запрос страницы секретов пользователя.
 func (h *secretHandler) ListSecrets(ctx context.Context, req *pb.ListSecretsRequest) (*pb.ListSecretsResponse, error) {
 	userID, err := middleware.UserIDFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	secrets, err := h.secretService.ListByUserID(ctx, userID)
+	page, err := h.secretService.ListPage(ctx, userID, req.GetPageToken(), int(req.GetPageSize()))
 	if err != nil {
 		return nil, toGRPCError(err)
 	}
 
-	var items []*pb.SecretItem
-	for _, secret := range secrets {
+	items := make([]*pb.SecretItem, 0, len(page.Secrets))
+	for _, secret := range page.Secrets {
 		si := &pb.SecretItem{}
 		si.SetBlindIndex(secret.BlindIndex)
 		si.SetData(secret.Data)
@@ -115,5 +115,8 @@ func (h *secretHandler) ListSecrets(ctx context.Context, req *pb.ListSecretsRequ
 		items = append(items, si)
 	}
 
-	return pb.ListSecretsResponse_builder{Items: items}.Build(), nil
+	return pb.ListSecretsResponse_builder{
+		Items:         items,
+		NextPageToken: &page.NextPageToken,
+	}.Build(), nil
 }

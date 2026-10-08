@@ -23,17 +23,24 @@ func NewSecretRepository(pool *pgxpool.Pool) domain.SecretRepository {
 }
 
 // Create создает новый секрет в базе данных.
-func (r *secretRepository) Create(ctx context.Context, secret *domain.Secret) error {
+// Строка пользователя блокируется FOR SHARE с проверкой версии токенов: если параллельно
+// идёт смена пароля, вставка дождётся её завершения и не выполнится, так как версия изменится.
+func (r *secretRepository) Create(ctx context.Context, secret *domain.Secret, tokenVersion int) error {
 	err := repository.WithRetry(ctx, isRetriable, func() error {
 		return r.pool.QueryRow(ctx, `
+			WITH u AS (
+				SELECT id FROM users WHERE id = $1 AND token_version = $4 FOR SHARE
+			)
 			INSERT INTO secrets(user_id, blind_index, data)
-			VALUES ($1, $2, $3)
+			SELECT u.id, $2, $3 FROM u
 			RETURNING id, updated_at, created_at
-		`, secret.UserID, secret.BlindIndex, secret.Data).Scan(&secret.ID, &secret.UpdatedAt, &secret.CreatedAt)
+		`, secret.UserID, secret.BlindIndex, secret.Data, tokenVersion).Scan(&secret.ID, &secret.UpdatedAt, &secret.CreatedAt)
 	})
 
 	if err != nil {
 		switch {
+		case isNoRows(err):
+			return domain.ErrInvalidCredentials
 		case isUniqueViolation(err):
 			return domain.ErrSecretAlreadyExists
 		case isForeignKeyViolation(err):
@@ -46,16 +53,21 @@ func (r *secretRepository) Create(ctx context.Context, secret *domain.Secret) er
 }
 
 // Update обновляет существующий секрет в базе данных.
-func (r *secretRepository) Update(ctx context.Context, secret *domain.Secret) error {
+// Как и Create, блокирует строку пользователя и проверяет версию токенов.
+func (r *secretRepository) Update(ctx context.Context, secret *domain.Secret, tokenVersion int) error {
 	var tag pgconn.CommandTag
 
 	err := repository.WithRetry(ctx, isRetriable, func() error {
 		var err error
 		tag, err = r.pool.Exec(ctx, `
+			WITH u AS (
+				SELECT id FROM users WHERE id = $2 AND token_version = $4 FOR SHARE
+			)
 			UPDATE secrets
 			SET data = $1, updated_at = now()
-			WHERE user_id = $2 AND blind_index = $3
-		`, secret.Data, secret.UserID, secret.BlindIndex)
+			FROM u
+			WHERE secrets.user_id = u.id AND secrets.blind_index = $3
+		`, secret.Data, secret.UserID, secret.BlindIndex, tokenVersion)
 		return err
 	})
 
@@ -94,17 +106,19 @@ func (r *secretRepository) GetByBlindIndex(
 	return &secret, nil
 }
 
-// ListByUserID возвращает список всех секретов для указанного пользователя.
-func (r *secretRepository) ListByUserID(ctx context.Context, userID uuid.UUID) ([]*domain.Secret, error) {
+// ListByUserID возвращает до limit секретов пользователя с ID больше afterID, упорядоченных по ID.
+func (r *secretRepository) ListByUserID(ctx context.Context, userID, afterID uuid.UUID, limit int) ([]*domain.Secret, error) {
 
 	var rows pgx.Rows
 	err := repository.WithRetry(ctx, isRetriable, func() error {
 		var err error
 		rows, err = r.pool.Query(ctx, `
 			SELECT id, blind_index, data, updated_at, created_at
-			FROM secrets 
-			WHERE user_id = $1
-		`, userID)
+			FROM secrets
+			WHERE user_id = $1 AND id > $2
+			ORDER BY id
+			LIMIT $3
+		`, userID, afterID, limit)
 
 		return err
 	})

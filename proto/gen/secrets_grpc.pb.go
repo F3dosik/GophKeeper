@@ -33,7 +33,8 @@ const (
 // Secrets — сервис управления зашифрованными секретами пользователя.
 // Все методы требуют JWT-токен в метаданных (authorization: Bearer ...).
 type SecretsClient interface {
-	// ListSecrets возвращает все секреты текущего пользователя.
+	// ListSecrets возвращает страницу секретов текущего пользователя.
+	// Ошибка: InvalidArgument — неверный page_size или page_token.
 	ListSecrets(ctx context.Context, in *ListSecretsRequest, opts ...grpc.CallOption) (*ListSecretsResponse, error)
 	// CreateSecret создаёт новый секрет.
 	// Ошибка: AlreadyExists — секрет с таким blind_index уже существует.
@@ -114,7 +115,8 @@ func (c *secretsClient) DeleteSecret(ctx context.Context, in *DeleteSecretReques
 // Secrets — сервис управления зашифрованными секретами пользователя.
 // Все методы требуют JWT-токен в метаданных (authorization: Bearer ...).
 type SecretsServer interface {
-	// ListSecrets возвращает все секреты текущего пользователя.
+	// ListSecrets возвращает страницу секретов текущего пользователя.
+	// Ошибка: InvalidArgument — неверный page_size или page_token.
 	ListSecrets(context.Context, *ListSecretsRequest) (*ListSecretsResponse, error)
 	// CreateSecret создаёт новый секрет.
 	// Ошибка: AlreadyExists — секрет с таким blind_index уже существует.

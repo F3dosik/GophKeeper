@@ -16,9 +16,14 @@ type User struct {
 	Login        string
 	PasswordHash []byte
 	PasswordSalt []byte
+	// KDF — параметры Argon2id, с которыми из пароля выводится мастер-ключ.
+	KDF KDFParams
 	// TokenVersion — версия токенов пользователя; токены с другой версией недействительны.
 	TokenVersion int
-	CreatedAt    time.Time
+	// PasswordExpiresAt задан для временного пароля, выданного администратором:
+	// до этого времени им можно войти, после входа пароль нужно сменить.
+	PasswordExpiresAt *time.Time
+	CreatedAt         time.Time
 }
 
 // Secret представляет зашифрованный секрет пользователя.
@@ -29,6 +34,64 @@ type Secret struct {
 	Data       []byte
 	UpdatedAt  time.Time
 	CreatedAt  time.Time
+}
+
+// Registration — данные регистрации пользователя.
+type Registration struct {
+	Login   string
+	AuthKey []byte
+	Salt    []byte
+	KDF     KDFParams
+	// Temporary — пароль временный: ограничен по времени и должен быть сменён при входе.
+	Temporary bool
+}
+
+// LoginResult — результат входа.
+type LoginResult struct {
+	Token string
+	// PasswordChangeRequired — пароль временный; Token разрешает только смену пароля.
+	PasswordChangeRequired bool
+}
+
+// PasswordChange — данные для смены пароля, которые клиент выводит из старого и нового пароля.
+type PasswordChange struct {
+	// OldAuthKey — ключ аутентификации от текущего пароля.
+	OldAuthKey []byte
+	// NewSalt и NewKDF — соль и параметры Argon2id нового пароля.
+	NewSalt []byte
+	NewKDF  KDFParams
+	// NewAuthKey — ключ аутентификации от нового пароля.
+	NewAuthKey []byte
+}
+
+// PasswordHashChange — то, что сохраняется в БД при смене пароля.
+type PasswordHashChange struct {
+	// OldHash — хеш ключа аутентификации от текущего пароля; смена выполняется,
+	// только если он совпадает с сохранённым.
+	OldHash []byte
+	NewHash []byte
+	NewSalt []byte
+	NewKDF  KDFParams
+}
+
+// ReencryptedSecret — секрет, перешифрованный клиентом ключом от нового пароля.
+type ReencryptedSecret struct {
+	OldBlindIndex string
+	NewBlindIndex string
+	Data          []byte
+	// ExpectedUpdatedAt — updated_at секрета на момент чтения клиентом.
+	ExpectedUpdatedAt time.Time
+}
+
+// SecretIterator возвращает следующий перешифрованный секрет или (nil, nil) в конце.
+// Позволяет обрабатывать секреты по мере получения, не держа их все в памяти.
+type SecretIterator func() (*ReencryptedSecret, error)
+
+// SecretPage — страница списка секретов.
+type SecretPage struct {
+	Secrets []*Secret
+	// NextPageToken — курсор следующей страницы; пустой, если страница последняя.
+	NextPageToken string
 }
 
 // SecretType определяет тип хранимого секрета.

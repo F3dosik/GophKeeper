@@ -47,7 +47,8 @@ func TestE2E_Logout_OtherDeviceUnaffected(t *testing.T) {
 
 	phone := newClientKit(t)
 	phone.Login, phone.Password = laptop.Login, laptop.Password
-	require.NoError(t, phone.Auth.Login(ctx, phone.Login, phone.Password))
+	_, err := phone.Auth.Login(ctx, phone.Login, phone.Password)
+	require.NoError(t, err)
 
 	require.NoError(t, laptop.Auth.Logout(ctx, false))
 
@@ -61,16 +62,18 @@ func TestE2E_Logout_AllSessions(t *testing.T) {
 
 	phone := newClientKit(t)
 	phone.Login, phone.Password = laptop.Login, laptop.Password
-	require.NoError(t, phone.Auth.Login(ctx, phone.Login, phone.Password))
+	_, err := phone.Auth.Login(ctx, phone.Login, phone.Password)
+	require.NoError(t, err)
 	phoneToken := phone.Tokens.Token()
 
 	require.NoError(t, laptop.Auth.Logout(ctx, true))
 
-	err := listWithToken(ctx, t, phoneToken)
+	err = listWithToken(ctx, t, phoneToken)
 	assert.ErrorIs(t, err, domain.ErrInvalidCredentials, "all tokens must be revoked")
 
 	// После выхода на всех устройствах можно снова войти, новый токен действителен.
-	require.NoError(t, phone.Auth.Login(ctx, phone.Login, phone.Password))
+	_, err = phone.Auth.Login(ctx, phone.Login, phone.Password)
+	require.NoError(t, err)
 	assert.NoError(t, listWithToken(ctx, t, phone.Tokens.Token()))
 }
 

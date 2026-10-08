@@ -38,6 +38,37 @@ func TestSecretsClient_ListSecrets(t *testing.T) {
 		assert.Equal(t, []byte("encrypted"), secrets[0].Data)
 	})
 
+	t.Run("follows page tokens", func(t *testing.T) {
+		mockPB := mocks.NewPBSecretsClient(t)
+		page := func(blindIndex, next string) *pb.ListSecretsResponse {
+			return pb.ListSecretsResponse_builder{
+				Items:         []*pb.SecretItem{pb.SecretItem_builder{BlindIndex: &blindIndex}.Build()},
+				NextPageToken: &next,
+			}.Build()
+		}
+		withToken := func(token string) any {
+			return mock.MatchedBy(func(req *pb.ListSecretsRequest) bool { return req.GetPageToken() == token })
+		}
+		mockPB.On("ListSecrets", mock.Anything, withToken(""), mock.Anything).Return(page("a", "t1"), nil)
+		mockPB.On("ListSecrets", mock.Anything, withToken("t1"), mock.Anything).Return(page("b", "t2"), nil)
+		mockPB.On("ListSecrets", mock.Anything, withToken("t2"), mock.Anything).Return(page("c", ""), nil)
+
+		secrets, err := grpcclient.NewSecretsClient(mockPB).ListSecrets(context.Background())
+		require.NoError(t, err)
+		require.Len(t, secrets, 3)
+		assert.Equal(t, "c", secrets[2].BlindIndex)
+	})
+
+	t.Run("repeated page token is an error", func(t *testing.T) {
+		mockPB := mocks.NewPBSecretsClient(t)
+		next := "same"
+		mockPB.On("ListSecrets", mock.Anything, mock.Anything, mock.Anything).
+			Return(pb.ListSecretsResponse_builder{NextPageToken: &next}.Build(), nil)
+
+		_, err := grpcclient.NewSecretsClient(mockPB).ListSecrets(context.Background())
+		assert.ErrorIs(t, err, grpcclient.ErrPaginationLoop)
+	})
+
 	t.Run("empty list", func(t *testing.T) {
 		mockPB := mocks.NewPBSecretsClient(t)
 		mockPB.On("ListSecrets", mock.Anything, mock.Anything, mock.Anything).

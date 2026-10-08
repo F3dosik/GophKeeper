@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/F3dosik/GophKeeper/internal/client/grpcclient"
 	"github.com/F3dosik/GophKeeper/internal/domain"
@@ -37,6 +38,11 @@ type SecretsService interface {
 
 	// DeleteSecret удаляет секрет по имени и типу.
 	DeleteSecret(ctx context.Context, name string, secretType domain.SecretType) error
+
+	// Reencrypt загружает все секреты, расшифровывает их текущим ключом и шифрует
+	// ключами, выведенными из newMasterKey, вместе с новыми blind index.
+	// Используется при смене пароля.
+	Reencrypt(ctx context.Context, newMasterKey []byte) ([]domain.ReencryptedSecret, error)
 }
 
 // secretsService реализует SecretsService.
@@ -52,6 +58,12 @@ type secretsService struct {
 // NewSecretsService создаёт новый secretsService.
 // Деривирует ключ шифрования и ключ HMAC из masterKey через HKDF.
 func NewSecretsService(client grpcclient.SecretsClient, masterKey []byte) (SecretsService, error) {
+	return newSecretsService(client, masterKey)
+}
+
+// newSecretsService создаёт *secretsService; нужен там, где требуются ключи
+// конкретного мастер-ключа, например при перешифровке.
+func newSecretsService(client grpcclient.SecretsClient, masterKey []byte) (*secretsService, error) {
 	hmacKey, err := crypto.HKDF(masterKey, crypto.InfoBlindIndex)
 	if err != nil {
 		return nil, fmt.Errorf("new secrets service: %w", err)
@@ -70,7 +82,7 @@ func NewSecretsService(client grpcclient.SecretsClient, masterKey []byte) (Secre
 
 // encryptPayload сериализует payload в JSON и шифрует его через AES-256-GCM.
 func (s *secretsService) encryptPayload(payload *domain.SecretPayload) ([]byte, error) {
-	plaintext, err := json.Marshal(payload)
+	plaintext, err := padPayload(payload)
 	if err != nil {
 		return nil, fmt.Errorf("encode payload: %w", err)
 	}
@@ -79,6 +91,32 @@ func (s *secretsService) encryptPayload(payload *domain.SecretPayload) ([]byte, 
 		return nil, fmt.Errorf("encrypt payload: %w", err)
 	}
 	return ciphertext, nil
+}
+
+// paddingBlock — размер блока, до которого дополняется открытый текст секрета.
+const paddingBlock = 256
+
+// paddedPayload — формат открытого текста секрета: payload и поле-заполнитель.
+// Поле pad при расшифровке игнорируется, в том числе клиентами без этого поля.
+type paddedPayload struct {
+	*domain.SecretPayload
+	Pad string `json:"pad"`
+}
+
+// padPayload сериализует payload в JSON и дополняет его пробелами в поле pad так,
+// чтобы длина была кратна paddingBlock. AES-GCM сохраняет длину открытого текста,
+// и без дополнения сервер по размеру шифротекста оценил бы длину пароля или заметки.
+func padPayload(payload *domain.SecretPayload) ([]byte, error) {
+	base, err := json.Marshal(paddedPayload{SecretPayload: payload})
+	if err != nil {
+		return nil, err
+	}
+	// Пробелы кодируются в JSON один к одному, поэтому длину можно рассчитать заранее.
+	padLen := (paddingBlock - len(base)%paddingBlock) % paddingBlock
+	if padLen == 0 {
+		return base, nil
+	}
+	return json.Marshal(paddedPayload{SecretPayload: payload, Pad: strings.Repeat(" ", padLen)})
 }
 
 // decryptPayload расшифровывает данные, десериализует их в SecretPayload и проверяет,
@@ -188,4 +226,38 @@ func (s *secretsService) DeleteSecret(ctx context.Context, name string, secretTy
 		return fmt.Errorf("secretService.DeleteSecret: %w", err)
 	}
 	return nil
+}
+
+// Reencrypt перешифровывает все секреты ключами от нового мастер-ключа.
+// Каждый секрет проходит проверку целостности, поэтому подменённые сервером данные
+// не будут перешифрованы под новым паролем.
+func (s *secretsService) Reencrypt(ctx context.Context, newMasterKey []byte) ([]domain.ReencryptedSecret, error) {
+	target, err := newSecretsService(nil, newMasterKey)
+	if err != nil {
+		return nil, fmt.Errorf("secretsService.Reencrypt: %w", err)
+	}
+
+	secrets, err := s.client.ListSecrets(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("secretsService.Reencrypt: %w", err)
+	}
+
+	result := make([]domain.ReencryptedSecret, 0, len(secrets))
+	for _, secret := range secrets {
+		payload, err := s.decryptPayload(secret.BlindIndex, secret.Data)
+		if err != nil {
+			return nil, fmt.Errorf("secretsService.Reencrypt: %w", err)
+		}
+		data, err := target.encryptPayload(payload)
+		if err != nil {
+			return nil, fmt.Errorf("secretsService.Reencrypt: %w", err)
+		}
+		result = append(result, domain.ReencryptedSecret{
+			OldBlindIndex:     secret.BlindIndex,
+			NewBlindIndex:     crypto.BlindIndex(payload.Name, payload.Type, target.hmacKey),
+			Data:              data,
+			ExpectedUpdatedAt: secret.UpdatedAt,
+		})
+	}
+	return result, nil
 }

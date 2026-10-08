@@ -54,6 +54,9 @@ func (c *Commands) newSecretService(ctx context.Context, login, password string)
 	if errors.Is(err, domain.ErrInvalidCredentials) {
 		return nil, ErrWrongMasterPassword
 	}
+	if errors.Is(err, domain.ErrPasswordChangeRequired) {
+		return nil, fmt.Errorf("пароль временный: выполните 'gophkeeper auth login %s' и задайте свой пароль", login)
+	}
 	if err != nil {
 		return nil, err
 	}

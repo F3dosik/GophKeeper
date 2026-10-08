@@ -35,6 +35,22 @@ var (
 	// ErrSecretQuotaExceeded возвращается, если у пользователя достигнут лимит количества секретов.
 	ErrSecretQuotaExceeded = errors.New("secret quota exceeded")
 
+	// ErrSecretsChanged возвращается, если секреты пользователя изменились во время
+	// смены пароля (создан, изменён или удалён секрет). Смену нужно повторить.
+	ErrSecretsChanged = errors.New("secrets changed during password change")
+
+	// ErrRegistrationDisabled возвращается, если регистрация отключена (или временные
+	// пароли запрошены не на административном порту).
+	ErrRegistrationDisabled = errors.New("registration is disabled")
+
+	// ErrPasswordChangeRequired возвращается на запросы с токеном временного пароля
+	// ко всему, кроме смены пароля и выхода.
+	ErrPasswordChangeRequired = errors.New("password change required")
+
+	// ErrPermissionDenied возвращается клиенту, когда сервер отказал в действии
+	// (codes.PermissionDenied); подробности — в тексте ошибки.
+	ErrPermissionDenied = errors.New("permission denied")
+
 	// ErrResourceExhausted возвращается клиенту, когда сервер отклонил запрос из-за лимита
 	// (частоты запросов или квоты хранилища).
 	ErrResourceExhausted = errors.New("limit exceeded")

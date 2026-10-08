@@ -4,15 +4,20 @@
 ## Table of Contents
 
 - [auth.proto](#auth-proto)
+    - [ChangePasswordHeader](#auth-ChangePasswordHeader)
+    - [ChangePasswordRequest](#auth-ChangePasswordRequest)
+    - [ChangePasswordResponse](#auth-ChangePasswordResponse)
     - [CreateUserRequest](#auth-CreateUserRequest)
     - [CreateUserResponse](#auth-CreateUserResponse)
     - [Credentials](#auth-Credentials)
     - [GetSaltRequest](#auth-GetSaltRequest)
     - [GetSaltResponse](#auth-GetSaltResponse)
+    - [KDFParams](#auth-KDFParams)
     - [LoginRequest](#auth-LoginRequest)
     - [LoginResponse](#auth-LoginResponse)
     - [LogoutRequest](#auth-LogoutRequest)
     - [LogoutResponse](#auth-LogoutResponse)
+    - [ReencryptedSecret](#auth-ReencryptedSecret)
   
     - [Auth](#auth-Auth)
   
@@ -43,6 +48,56 @@
 
 
 
+<a name="auth-ChangePasswordHeader"></a>
+
+### ChangePasswordHeader
+ChangePasswordHeader — первое сообщение потока смены пароля.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| old_auth_key | [bytes](#bytes) |  | Ключ аутентификации от текущего пароля: подтверждает, что пароль знает владелец, а не только тот, у кого есть токен. |
+| new_salt | [bytes](#bytes) |  | Новая соль (16 байт). |
+| new_auth_key | [bytes](#bytes) |  | Ключ аутентификации от нового пароля (32 байта). |
+| new_kdf | [KDFParams](#auth-KDFParams) |  | Параметры Argon2id, с которыми выведен новый ключ. |
+
+
+
+
+
+
+<a name="auth-ChangePasswordRequest"></a>
+
+### ChangePasswordRequest
+ChangePasswordRequest — сообщение потока смены пароля: сначала header,
+затем по одному secret на каждый секрет пользователя.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| header | [ChangePasswordHeader](#auth-ChangePasswordHeader) |  |  |
+| secret | [ReencryptedSecret](#auth-ReencryptedSecret) |  |  |
+
+
+
+
+
+
+<a name="auth-ChangePasswordResponse"></a>
+
+### ChangePasswordResponse
+ChangePasswordResponse — ответ на успешную смену пароля.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| token | [string](#string) |  | Новый токен. Все ранее выданные токены пользователя отозваны. |
+
+
+
+
+
+
 <a name="auth-CreateUserRequest"></a>
 
 ### CreateUserRequest
@@ -52,7 +107,9 @@ CreateUserRequest — запрос регистрации нового поль�
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | credentials | [Credentials](#auth-Credentials) |  | Учётные данные будущего пользователя. |
-| salt | [bytes](#bytes) |  | Случайная соль (16&#43; байт), сгенерированная клиентом, — используется при деривации ключа. |
+| salt | [bytes](#bytes) |  | Случайная соль (16 байт), сгенерированная клиентом, — используется при деривации ключа. |
+| kdf | [KDFParams](#auth-KDFParams) |  | Параметры Argon2id, с которыми клиент вывел ключ. Обязательны. |
+| temporary | [bool](#bool) |  | true — пароль временный: годен ограниченное время и должен быть сменён при первом входе. Разрешено только на административном порту. |
 
 
 
@@ -62,7 +119,12 @@ CreateUserRequest — запрос регистрации нового поль�
 <a name="auth-CreateUserResponse"></a>
 
 ### CreateUserResponse
-CreateUserResponse — пустой ответ при успешной регистрации.
+CreateUserResponse — ответ при успешной регистрации.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| temporary_expires_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  | Для временного пароля — время, до которого им можно войти. |
 
 
 
@@ -114,6 +176,24 @@ GetSaltResponse — ответ с солью пользователя.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | salt | [bytes](#bytes) |  | Соль, сохранённая при регистрации пользователя. |
+| kdf | [KDFParams](#auth-KDFParams) |  | Параметры Argon2id пользователя. |
+
+
+
+
+
+
+<a name="auth-KDFParams"></a>
+
+### KDFParams
+KDFParams — параметры Argon2id, с которыми из пароля выводится мастер-ключ.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| time | [uint32](#uint32) |  | Число проходов (1–10). |
+| memory_kib | [uint32](#uint32) |  | Объём памяти в КиБ (19456–1048576). |
+| threads | [uint32](#uint32) |  | Степень параллелизма (1–16). |
 
 
 
@@ -144,6 +224,7 @@ LoginResponse — ответ на успешный вход.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | token | [string](#string) |  | JWT-токен, который клиент передаёт в метаданных последующих запросов. |
+| password_change_required | [bool](#bool) |  | true — пароль временный и должен быть сменён. Токен в этом случае короткоживущий и разрешает только ChangePassword и Logout. |
 
 
 
@@ -174,6 +255,24 @@ LogoutResponse — пустой ответ при успешном выходе.
 
 
 
+
+<a name="auth-ReencryptedSecret"></a>
+
+### ReencryptedSecret
+ReencryptedSecret — секрет, перешифрованный ключом от нового пароля.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| old_blind_index | [string](#string) |  | Blind index секрета, вычисленный ключом от текущего пароля. |
+| new_blind_index | [string](#string) |  | Blind index, вычисленный ключом от нового пароля. |
+| data | [bytes](#bytes) |  | Данные, зашифрованные ключом от нового пароля. |
+| expected_updated_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  | updated_at секрета на момент чтения клиентом: если секрет изменили позже, смена пароля отменяется, чтобы не затереть изменение старыми данными. |
+
+
+
+
+
  
 
  
@@ -188,10 +287,11 @@ Auth — сервис аутентификации и регистрации п�
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
-| CreateUser | [CreateUserRequest](#auth-CreateUserRequest) | [CreateUserResponse](#auth-CreateUserResponse) | CreateUser регистрирует нового пользователя. Ошибки: AlreadyExists — логин занят; InvalidArgument — невалидные данные. |
+| CreateUser | [CreateUserRequest](#auth-CreateUserRequest) | [CreateUserResponse](#auth-CreateUserResponse) | CreateUser регистрирует нового пользователя. Ошибки: AlreadyExists — логин занят; InvalidArgument — невалидные данные; PermissionDenied — регистрация на этом порту отключена. |
 | GetSalt | [GetSaltRequest](#auth-GetSaltRequest) | [GetSaltResponse](#auth-GetSaltResponse) | GetSalt возвращает соль пользователя, сохранённую при регистрации. Ошибка: NotFound — пользователь не найден. |
 | Login | [LoginRequest](#auth-LoginRequest) | [LoginResponse](#auth-LoginResponse) | Login выполняет вход и возвращает JWT-токен. Ошибки: NotFound — пользователь не найден; Unauthenticated — неверные учётные данные. |
 | Logout | [LogoutRequest](#auth-LogoutRequest) | [LogoutResponse](#auth-LogoutResponse) | Logout отзывает текущий токен или все токены пользователя. Требует JWT-токен в метаданных (authorization: Bearer ...). Ошибка: Unauthenticated — токен отсутствует, истёк или уже отозван. |
+| ChangePassword | [ChangePasswordRequest](#auth-ChangePasswordRequest) stream | [ChangePasswordResponse](#auth-ChangePasswordResponse) | ChangePassword меняет пароль и перешифровывает все секреты в одной транзакции: при любой ошибке ничего не меняется. Клиент передаёт header, затем все свои секреты. Требует JWT-токен. После успеха все прежние токены пользователя отозваны. Ошибки: Unauthenticated — неверный текущий пароль или токен; Aborted — секреты изменились во время смены (нужно повторить); InvalidArgument — некорректные данные. |
 
  
 
@@ -289,7 +389,13 @@ GetSecretResponse — ответ с зашифрованным секретом 
 <a name="secrets-ListSecretsRequest"></a>
 
 ### ListSecretsRequest
-ListSecretsRequest — пустой запрос списка секретов текущего пользователя.
+ListSecretsRequest — запрос страницы списка секретов текущего пользователя.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| page_size | [int32](#int32) |  | Максимум секретов на странице (1–100, по умолчанию 100). Сервер может вернуть меньше, чтобы ответ не превышал 4 MiB, но не меньше одного секрета. |
+| page_token | [string](#string) |  | Курсор из next_page_token предыдущего ответа; пустой — первая страница. |
 
 
 
@@ -299,12 +405,13 @@ ListSecretsRequest — пустой запрос списка секретов �
 <a name="secrets-ListSecretsResponse"></a>
 
 ### ListSecretsResponse
-ListSecretsResponse — ответ со списком секретов.
+ListSecretsResponse — страница списка секретов.
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| items | [SecretItem](#secrets-SecretItem) | repeated | Все секреты текущего пользователя. |
+| items | [SecretItem](#secrets-SecretItem) | repeated | Секреты текущей страницы. |
+| next_page_token | [string](#string) |  | Курсор следующей страницы; пустой, если страница последняя. |
 
 
 
@@ -387,7 +494,7 @@ Secrets — сервис управления зашифрованными се�
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
-| ListSecrets | [ListSecretsRequest](#secrets-ListSecretsRequest) | [ListSecretsResponse](#secrets-ListSecretsResponse) | ListSecrets возвращает все секреты текущего пользователя. |
+| ListSecrets | [ListSecretsRequest](#secrets-ListSecretsRequest) | [ListSecretsResponse](#secrets-ListSecretsResponse) | ListSecrets возвращает страницу секретов текущего пользователя. Ошибка: InvalidArgument — неверный page_size или page_token. |
 | CreateSecret | [CreateSecretRequest](#secrets-CreateSecretRequest) | [CreateSecretResponse](#secrets-CreateSecretResponse) | CreateSecret создаёт новый секрет. Ошибка: AlreadyExists — секрет с таким blind_index уже существует. |
 | UpdateSecret | [UpdateSecretRequest](#secrets-UpdateSecretRequest) | [UpdateSecretResponse](#secrets-UpdateSecretResponse) | UpdateSecret обновляет существующий секрет. Ошибка: NotFound — секрет с таким blind_index не найден. |
 | GetSecret | [GetSecretRequest](#secrets-GetSecretRequest) | [GetSecretResponse](#secrets-GetSecretResponse) | GetSecret возвращает секрет по blind_index. Ошибка: NotFound — секрет не найден. |

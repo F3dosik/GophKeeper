@@ -28,14 +28,15 @@ func TestAuthClient_CreateUser(t *testing.T) {
 		mockPB.On("CreateUser", mock.Anything, mock.MatchedBy(func(req *pb.CreateUserRequest) bool {
 			return req.GetCredentials().GetLogin() == "user" &&
 				bytes.Equal(req.GetCredentials().GetAuthKey(), hash) &&
-				bytes.Equal(req.GetSalt(), testSalt)
+				bytes.Equal(req.GetSalt(), testSalt) &&
+				req.GetKdf().GetTime() == domain.DefaultKDFParams.Time
 		}), mock.Anything).Return(&pb.CreateUserResponse{}, nil)
 
 		client := grpcclient.NewAuthClient(mockPB)
-		err := client.CreateUser(context.Background(), domain.Credentials{
+		_, err := client.CreateUser(context.Background(), domain.Credentials{
 			Login:   "user",
 			AuthKey: hash,
-		}, testSalt)
+		}, testSalt, domain.DefaultKDFParams, false)
 
 		require.NoError(t, err)
 	})
@@ -46,7 +47,7 @@ func TestAuthClient_CreateUser(t *testing.T) {
 			Return(nil, status.Error(codes.AlreadyExists, "user already exists"))
 
 		client := grpcclient.NewAuthClient(mockPB)
-		err := client.CreateUser(context.Background(), domain.Credentials{}, testSalt)
+		_, err := client.CreateUser(context.Background(), domain.Credentials{}, testSalt, domain.DefaultKDFParams, false)
 
 		assert.ErrorIs(t, err, domain.ErrAlreadyExists)
 	})
@@ -57,7 +58,7 @@ func TestAuthClient_CreateUser(t *testing.T) {
 			Return(nil, status.Error(codes.InvalidArgument, "invalid argument"))
 
 		client := grpcclient.NewAuthClient(mockPB)
-		err := client.CreateUser(context.Background(), domain.Credentials{}, []byte{})
+		_, err := client.CreateUser(context.Background(), domain.Credentials{}, []byte{}, domain.DefaultKDFParams, false)
 
 		assert.ErrorIs(t, err, domain.ErrInvalidArgument)
 	})
@@ -68,7 +69,7 @@ func TestAuthClient_CreateUser(t *testing.T) {
 			Return(nil, status.Error(codes.Internal, "internal error"))
 
 		client := grpcclient.NewAuthClient(mockPB)
-		err := client.CreateUser(context.Background(), domain.Credentials{}, testSalt)
+		_, err := client.CreateUser(context.Background(), domain.Credentials{}, testSalt, domain.DefaultKDFParams, false)
 
 		assert.Error(t, err)
 	})
@@ -80,14 +81,15 @@ func TestAuthClient_GetSalt(t *testing.T) {
 		mockPB.On("GetSalt", mock.Anything, mock.MatchedBy(func(req *pb.GetSaltRequest) bool {
 			return req.GetLogin() == "user"
 		}), mock.Anything).Return(
-			pb.GetSaltResponse_builder{Salt: testSalt}.Build(), nil,
+			pb.GetSaltResponse_builder{Salt: testSalt, Kdf: pbKDF(domain.DefaultKDFParams)}.Build(), nil,
 		)
 
 		client := grpcclient.NewAuthClient(mockPB)
-		salt, err := client.GetSalt(context.Background(), "user")
+		salt, kdf, err := client.GetSalt(context.Background(), "user")
 
 		require.NoError(t, err)
 		assert.Equal(t, testSalt, salt)
+		assert.Equal(t, domain.DefaultKDFParams, kdf)
 	})
 
 	t.Run("user not found", func(t *testing.T) {
@@ -96,7 +98,7 @@ func TestAuthClient_GetSalt(t *testing.T) {
 			Return(nil, status.Error(codes.NotFound, "user not found"))
 
 		client := grpcclient.NewAuthClient(mockPB)
-		_, err := client.GetSalt(context.Background(), "unknown")
+		_, _, err := client.GetSalt(context.Background(), "unknown")
 
 		assert.ErrorIs(t, err, domain.ErrNotFound)
 	})
@@ -107,7 +109,7 @@ func TestAuthClient_GetSalt(t *testing.T) {
 			Return(nil, status.Error(codes.Internal, "internal error"))
 
 		client := grpcclient.NewAuthClient(mockPB)
-		_, err := client.GetSalt(context.Background(), "user")
+		_, _, err := client.GetSalt(context.Background(), "user")
 
 		assert.Error(t, err)
 	})
@@ -124,13 +126,14 @@ func TestAuthClient_Login(t *testing.T) {
 		)
 
 		client := grpcclient.NewAuthClient(mockPB)
-		token, err := client.Login(context.Background(), domain.Credentials{
+		token, changeRequired, err := client.Login(context.Background(), domain.Credentials{
 			Login:   "user",
 			AuthKey: hash,
 		})
 
 		require.NoError(t, err)
 		assert.Equal(t, jwtToken, token)
+		assert.False(t, changeRequired)
 	})
 
 	t.Run("invalid credentials", func(t *testing.T) {
@@ -139,7 +142,7 @@ func TestAuthClient_Login(t *testing.T) {
 			Return(nil, status.Error(codes.Unauthenticated, "invalid credentials"))
 
 		client := grpcclient.NewAuthClient(mockPB)
-		_, err := client.Login(context.Background(), domain.Credentials{})
+		_, _, err := client.Login(context.Background(), domain.Credentials{})
 
 		assert.ErrorIs(t, err, domain.ErrInvalidCredentials)
 	})
@@ -150,7 +153,7 @@ func TestAuthClient_Login(t *testing.T) {
 			Return(nil, status.Error(codes.NotFound, "user not found"))
 
 		client := grpcclient.NewAuthClient(mockPB)
-		_, err := client.Login(context.Background(), domain.Credentials{})
+		_, _, err := client.Login(context.Background(), domain.Credentials{})
 
 		assert.ErrorIs(t, err, domain.ErrNotFound)
 	})
@@ -161,8 +164,14 @@ func TestAuthClient_Login(t *testing.T) {
 			Return(nil, status.Error(codes.Internal, "internal error"))
 
 		client := grpcclient.NewAuthClient(mockPB)
-		_, err := client.Login(context.Background(), domain.Credentials{})
+		_, _, err := client.Login(context.Background(), domain.Credentials{})
 
 		assert.Error(t, err)
 	})
+}
+
+// pbKDF собирает protobuf-параметры Argon2id для ответов мока.
+func pbKDF(p domain.KDFParams) *pb.KDFParams {
+	threads := uint32(p.Threads)
+	return pb.KDFParams_builder{Time: &p.Time, MemoryKib: &p.MemoryKiB, Threads: &threads}.Build()
 }

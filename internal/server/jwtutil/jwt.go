@@ -15,6 +15,9 @@ type Claims struct {
 	// TokenVersion — версия токенов пользователя на момент выдачи; после «выхода
 	// на всех устройствах» версия пользователя растёт и старые токены перестают действовать.
 	TokenVersion int `json:"tv"`
+	// PasswordChangeOnly — токен выдан по временному паролю и разрешает только смену
+	// пароля и выход.
+	PasswordChangeOnly bool `json:"pco,omitempty"`
 	// TokenID — уникальный идентификатор токена (jti), по нему отзывается отдельный токен.
 	TokenID uuid.UUID `json:"-"`
 	jwt.RegisteredClaims
@@ -24,10 +27,21 @@ type Claims struct {
 // Токен содержит userID, версию токенов и случайный jti и истекает через ttl.
 // Возвращает подписанную строку токена или ошибку если подпись не удалась.
 func GenerateToken(userID uuid.UUID, tokenVersion int, secretKey string, ttl time.Duration) (string, error) {
+	return generate(userID, tokenVersion, false, secretKey, ttl)
+}
+
+// GeneratePasswordChangeToken генерирует токен для пользователя с временным паролем:
+// с ним доступны только смена пароля и выход.
+func GeneratePasswordChangeToken(userID uuid.UUID, tokenVersion int, secretKey string, ttl time.Duration) (string, error) {
+	return generate(userID, tokenVersion, true, secretKey, ttl)
+}
+
+func generate(userID uuid.UUID, tokenVersion int, passwordChangeOnly bool, secretKey string, ttl time.Duration) (string, error) {
 	now := time.Now()
 	claims := Claims{
-		UserID:       userID,
-		TokenVersion: tokenVersion,
+		UserID:             userID,
+		TokenVersion:       tokenVersion,
+		PasswordChangeOnly: passwordChangeOnly,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ID:        uuid.NewString(),
 			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),

@@ -1,4 +1,4 @@
-.PHONY: help generate docs build-client build-client-all build-server test test-e2e test-cover docker-up docker-down certs clean
+.PHONY: help generate docs build-client build-client-all build-server test test-e2e test-cover docker-up docker-down certs ca-encrypt clean
 
 # Версия и дата сборки — подставляются в бинарь клиента через -ldflags.
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -15,6 +15,7 @@ COMPLETION_FILE := $(HOME)/.gophkeeper_completion
 # TLS: каталог с сертификатами и список имён/IP, по которым клиенты обращаются к серверу.
 # Пример: make certs CERT_HOSTS=localhost,127.0.0.1,203.0.113.10,keeper.example.com
 CERTS_DIR  := certs
+CA_DIR     := ca
 CERT_HOSTS ?= localhost,127.0.0.1
 CERT_DAYS  ?= 825
 
@@ -31,6 +32,7 @@ help:
 	@echo "  docker-up         — поднять сервер в docker-compose"
 	@echo "  docker-down       — остановить docker-compose"
 	@echo "  certs             — сгенерировать CA и TLS-сертификат сервера (CERT_HOSTS=...)"
+	@echo "  ca-encrypt        — зашифровать паролем существующий ключ CA"
 	@echo "  clean             — удалить bin/"
 
 # Кодогенерация из .proto файлов
@@ -93,27 +95,57 @@ test-cover:
 	go tool cover -func=coverage.final.out | tail -1
 
 # Генерирует собственный CA и подписанный им сертификат сервера.
-# certs/ca.crt раздаётся клиентам (GOPHKEEPER_TLS_CERT), ca.key и server.key остаются на сервере.
+# certs/ca.crt раздаётся клиентам (GOPHKEEPER_TLS_CERT), certs/server.* монтируются в контейнер.
+# Ключ CA лежит отдельно в ca/ (не монтируется в контейнер) и зашифрован паролем:
+# с ним можно выпустить сертификат, которому поверят все клиенты, поэтому после выпуска
+# его лучше убрать с сервера (см. README) и возвращать только для перевыпуска.
+# Пароль ключа CA спрашивается интерактивно или берётся из переменной CA_PASS.
 # server.key получает права 0644, т.к. сервер в контейнере работает под отдельным UID;
-# каталог certs/ не коммитится (см. .gitignore) и не должен быть доступен посторонним.
+# каталоги certs/ и ca/ не коммитятся (см. .gitignore).
+CA_PASS_OUT = $(if $(CA_PASS),-passout env:CA_PASS)
+CA_PASS_IN  = $(if $(CA_PASS),-passin env:CA_PASS)
+
 certs:
-	@mkdir -p $(CERTS_DIR)
-	@test -f $(CERTS_DIR)/ca.key || openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes \
-		-keyout $(CERTS_DIR)/ca.key -out $(CERTS_DIR)/ca.crt -days $(CERT_DAYS) \
-		-subj "/CN=GophKeeper CA" 2>/dev/null
+	@if [ -f $(CERTS_DIR)/ca.key ]; then \
+		echo "Ключ CA лежит в $(CERTS_DIR)/, а этот каталог монтируется в контейнер."; \
+		echo "Перенесите его: mkdir -p $(CA_DIR) && mv $(CERTS_DIR)/ca.key $(CA_DIR)/ && make ca-encrypt"; \
+		exit 1; \
+	fi
+	@mkdir -p $(CERTS_DIR) $(CA_DIR) && chmod 700 $(CA_DIR)
+	@test -f $(CA_DIR)/ca.key || { \
+		echo "Создаётся CA. Задайте пароль ключа CA, он понадобится при перевыпуске сертификата."; \
+		openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 $(CA_PASS_OUT) \
+			-keyout $(CA_DIR)/ca.key -out $(CERTS_DIR)/ca.crt -days $(CERT_DAYS) \
+			-subj "/CN=GophKeeper CA" 2>/dev/null; }
 	@SAN=$$(echo "$(CERT_HOSTS)" | tr ',' '\n' | while read h; do \
 		if echo "$$h" | grep -Eq '^[0-9.]+$$|:'; then echo "IP:$$h"; else echo "DNS:$$h"; fi; \
 	done | paste -sd, -); \
 	openssl req -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes \
-		-keyout $(CERTS_DIR)/server.key -out $(CERTS_DIR)/server.csr \
+		-keyout $(CERTS_DIR)/server.key.new -out $(CERTS_DIR)/server.csr \
 		-subj "/CN=gophkeeper-server" 2>/dev/null && \
-	openssl x509 -req -in $(CERTS_DIR)/server.csr -CA $(CERTS_DIR)/ca.crt -CAkey $(CERTS_DIR)/ca.key \
-		-CAcreateserial -out $(CERTS_DIR)/server.crt -days $(CERT_DAYS) \
-		-extfile <(printf "subjectAltName=$$SAN\nextendedKeyUsage=serverAuth") 2>/dev/null && \
-	rm -f $(CERTS_DIR)/server.csr $(CERTS_DIR)/ca.srl && \
-	chmod 600 $(CERTS_DIR)/ca.key && chmod 644 $(CERTS_DIR)/server.key && \
+	echo "Подпись сертификата сервера ключом CA:" && \
+	openssl x509 -req -in $(CERTS_DIR)/server.csr -CA $(CERTS_DIR)/ca.crt -CAkey $(CA_DIR)/ca.key $(CA_PASS_IN) \
+		-CAcreateserial -CAserial $(CA_DIR)/ca.srl -out $(CERTS_DIR)/server.crt.new -days $(CERT_DAYS) \
+		-extfile <(printf "subjectAltName=$$SAN\nextendedKeyUsage=serverAuth") 2>/dev/null; \
+	status=$$?; rm -f $(CERTS_DIR)/server.csr $(CA_DIR)/ca.srl; \
+	if [ $$status -ne 0 ]; then \
+		rm -f $(CERTS_DIR)/server.key.new $(CERTS_DIR)/server.crt.new; \
+		echo "Не удалось подписать сертификат (неверный пароль CA?). Текущий сертификат не изменён."; \
+		exit 1; \
+	fi; \
+	mv $(CERTS_DIR)/server.key.new $(CERTS_DIR)/server.key && \
+	mv $(CERTS_DIR)/server.crt.new $(CERTS_DIR)/server.crt && \
+	chmod 600 $(CA_DIR)/ca.key && chmod 644 $(CERTS_DIR)/server.key && \
 	echo "Сертификат сервера выпущен для: $$SAN" && \
-	echo "Клиентам передать $(CERTS_DIR)/ca.crt и задать GOPHKEEPER_TLS_CERT=<путь к ca.crt>"
+	echo "Клиентам передать $(CERTS_DIR)/ca.crt и задать GOPHKEEPER_TLS_CERT=<путь к ca.crt>" && \
+	echo "Ключ CA ($(CA_DIR)/ca.key) после выпуска лучше убрать с сервера."
+
+# Шифрует паролем ранее созданный незашифрованный ключ CA.
+ca-encrypt:
+	@if grep -q ENCRYPTED $(CA_DIR)/ca.key; then echo "$(CA_DIR)/ca.key уже зашифрован"; exit 0; fi; \
+	openssl pkey -in $(CA_DIR)/ca.key -aes256 $(CA_PASS_OUT) -out $(CA_DIR)/ca.key.enc && \
+	mv $(CA_DIR)/ca.key.enc $(CA_DIR)/ca.key && chmod 600 $(CA_DIR)/ca.key && \
+	echo "$(CA_DIR)/ca.key зашифрован"
 
 docker-up:
 	docker compose up -d --build

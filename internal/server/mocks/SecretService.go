@@ -16,17 +16,17 @@ type SecretService struct {
 	mock.Mock
 }
 
-// Create provides a mock function with given fields: ctx, userID, blindIndex, data
-func (_m *SecretService) Create(ctx context.Context, userID uuid.UUID, blindIndex string, data []byte) error {
-	ret := _m.Called(ctx, userID, blindIndex, data)
+// Create provides a mock function with given fields: ctx, userID, tokenVersion, blindIndex, data
+func (_m *SecretService) Create(ctx context.Context, userID uuid.UUID, tokenVersion int, blindIndex string, data []byte) error {
+	ret := _m.Called(ctx, userID, tokenVersion, blindIndex, data)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, string, []byte) error); ok {
-		r0 = rf(ctx, userID, blindIndex, data)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int, string, []byte) error); ok {
+		r0 = rf(ctx, userID, tokenVersion, blindIndex, data)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -82,29 +82,29 @@ func (_m *SecretService) GetByBlindIndex(ctx context.Context, userID uuid.UUID, 
 	return r0, r1
 }
 
-// ListByUserID provides a mock function with given fields: ctx, userID
-func (_m *SecretService) ListByUserID(ctx context.Context, userID uuid.UUID) ([]*domain.Secret, error) {
-	ret := _m.Called(ctx, userID)
+// ListPage provides a mock function with given fields: ctx, userID, pageToken, pageSize
+func (_m *SecretService) ListPage(ctx context.Context, userID uuid.UUID, pageToken string, pageSize int) (*domain.SecretPage, error) {
+	ret := _m.Called(ctx, userID, pageToken, pageSize)
 
 	if len(ret) == 0 {
-		panic("no return value specified for ListByUserID")
+		panic("no return value specified for ListPage")
 	}
 
-	var r0 []*domain.Secret
+	var r0 *domain.SecretPage
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) ([]*domain.Secret, error)); ok {
-		return rf(ctx, userID)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, string, int) (*domain.SecretPage, error)); ok {
+		return rf(ctx, userID, pageToken, pageSize)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) []*domain.Secret); ok {
-		r0 = rf(ctx, userID)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, string, int) *domain.SecretPage); ok {
+		r0 = rf(ctx, userID, pageToken, pageSize)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*domain.Secret)
+			r0 = ret.Get(0).(*domain.SecretPage)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
-		r1 = rf(ctx, userID)
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, string, int) error); ok {
+		r1 = rf(ctx, userID, pageToken, pageSize)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -112,17 +112,17 @@ func (_m *SecretService) ListByUserID(ctx context.Context, userID uuid.UUID) ([]
 	return r0, r1
 }
 
-// Update provides a mock function with given fields: ctx, userID, blindIndex, data
-func (_m *SecretService) Update(ctx context.Context, userID uuid.UUID, blindIndex string, data []byte) error {
-	ret := _m.Called(ctx, userID, blindIndex, data)
+// Update provides a mock function with given fields: ctx, userID, tokenVersion, blindIndex, data
+func (_m *SecretService) Update(ctx context.Context, userID uuid.UUID, tokenVersion int, blindIndex string, data []byte) error {
+	ret := _m.Called(ctx, userID, tokenVersion, blindIndex, data)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, string, []byte) error); ok {
-		r0 = rf(ctx, userID, blindIndex, data)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int, string, []byte) error); ok {
+		r0 = rf(ctx, userID, tokenVersion, blindIndex, data)
 	} else {
 		r0 = ret.Error(0)
 	}

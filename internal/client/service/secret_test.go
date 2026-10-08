@@ -1,6 +1,7 @@
 package service_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"testing"
@@ -336,4 +337,44 @@ func encryptPayloadForTest(t *testing.T, masterKey []byte, payload *domain.Secre
 	require.NoError(t, err)
 
 	return ciphertext
+}
+
+func TestSecretsService_Reencrypt(t *testing.T) {
+	payload := &domain.SecretPayload{
+		Name: "bank", Type: domain.SecretTypeCredentials,
+		Data: json.RawMessage(`{"login":"u","password":"p"}`),
+	}
+	updatedAt := time.Date(2026, 1, 2, 3, 4, 5, 6000, time.UTC)
+
+	mockSecrets := mocks.NewSecretsClient(t)
+	mockSecrets.On("ListSecrets", mock.Anything).Return([]*domain.Secret{{
+		BlindIndex: blindIndexForTest(t, payload),
+		Data:       encryptPayloadForTest(t, testMasterKey, payload),
+		UpdatedAt:  updatedAt,
+	}}, nil)
+
+	svc, err := service.NewSecretsService(mockSecrets, testMasterKey)
+	require.NoError(t, err)
+
+	newMasterKey := bytes.Repeat([]byte{9}, 32)
+	items, err := svc.Reencrypt(context.Background(), newMasterKey)
+	require.NoError(t, err)
+	require.Len(t, items, 1)
+
+	item := items[0]
+	assert.Equal(t, blindIndexForTest(t, payload), item.OldBlindIndex)
+	assert.Equal(t, updatedAt, item.ExpectedUpdatedAt)
+
+	// Новые blind index и данные соответствуют новому ключу: их принимает сервис нового ключа.
+	newHMAC, err := crypto.HKDF(newMasterKey, crypto.InfoBlindIndex)
+	require.NoError(t, err)
+	assert.Equal(t, crypto.BlindIndex("bank", domain.SecretTypeCredentials, newHMAC), item.NewBlindIndex)
+
+	newClient := mocks.NewSecretsClient(t)
+	newClient.On("GetSecret", mock.Anything, item.NewBlindIndex).Return(&domain.Secret{Data: item.Data}, nil)
+	newSvc, err := service.NewSecretsService(newClient, newMasterKey)
+	require.NoError(t, err)
+	got, err := newSvc.GetSecret(context.Background(), "bank", domain.SecretTypeCredentials)
+	require.NoError(t, err)
+	assert.JSONEq(t, string(payload.Data), string(got.Data))
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/F3dosik/GophKeeper/internal/client/grpcclient"
 	"github.com/F3dosik/GophKeeper/internal/client/service"
+	"github.com/F3dosik/GophKeeper/internal/domain"
 	pb "github.com/F3dosik/GophKeeper/proto/gen"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -72,7 +73,8 @@ func (k *clientKit) initSecretsService(ctx context.Context, t *testing.T) {
 // Инициализирует Secrets-сервис, готовый для CRUD-операций.
 func (k *clientKit) registerAndLogin(ctx context.Context, t *testing.T) {
 	t.Helper()
-	require.NoError(t, k.Auth.CreateUser(ctx, k.Login, k.Password))
-	require.NoError(t, k.Auth.Login(ctx, k.Login, k.Password))
+	require.NoError(t, k.Auth.CreateUser(ctx, k.Login, k.Password, domain.DefaultKDFParams))
+	_, err := k.Auth.Login(ctx, k.Login, k.Password)
+	require.NoError(t, err)
 	k.initSecretsService(ctx, t)
 }

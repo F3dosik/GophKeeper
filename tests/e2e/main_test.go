@@ -32,6 +32,8 @@ var migrationPaths = []string{
 	"../../migrations/000001_init.up.sql",
 	"../../migrations/000002_auth_key_hash.up.sql",
 	"../../migrations/000003_token_revocation.up.sql",
+	"../../migrations/000004_kdf_params.up.sql",
+	"../../migrations/000005_temporary_passwords.up.sql",
 }
 
 // serverAddr — адрес in-process gRPC сервера, заполняется в TestMain.
@@ -92,18 +94,29 @@ func startTestServer(pool *pgxpool.Pool) (stop func(), addr string, err error) {
 	secretRepo := postgres.NewSecretRepository(pool)
 	tokenRepo := postgres.NewTokenRepository(pool)
 
-	authService := service.NewAuthService(userRepo, tokenRepo, testJWTSecret, time.Hour)
-	secretService := service.NewSecretService(secretRepo, service.SecretLimits{
-		MaxSize: 1 << 20, MaxCount: 1000,
+	keys, err := service.DeriveServerKeys(testJWTSecret)
+	if err != nil {
+		return nil, "", fmt.Errorf("derive keys: %w", err)
+	}
+	limits := service.SecretLimits{MaxSize: 1 << 20, MaxCount: 1000}
+	authService := service.NewAuthService(userRepo, tokenRepo, service.AuthConfig{
+		Keys: keys, TokenTTL: time.Hour, SecretLimits: limits, TempPasswordTTL: time.Hour,
 	})
+	secretService := service.NewSecretService(secretRepo, limits)
 
-	authHandler := grpchandler.NewAuthHandler(authService)
+	authHandler := grpchandler.NewAuthHandler(authService, grpchandler.AuthHandlerOptions{
+		AllowRegistration: true, AllowTemporary: true,
+	})
 	secretHandler := grpchandler.NewSecretHandler(secretService)
 
 	server := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			middleware.LoggingInterceptor(log),
-			middleware.AuthInterceptor(testJWTSecret, tokenRepo, log),
+			middleware.AuthInterceptor(keys.TokenSigning, tokenRepo, log),
+		),
+		grpc.ChainStreamInterceptor(
+			middleware.LoggingStreamInterceptor(log),
+			middleware.AuthStreamInterceptor(keys.TokenSigning, tokenRepo, log),
 		),
 	)
 	pb.RegisterAuthServer(server, authHandler)
