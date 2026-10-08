@@ -66,7 +66,7 @@ func (k *clientKit) initSecretsService(ctx context.Context, t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = authConn.Close() })
 
-	masterKey, err := k.Auth.DeriveMasterKey(ctx, k.Login, k.Password)
+	masterKey, err := k.Auth.Unlock(ctx, k.Login, k.Password)
 	require.NoError(t, err)
 
 	secretsClient := grpcclient.NewSecretsClient(pb.NewSecretsClient(authConn))

@@ -3,6 +3,7 @@ package service_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"testing"
 
@@ -102,5 +103,54 @@ func TestAuthService_Login(t *testing.T) {
 		info, err := os.Stat(tokenPath)
 		require.NoError(t, err)
 		assert.Equal(t, os.FileMode(0600), info.Mode().Perm())
+	})
+}
+
+func TestAuthService_Unlock(t *testing.T) {
+	t.Run("correct password returns master key", func(t *testing.T) {
+		var sentAuthKey []byte
+		mockAuth := mocks.NewAuthClient(t)
+		mockAuth.On("GetSalt", mock.Anything, "user").
+			Return([]byte("saltsaltsaltsalt"), nil)
+		mockAuth.On("Login", mock.Anything, mock.MatchedBy(func(creds domain.Credentials) bool {
+			sentAuthKey = creds.AuthKey
+			return creds.Login == "user" && len(creds.AuthKey) == 32
+		})).Return("jwt-token", nil)
+
+		sessionPath := t.TempDir() + "/session"
+		svc := service.NewAuthService(mockAuth, sessionPath)
+		masterKey, err := svc.Unlock(context.Background(), "user", "password")
+
+		require.NoError(t, err)
+		assert.Len(t, masterKey, 32)
+		assert.NotEqual(t, sentAuthKey, masterKey, "master key must never be sent to the server")
+
+		_, statErr := os.Stat(sessionPath)
+		assert.True(t, os.IsNotExist(statErr), "Unlock must not overwrite the session")
+	})
+
+	t.Run("wrong password", func(t *testing.T) {
+		mockAuth := mocks.NewAuthClient(t)
+		mockAuth.On("GetSalt", mock.Anything, "user").
+			Return([]byte("saltsaltsaltsalt"), nil)
+		mockAuth.On("Login", mock.Anything, mock.Anything).
+			Return("", domain.ErrInvalidCredentials)
+
+		svc := service.NewAuthService(mockAuth, t.TempDir()+"/session")
+		masterKey, err := svc.Unlock(context.Background(), "user", "wrong")
+
+		assert.ErrorIs(t, err, domain.ErrInvalidCredentials)
+		assert.Nil(t, masterKey)
+	})
+
+	t.Run("get salt error", func(t *testing.T) {
+		mockAuth := mocks.NewAuthClient(t)
+		mockAuth.On("GetSalt", mock.Anything, "user").
+			Return(nil, errors.New("network down"))
+
+		svc := service.NewAuthService(mockAuth, t.TempDir()+"/session")
+		_, err := svc.Unlock(context.Background(), "user", "password")
+
+		assert.Error(t, err)
 	})
 }

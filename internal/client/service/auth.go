@@ -23,9 +23,11 @@ type AuthService interface {
 	// Запрашивает соль с сервера, деривирует ключ аутентификации и получает токен.
 	Login(ctx context.Context, login, password string) error
 
-	// DeriveMasterKey запрашивает соль пользователя с сервера и деривирует masterKey
-	// через Argon2id. Используется перед операциями с секретами для получения ключа шифрования.
-	DeriveMasterKey(ctx context.Context, login, password string) ([]byte, error)
+	// Unlock проверяет мастер-пароль на сервере и возвращает masterKey для деривации
+	// ключей шифрования. Используется перед операциями с секретами: без проверки неверный
+	// пароль дал бы другие ключи, и секрет был бы сохранён в недоступном для пользователя виде.
+	// Возвращает domain.ErrInvalidCredentials, если пароль неверный.
+	Unlock(ctx context.Context, login, password string) ([]byte, error)
 }
 
 // authService реализует AuthService.
@@ -88,15 +90,25 @@ func (s *authService) Login(ctx context.Context, login, password string) error {
 	return nil
 }
 
-// DeriveMasterKey получает соль пользователя с сервера и деривирует masterKey через Argon2id.
-// Мастер-ключ далее используется для деривации ключей шифрования секретов на клиенте.
-func (s *authService) DeriveMasterKey(ctx context.Context, login, password string) ([]byte, error) {
+// Unlock получает соль пользователя, деривирует masterKey через Argon2id и проверяет
+// пароль, выполняя Login с производным ключом аутентификации. Новый токен не сохраняется:
+// цель вызова — только проверка пароля.
+func (s *authService) Unlock(ctx context.Context, login, password string) ([]byte, error) {
 	salt, err := s.client.GetSalt(ctx, login)
 	if err != nil {
-		return nil, fmt.Errorf("authService.DeriveMasterKey: %w", err)
+		return nil, fmt.Errorf("authService.Unlock: %w", err)
 	}
 
-	return crypto.DeriveKey(password, salt), nil
+	masterKey := crypto.DeriveKey(password, salt)
+	authKey, err := crypto.HKDF(masterKey, crypto.InfoAuth)
+	if err != nil {
+		return nil, fmt.Errorf("authService.Unlock: %w", err)
+	}
+	if _, err := s.client.Login(ctx, domain.Credentials{Login: login, AuthKey: authKey}); err != nil {
+		return nil, fmt.Errorf("authService.Unlock: %w", err)
+	}
+
+	return masterKey, nil
 }
 
 // deriveAuthKey вычисляет ключ аутентификации HKDF(Argon2id(password, salt), "auth").
