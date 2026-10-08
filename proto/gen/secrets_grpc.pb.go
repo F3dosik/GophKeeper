@@ -29,11 +29,23 @@ const (
 // SecretsClient is the client API for Secrets service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// Secrets — сервис управления зашифрованными секретами пользователя.
+// Все методы требуют JWT-токен в метаданных (authorization: Bearer ...).
 type SecretsClient interface {
+	// ListSecrets возвращает все секреты текущего пользователя.
 	ListSecrets(ctx context.Context, in *ListSecretsRequest, opts ...grpc.CallOption) (*ListSecretsResponse, error)
+	// CreateSecret создаёт новый секрет.
+	// Ошибка: AlreadyExists — секрет с таким blind_index уже существует.
 	CreateSecret(ctx context.Context, in *CreateSecretRequest, opts ...grpc.CallOption) (*CreateSecretResponse, error)
+	// UpdateSecret обновляет существующий секрет.
+	// Ошибка: NotFound — секрет с таким blind_index не найден.
 	UpdateSecret(ctx context.Context, in *UpdateSecretRequest, opts ...grpc.CallOption) (*UpdateSecretResponse, error)
+	// GetSecret возвращает секрет по blind_index.
+	// Ошибка: NotFound — секрет не найден.
 	GetSecret(ctx context.Context, in *GetSecretRequest, opts ...grpc.CallOption) (*GetSecretResponse, error)
+	// DeleteSecret удаляет секрет по blind_index.
+	// Ошибка: NotFound — секрет не найден.
 	DeleteSecret(ctx context.Context, in *DeleteSecretRequest, opts ...grpc.CallOption) (*DeleteSecretResponse, error)
 }
 
@@ -98,11 +110,23 @@ func (c *secretsClient) DeleteSecret(ctx context.Context, in *DeleteSecretReques
 // SecretsServer is the server API for Secrets service.
 // All implementations must embed UnimplementedSecretsServer
 // for forward compatibility.
+//
+// Secrets — сервис управления зашифрованными секретами пользователя.
+// Все методы требуют JWT-токен в метаданных (authorization: Bearer ...).
 type SecretsServer interface {
+	// ListSecrets возвращает все секреты текущего пользователя.
 	ListSecrets(context.Context, *ListSecretsRequest) (*ListSecretsResponse, error)
+	// CreateSecret создаёт новый секрет.
+	// Ошибка: AlreadyExists — секрет с таким blind_index уже существует.
 	CreateSecret(context.Context, *CreateSecretRequest) (*CreateSecretResponse, error)
+	// UpdateSecret обновляет существующий секрет.
+	// Ошибка: NotFound — секрет с таким blind_index не найден.
 	UpdateSecret(context.Context, *UpdateSecretRequest) (*UpdateSecretResponse, error)
+	// GetSecret возвращает секрет по blind_index.
+	// Ошибка: NotFound — секрет не найден.
 	GetSecret(context.Context, *GetSecretRequest) (*GetSecretResponse, error)
+	// DeleteSecret удаляет секрет по blind_index.
+	// Ошибка: NotFound — секрет не найден.
 	DeleteSecret(context.Context, *DeleteSecretRequest) (*DeleteSecretResponse, error)
 	mustEmbedUnimplementedSecretsServer()
 }

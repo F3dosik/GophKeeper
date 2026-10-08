@@ -27,7 +27,7 @@ func NewAuthHandler(authService service.AuthService) pb.AuthServer {
 func (h *authHandler) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.CreateUserResponse, error) {
 	if err := h.authService.Create(
 		ctx, req.GetCredentials().GetLogin(),
-		req.GetCredentials().GetMasterKey(), req.GetSalt(),
+		req.GetCredentials().GetAuthKey(), req.GetSalt(),
 	); err != nil {
 		return nil, toGRPCError(err)
 	}
@@ -46,12 +46,12 @@ func (h *authHandler) GetSalt(ctx context.Context, req *pb.GetSaltRequest) (*pb.
 }
 
 // Login обрабатывает запрос аутентификации пользователя.
-// Возвращает codes.Unauthenticated если masterKey неверный или логин не существует
+// Возвращает codes.Unauthenticated если authKey неверный или логин не существует
 // (единый код ответа скрывает факт наличия пользователя).
 func (h *authHandler) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
 	token, err := h.authService.Login(
 		ctx, req.GetCredentials().GetLogin(),
-		req.GetCredentials().GetMasterKey(),
+		req.GetCredentials().GetAuthKey(),
 	)
 	if err != nil {
 		return nil, toGRPCError(err)

@@ -1,6 +1,7 @@
 package crypto_test
 
 import (
+	"encoding/hex"
 	"testing"
 
 	"github.com/F3dosik/GophKeeper/pkg/crypto"
@@ -76,4 +77,44 @@ func TestHKDF(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotEqual(t, key1, key2)
 	})
+}
+
+func TestAuthKeyIndependence(t *testing.T) {
+	master := []byte("masterkey")
+	authKey, err := crypto.HKDF(master, crypto.InfoAuth)
+	require.NoError(t, err)
+	encKey, err := crypto.HKDF(master, crypto.InfoEncryption)
+	require.NoError(t, err)
+	hmacKey, err := crypto.HKDF(master, crypto.InfoBlindIndex)
+	require.NoError(t, err)
+
+	assert.NotEqual(t, authKey, encKey)
+	assert.NotEqual(t, authKey, hmacKey)
+	assert.NotEqual(t, authKey, master)
+}
+
+func TestHashAuthKey(t *testing.T) {
+	t.Run("returns 32 bytes", func(t *testing.T) {
+		assert.Len(t, crypto.HashAuthKey([]byte("key")), 32)
+	})
+
+	t.Run("deterministic and differs from input", func(t *testing.T) {
+		key := make([]byte, 32)
+		h1 := crypto.HashAuthKey(key)
+		h2 := crypto.HashAuthKey(key)
+		assert.Equal(t, h1, h2)
+		assert.NotEqual(t, key, h1)
+	})
+}
+
+// Вектор совпадает с тем, что вычисляет SQL в migrations/000002_auth_key_hash.up.sql:
+// изменение деривации authKey сломает аутентификацию мигрированных пользователей.
+func TestHashAuthKey_MatchesMigrationVector(t *testing.T) {
+	master := make([]byte, 32)
+	for i := range master {
+		master[i] = byte(i)
+	}
+	authKey, err := crypto.HKDF(master, crypto.InfoAuth)
+	require.NoError(t, err)
+	assert.Equal(t, "4d3f61ca7586d06c91f93768457312a3c03e9de00767956966fd379a73813ee5", hex.EncodeToString(crypto.HashAuthKey(authKey)))
 }

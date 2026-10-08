@@ -19,7 +19,7 @@ func TestAuthService_CreateUser(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		mockAuth := mocks.NewAuthClient(t)
 		mockAuth.On("CreateUser", mock.Anything, mock.MatchedBy(func(creds domain.Credentials) bool {
-			return creds.Login == "user" && len(creds.MasterKey) == 32
+			return creds.Login == "user" && len(creds.AuthKey) == 32
 		}), mock.AnythingOfType("[]uint8")).Return(nil)
 
 		svc := service.NewAuthService(mockAuth, t.TempDir()+"/token")
@@ -47,7 +47,7 @@ func TestAuthService_Login(t *testing.T) {
 		mockAuth.On("GetSalt", mock.Anything, "user").
 			Return([]byte("saltsaltsaltsalt"), nil)
 		mockAuth.On("Login", mock.Anything, mock.MatchedBy(func(creds domain.Credentials) bool {
-			return creds.Login == "user" && len(creds.MasterKey) == 32
+			return creds.Login == "user" && len(creds.AuthKey) == 32
 		})).Return("jwt-token", nil)
 
 		tokenPath := t.TempDir() + "/token"

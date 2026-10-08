@@ -10,8 +10,8 @@ const tokenMetadataKey = "authorization"
 
 func toPBCredentials(c domain.Credentials) *pb.Credentials {
 	return pb.Credentials_builder{
-		Login:     &c.Login,
-		MasterKey: c.MasterKey,
+		Login:   &c.Login,
+		AuthKey: c.AuthKey,
 	}.Build()
 }
 

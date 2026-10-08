@@ -27,14 +27,14 @@ func TestAuthClient_CreateUser(t *testing.T) {
 		mockPB := mocks.NewPBAuthClient(t)
 		mockPB.On("CreateUser", mock.Anything, mock.MatchedBy(func(req *pb.CreateUserRequest) bool {
 			return req.GetCredentials().GetLogin() == "user" &&
-				bytes.Equal(req.GetCredentials().GetMasterKey(), hash) &&
+				bytes.Equal(req.GetCredentials().GetAuthKey(), hash) &&
 				bytes.Equal(req.GetSalt(), testSalt)
 		}), mock.Anything).Return(&pb.CreateUserResponse{}, nil)
 
 		client := grpcclient.NewAuthClient(mockPB)
 		err := client.CreateUser(context.Background(), domain.Credentials{
-			Login:     "user",
-			MasterKey: hash,
+			Login:   "user",
+			AuthKey: hash,
 		}, testSalt)
 
 		require.NoError(t, err)
@@ -118,15 +118,15 @@ func TestAuthClient_Login(t *testing.T) {
 		mockPB := mocks.NewPBAuthClient(t)
 		mockPB.On("Login", mock.Anything, mock.MatchedBy(func(req *pb.LoginRequest) bool {
 			return req.GetCredentials().GetLogin() == "user" &&
-				bytes.Equal(req.GetCredentials().GetMasterKey(), hash)
+				bytes.Equal(req.GetCredentials().GetAuthKey(), hash)
 		}), mock.Anything).Return(
 			pb.LoginResponse_builder{Token: &jwtToken}.Build(), nil,
 		)
 
 		client := grpcclient.NewAuthClient(mockPB)
 		token, err := client.Login(context.Background(), domain.Credentials{
-			Login:     "user",
-			MasterKey: hash,
+			Login:   "user",
+			AuthKey: hash,
 		})
 
 		require.NoError(t, err)

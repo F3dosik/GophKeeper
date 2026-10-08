@@ -21,6 +21,9 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// SecretData — единица хранения секрета на сервере.
+// Сервер никогда не видит открытые данные: data зашифрована на клиенте (AES-256-GCM),
+// blind_index — детерминированный HMAC-SHA256 от (имя, тип) для поиска без раскрытия имени.
 type SecretData struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_BlindIndex  *string                `protobuf:"bytes,1,opt,name=blind_index,json=blindIndex"`
@@ -113,8 +116,10 @@ func (x *SecretData) ClearData() {
 type SecretData_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
+	// Детерминированный индекс для поиска секрета (HMAC-SHA256).
 	BlindIndex *string
-	Data       []byte
+	// Зашифрованный полезный payload секрета.
+	Data []byte
 }
 
 func (b0 SecretData_builder) Build() *SecretData {
@@ -132,6 +137,7 @@ func (b0 SecretData_builder) Build() *SecretData {
 	return m0
 }
 
+// CreateSecretRequest — запрос создания секрета.
 type CreateSecretRequest struct {
 	state           protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Item *SecretData            `protobuf:"bytes,1,opt,name=item"`
@@ -189,6 +195,7 @@ func (x *CreateSecretRequest) ClearItem() {
 type CreateSecretRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
+	// Создаваемый секрет.
 	Item *SecretData
 }
 
@@ -200,6 +207,7 @@ func (b0 CreateSecretRequest_builder) Build() *CreateSecretRequest {
 	return m0
 }
 
+// CreateSecretResponse — пустой ответ при успешном создании.
 type CreateSecretResponse struct {
 	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -243,6 +251,8 @@ func (b0 CreateSecretResponse_builder) Build() *CreateSecretResponse {
 	return m0
 }
 
+// UpdateSecretRequest — запрос обновления существующего секрета.
+// Секрет идентифицируется по blind_index.
 type UpdateSecretRequest struct {
 	state           protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Item *SecretData            `protobuf:"bytes,1,opt,name=item"`
@@ -300,6 +310,7 @@ func (x *UpdateSecretRequest) ClearItem() {
 type UpdateSecretRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
+	// Новое содержимое секрета (blind_index остаётся прежним).
 	Item *SecretData
 }
 
@@ -311,6 +322,7 @@ func (b0 UpdateSecretRequest_builder) Build() *UpdateSecretRequest {
 	return m0
 }
 
+// UpdateSecretResponse — пустой ответ при успешном обновлении.
 type UpdateSecretResponse struct {
 	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -354,6 +366,7 @@ func (b0 UpdateSecretResponse_builder) Build() *UpdateSecretResponse {
 	return m0
 }
 
+// GetSecretRequest — запрос на получение секрета по blind_index.
 type GetSecretRequest struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_BlindIndex  *string                `protobuf:"bytes,1,opt,name=blind_index,json=blindIndex"`
@@ -418,6 +431,7 @@ func (x *GetSecretRequest) ClearBlindIndex() {
 type GetSecretRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
+	// Индекс искомого секрета.
 	BlindIndex *string
 }
 
@@ -432,6 +446,7 @@ func (b0 GetSecretRequest_builder) Build() *GetSecretRequest {
 	return m0
 }
 
+// GetSecretResponse — ответ с зашифрованным секретом и метаданными.
 type GetSecretResponse struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Data        []byte                 `protobuf:"bytes,1,opt,name=data"`
@@ -542,8 +557,11 @@ func (x *GetSecretResponse) ClearUpdatedAt() {
 type GetSecretResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Data      []byte
+	// Зашифрованные данные секрета.
+	Data []byte
+	// Дата и время создания.
 	CreatedAt *timestamppb.Timestamp
+	// Дата и время последнего обновления.
 	UpdatedAt *timestamppb.Timestamp
 }
 
@@ -560,6 +578,7 @@ func (b0 GetSecretResponse_builder) Build() *GetSecretResponse {
 	return m0
 }
 
+// DeleteSecretRequest — запрос удаления секрета.
 type DeleteSecretRequest struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_BlindIndex  *string                `protobuf:"bytes,1,opt,name=blind_index,json=blindIndex"`
@@ -624,6 +643,7 @@ func (x *DeleteSecretRequest) ClearBlindIndex() {
 type DeleteSecretRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
+	// Индекс удаляемого секрета.
 	BlindIndex *string
 }
 
@@ -638,6 +658,7 @@ func (b0 DeleteSecretRequest_builder) Build() *DeleteSecretRequest {
 	return m0
 }
 
+// DeleteSecretResponse — пустой ответ при успешном удалении.
 type DeleteSecretResponse struct {
 	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -681,6 +702,7 @@ func (b0 DeleteSecretResponse_builder) Build() *DeleteSecretResponse {
 	return m0
 }
 
+// SecretItem — запись секрета для списка: зашифрованные данные и метаданные.
 type SecretItem struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_BlindIndex  *string                `protobuf:"bytes,1,opt,name=blind_index,json=blindIndex"`
@@ -819,10 +841,14 @@ func (x *SecretItem) ClearUpdatedAt() {
 type SecretItem_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
+	// Детерминированный индекс секрета.
 	BlindIndex *string
-	Data       []byte
-	CreatedAt  *timestamppb.Timestamp
-	UpdatedAt  *timestamppb.Timestamp
+	// Зашифрованные данные секрета.
+	Data []byte
+	// Дата и время создания.
+	CreatedAt *timestamppb.Timestamp
+	// Дата и время последнего обновления.
+	UpdatedAt *timestamppb.Timestamp
 }
 
 func (b0 SecretItem_builder) Build() *SecretItem {
@@ -842,6 +868,7 @@ func (b0 SecretItem_builder) Build() *SecretItem {
 	return m0
 }
 
+// ListSecretsRequest — пустой запрос списка секретов текущего пользователя.
 type ListSecretsRequest struct {
 	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -885,6 +912,7 @@ func (b0 ListSecretsRequest_builder) Build() *ListSecretsRequest {
 	return m0
 }
 
+// ListSecretsResponse — ответ со списком секретов.
 type ListSecretsResponse struct {
 	state            protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Items *[]*SecretItem         `protobuf:"bytes,1,rep,name=items"`
@@ -933,6 +961,7 @@ func (x *ListSecretsResponse) SetItems(v []*SecretItem) {
 type ListSecretsResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
+	// Все секреты текущего пользователя.
 	Items []*SecretItem
 }
 

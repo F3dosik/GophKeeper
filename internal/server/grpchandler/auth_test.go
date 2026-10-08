@@ -15,23 +15,23 @@ import (
 )
 
 var (
-	testLogin     = "test_user"
-	testMasterKey = []byte("secret")
-	testWrongKey  = []byte("wrongkey")
-	testSalt      = []byte("salt")
+	testLogin    = "test_user"
+	testAuthKey  = []byte("secret")
+	testWrongKey = []byte("wrongkey")
+	testSalt     = []byte("salt")
 )
 
 func TestAuthHandler_CreateUser_Success(t *testing.T) {
 	mockService := mocks.NewAuthService(t)
-	mockService.On("Create", mock.Anything, testLogin, testMasterKey, testSalt).
+	mockService.On("Create", mock.Anything, testLogin, testAuthKey, testSalt).
 		Return(nil)
 
 	handler := NewAuthHandler(mockService)
 
 	req := pb.CreateUserRequest_builder{
 		Credentials: pb.Credentials_builder{
-			Login:     &testLogin,
-			MasterKey: testMasterKey,
+			Login:   &testLogin,
+			AuthKey: testAuthKey,
 		}.Build(),
 		Salt: testSalt,
 	}.Build()
@@ -45,15 +45,15 @@ func TestAuthHandler_CreateUser_Success(t *testing.T) {
 
 func TestAuthHandler_CreateUser_UserAlreadyExists(t *testing.T) {
 	mockService := mocks.NewAuthService(t)
-	mockService.On("Create", mock.Anything, testLogin, testMasterKey, testSalt).
+	mockService.On("Create", mock.Anything, testLogin, testAuthKey, testSalt).
 		Return(domain.ErrUserAlreadyExists)
 
 	handler := NewAuthHandler(mockService)
 
 	req := pb.CreateUserRequest_builder{
 		Credentials: pb.Credentials_builder{
-			Login:     &testLogin,
-			MasterKey: testMasterKey,
+			Login:   &testLogin,
+			AuthKey: testAuthKey,
 		}.Build(),
 		Salt: testSalt,
 	}.Build()
@@ -84,15 +84,15 @@ func TestAuthHandler_GetSalt_Success(t *testing.T) {
 
 func TestAuthHandler_Login_Success(t *testing.T) {
 	mockService := mocks.NewAuthService(t)
-	mockService.On("Login", mock.Anything, testLogin, testMasterKey).
+	mockService.On("Login", mock.Anything, testLogin, testAuthKey).
 		Return("jwt-token", nil)
 
 	handler := NewAuthHandler(mockService)
 
 	req := pb.LoginRequest_builder{
 		Credentials: pb.Credentials_builder{
-			Login:     proto.String(testLogin),
-			MasterKey: testMasterKey,
+			Login:   proto.String(testLogin),
+			AuthKey: testAuthKey,
 		}.Build(),
 	}.Build()
 
@@ -112,8 +112,8 @@ func TestAuthHandler_Login_InvalidCredentials(t *testing.T) {
 
 	req := pb.LoginRequest_builder{
 		Credentials: pb.Credentials_builder{
-			Login:     proto.String(testLogin),
-			MasterKey: testWrongKey,
+			Login:   proto.String(testLogin),
+			AuthKey: testWrongKey,
 		}.Build(),
 	}.Build()
 

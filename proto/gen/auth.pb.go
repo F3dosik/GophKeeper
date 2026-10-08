@@ -20,10 +20,15 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Credentials — учётные данные пользователя, используемые при регистрации и входе.
+// auth_key — ключ аутентификации: HKDF(masterKey, "auth"), где masterKey = Argon2id(пароль, соль).
+// Он независим от ключей шифрования секретов, поэтому сервер (и тот, кто прочитает его БД)
+// не может расшифровать данные. Сервер хранит SHA-256 от auth_key; ни пароль, ни masterKey
+// на сервер не передаются.
 type Credentials struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Login       *string                `protobuf:"bytes,1,opt,name=login"`
-	xxx_hidden_MasterKey   []byte                 `protobuf:"bytes,2,opt,name=master_key,json=masterKey"`
+	xxx_hidden_AuthKey     []byte                 `protobuf:"bytes,2,opt,name=auth_key,json=authKey"`
 	XXX_raceDetectHookData protoimpl.RaceDetectHookData
 	XXX_presence           [1]uint32
 	unknownFields          protoimpl.UnknownFields
@@ -65,9 +70,9 @@ func (x *Credentials) GetLogin() string {
 	return ""
 }
 
-func (x *Credentials) GetMasterKey() []byte {
+func (x *Credentials) GetAuthKey() []byte {
 	if x != nil {
-		return x.xxx_hidden_MasterKey
+		return x.xxx_hidden_AuthKey
 	}
 	return nil
 }
@@ -77,11 +82,11 @@ func (x *Credentials) SetLogin(v string) {
 	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 2)
 }
 
-func (x *Credentials) SetMasterKey(v []byte) {
+func (x *Credentials) SetAuthKey(v []byte) {
 	if v == nil {
 		v = []byte{}
 	}
-	x.xxx_hidden_MasterKey = v
+	x.xxx_hidden_AuthKey = v
 	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 2)
 }
 
@@ -92,7 +97,7 @@ func (x *Credentials) HasLogin() bool {
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
 }
 
-func (x *Credentials) HasMasterKey() bool {
+func (x *Credentials) HasAuthKey() bool {
 	if x == nil {
 		return false
 	}
@@ -104,16 +109,18 @@ func (x *Credentials) ClearLogin() {
 	x.xxx_hidden_Login = nil
 }
 
-func (x *Credentials) ClearMasterKey() {
+func (x *Credentials) ClearAuthKey() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
-	x.xxx_hidden_MasterKey = nil
+	x.xxx_hidden_AuthKey = nil
 }
 
 type Credentials_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	Login     *string
-	MasterKey []byte
+	// Логин пользователя.
+	Login *string
+	// Ключ аутентификации (32 байта), полученный на клиенте.
+	AuthKey []byte
 }
 
 func (b0 Credentials_builder) Build() *Credentials {
@@ -124,13 +131,14 @@ func (b0 Credentials_builder) Build() *Credentials {
 		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 2)
 		x.xxx_hidden_Login = b.Login
 	}
-	if b.MasterKey != nil {
+	if b.AuthKey != nil {
 		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 2)
-		x.xxx_hidden_MasterKey = b.MasterKey
+		x.xxx_hidden_AuthKey = b.AuthKey
 	}
 	return m0
 }
 
+// CreateUserRequest — запрос регистрации нового пользователя.
 type CreateUserRequest struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Credentials *Credentials           `protobuf:"bytes,1,opt,name=credentials"`
@@ -218,8 +226,10 @@ func (x *CreateUserRequest) ClearSalt() {
 type CreateUserRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
+	// Учётные данные будущего пользователя.
 	Credentials *Credentials
-	Salt        []byte
+	// Случайная соль (16+ байт), сгенерированная клиентом, — используется при деривации ключа.
+	Salt []byte
 }
 
 func (b0 CreateUserRequest_builder) Build() *CreateUserRequest {
@@ -234,6 +244,7 @@ func (b0 CreateUserRequest_builder) Build() *CreateUserRequest {
 	return m0
 }
 
+// CreateUserResponse — пустой ответ при успешной регистрации.
 type CreateUserResponse struct {
 	state         protoimpl.MessageState `protogen:"opaque.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -277,6 +288,8 @@ func (b0 CreateUserResponse_builder) Build() *CreateUserResponse {
 	return m0
 }
 
+// GetSaltRequest — запрос соли пользователя по его логину.
+// Клиент запрашивает соль перед Login, чтобы получить тот же auth_key, что и при регистрации.
 type GetSaltRequest struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Login       *string                `protobuf:"bytes,1,opt,name=login"`
@@ -341,6 +354,7 @@ func (x *GetSaltRequest) ClearLogin() {
 type GetSaltRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
+	// Логин пользователя.
 	Login *string
 }
 
@@ -355,6 +369,7 @@ func (b0 GetSaltRequest_builder) Build() *GetSaltRequest {
 	return m0
 }
 
+// GetSaltResponse — ответ с солью пользователя.
 type GetSaltResponse struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Salt        []byte                 `protobuf:"bytes,1,opt,name=salt"`
@@ -419,6 +434,7 @@ func (x *GetSaltResponse) ClearSalt() {
 type GetSaltResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
+	// Соль, сохранённая при регистрации пользователя.
 	Salt []byte
 }
 
@@ -433,6 +449,7 @@ func (b0 GetSaltResponse_builder) Build() *GetSaltResponse {
 	return m0
 }
 
+// LoginRequest — запрос на вход в систему.
 type LoginRequest struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Credentials *Credentials           `protobuf:"bytes,1,opt,name=credentials"`
@@ -490,6 +507,7 @@ func (x *LoginRequest) ClearCredentials() {
 type LoginRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
+	// Учётные данные пользователя.
 	Credentials *Credentials
 }
 
@@ -501,6 +519,7 @@ func (b0 LoginRequest_builder) Build() *LoginRequest {
 	return m0
 }
 
+// LoginResponse — ответ на успешный вход.
 type LoginResponse struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
 	xxx_hidden_Token       *string                `protobuf:"bytes,1,opt,name=token"`
@@ -565,6 +584,7 @@ func (x *LoginResponse) ClearToken() {
 type LoginResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
+	// JWT-токен, который клиент передаёт в метаданных последующих запросов.
 	Token *string
 }
 
@@ -583,11 +603,10 @@ var File_proto_auth_proto protoreflect.FileDescriptor
 
 const file_proto_auth_proto_rawDesc = "" +
 	"\n" +
-	"\x10proto/auth.proto\x12\x04auth\"B\n" +
+	"\x10proto/auth.proto\x12\x04auth\">\n" +
 	"\vCredentials\x12\x14\n" +
-	"\x05login\x18\x01 \x01(\tR\x05login\x12\x1d\n" +
-	"\n" +
-	"master_key\x18\x02 \x01(\fR\tmasterKey\"\\\n" +
+	"\x05login\x18\x01 \x01(\tR\x05login\x12\x19\n" +
+	"\bauth_key\x18\x02 \x01(\fR\aauthKey\"\\\n" +
 	"\x11CreateUserRequest\x123\n" +
 	"\vcredentials\x18\x01 \x01(\v2\x11.auth.CredentialsR\vcredentials\x12\x12\n" +
 	"\x04salt\x18\x02 \x01(\fR\x04salt\"\x14\n" +

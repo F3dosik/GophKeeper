@@ -20,7 +20,7 @@ type AuthService interface {
 	CreateUser(ctx context.Context, login, password string) error
 
 	// Login аутентифицирует пользователя и сохраняет сессию (логин + JWT токен) в файл.
-	// Запрашивает соль с сервера, деривирует мастер-ключ и получает токен.
+	// Запрашивает соль с сервера, деривирует ключ аутентификации и получает токен.
 	Login(ctx context.Context, login, password string) error
 
 	// DeriveMasterKey запрашивает соль пользователя с сервера и деривирует masterKey
@@ -42,16 +42,20 @@ func NewAuthService(client grpcclient.AuthClient, sessionPath string) AuthServic
 }
 
 // CreateUser регистрирует нового пользователя.
-// Генерирует случайную соль, деривирует мастер-ключ через Argon2id и отправляет credentials на сервер.
+// Генерирует случайную соль, деривирует мастер-ключ через Argon2id и отправляет на сервер
+// производный от него ключ аутентификации (сам masterKey клиент не покидает).
 func (s *authService) CreateUser(ctx context.Context, login, password string) error {
 	salt, err := crypto.GenerateSalt()
 	if err != nil {
 		return fmt.Errorf("authService: %w", err)
 	}
 
-	masterKey := crypto.DeriveKey(password, salt)
+	authKey, err := deriveAuthKey(password, salt)
+	if err != nil {
+		return fmt.Errorf("authService.CreateUser: %w", err)
+	}
 	if err := s.client.CreateUser(
-		ctx, domain.Credentials{Login: login, MasterKey: masterKey}, salt,
+		ctx, domain.Credentials{Login: login, AuthKey: authKey}, salt,
 	); err != nil {
 		return fmt.Errorf("authService.CreateUser: %w", err)
 	}
@@ -60,7 +64,7 @@ func (s *authService) CreateUser(ctx context.Context, login, password string) er
 }
 
 // Login аутентифицирует пользователя на сервере.
-// Запрашивает соль по логину, деривирует мастер-ключ, получает JWT токен
+// Запрашивает соль по логину, деривирует ключ аутентификации, получает JWT токен
 // и сохраняет сессию (логин + токен) в файл для последующих вызовов.
 func (s *authService) Login(ctx context.Context, login, password string) error {
 	salt, err := s.client.GetSalt(ctx, login)
@@ -68,8 +72,11 @@ func (s *authService) Login(ctx context.Context, login, password string) error {
 		return fmt.Errorf("authService.Login: %w", err)
 	}
 
-	masterKey := crypto.DeriveKey(password, salt)
-	token, err := s.client.Login(ctx, domain.Credentials{Login: login, MasterKey: masterKey})
+	authKey, err := deriveAuthKey(password, salt)
+	if err != nil {
+		return fmt.Errorf("authService.Login: %w", err)
+	}
+	token, err := s.client.Login(ctx, domain.Credentials{Login: login, AuthKey: authKey})
 	if err != nil {
 		return fmt.Errorf("authService.Login: %w", err)
 	}
@@ -90,4 +97,11 @@ func (s *authService) DeriveMasterKey(ctx context.Context, login, password strin
 	}
 
 	return crypto.DeriveKey(password, salt), nil
+}
+
+// deriveAuthKey вычисляет ключ аутентификации HKDF(Argon2id(password, salt), "auth").
+// Ключ отправляется на сервер и независим от ключей шифрования, которые выводятся
+// из того же masterKey с другим info.
+func deriveAuthKey(password string, salt []byte) ([]byte, error) {
+	return crypto.HKDF(crypto.DeriveKey(password, salt), crypto.InfoAuth)
 }
