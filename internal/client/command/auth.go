@@ -23,6 +23,7 @@ func (c *Commands) newAuthCmd() *cobra.Command {
 		c.newLoginCmd(),
 		c.newLogoutCmd(),
 		c.newPasswdCmd(),
+		c.newDeleteAccountCmd(),
 	)
 	return cmd
 }
@@ -244,4 +245,47 @@ func (f *kdfFlags) params() (domain.KDFParams, error) {
 		return domain.KDFParams{}, err
 	}
 	return params, nil
+}
+
+// newDeleteAccountCmd создаёт команду удаления своей учётки.
+func (c *Commands) newDeleteAccountCmd() *cobra.Command {
+	var skipConfirm bool
+	cmd := &cobra.Command{
+		Use:   "delete-account",
+		Short: "Безвозвратно удалить свою учётку со всеми секретами",
+		Long: "Безвозвратно удаляет учётку текущего пользователя вместе со всеми секретами.\n" +
+			"Требует мастер-пароль: одного файла сессии для удаления недостаточно.",
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			sess, err := session.Load(c.cfg.SessionPath)
+			if err != nil {
+				return fmt.Errorf("не выполнен вход, запустите 'gophkeeper auth login': %w", err)
+			}
+
+			if !skipConfirm {
+				fmt.Printf("Учётка %s и все её секреты будут удалены без возможности восстановления.\n", sess.Login)
+				if err := confirmByTyping(sess.Login); err != nil {
+					return err
+				}
+			}
+
+			password, err := promptPassword(promptMasterPassword)
+			if err != nil {
+				return err
+			}
+
+			err = c.authService.DeleteAccount(cmd.Context(), sess.Login, password)
+			if errors.Is(err, domain.ErrInvalidCredentials) {
+				return ErrWrongMasterPassword
+			}
+			if err != nil {
+				return err
+			}
+
+			fmt.Println("Учётка удалена.")
+			return nil
+		},
+	}
+	cmd.Flags().BoolVarP(&skipConfirm, "yes", "y", false, "Пропустить подтверждение")
+	return cmd
 }

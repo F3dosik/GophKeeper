@@ -75,6 +75,24 @@ func (_m *AuthClient) CreateUser(ctx context.Context, creds domain.Credentials, 
 	return r0, r1
 }
 
+// DeleteAccount provides a mock function with given fields: ctx, authKey
+func (_m *AuthClient) DeleteAccount(ctx context.Context, authKey []byte) error {
+	ret := _m.Called(ctx, authKey)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteAccount")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, []byte) error); ok {
+		r0 = rf(ctx, authKey)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // GetSalt provides a mock function with given fields: ctx, login
 func (_m *AuthClient) GetSalt(ctx context.Context, login string) ([]byte, domain.KDFParams, error) {
 	ret := _m.Called(ctx, login)

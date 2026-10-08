@@ -3,6 +3,12 @@
 
 ## Table of Contents
 
+- [admin.proto](#admin-proto)
+    - [DeleteUserRequest](#admin-DeleteUserRequest)
+    - [DeleteUserResponse](#admin-DeleteUserResponse)
+  
+    - [Admin](#admin-Admin)
+  
 - [auth.proto](#auth-proto)
     - [ChangePasswordHeader](#auth-ChangePasswordHeader)
     - [ChangePasswordRequest](#auth-ChangePasswordRequest)
@@ -10,6 +16,8 @@
     - [CreateUserRequest](#auth-CreateUserRequest)
     - [CreateUserResponse](#auth-CreateUserResponse)
     - [Credentials](#auth-Credentials)
+    - [DeleteAccountRequest](#auth-DeleteAccountRequest)
+    - [DeleteAccountResponse](#auth-DeleteAccountResponse)
     - [GetSaltRequest](#auth-GetSaltRequest)
     - [GetSaltResponse](#auth-GetSaltResponse)
     - [KDFParams](#auth-KDFParams)
@@ -38,6 +46,59 @@
     - [Secrets](#secrets-Secrets)
   
 - [Scalar Value Types](#scalar-value-types)
+
+
+
+<a name="admin-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## admin.proto
+
+
+
+<a name="admin-DeleteUserRequest"></a>
+
+### DeleteUserRequest
+DeleteUserRequest — запрос удаления пользователя администратором.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| login | [string](#string) |  | Логин удаляемого пользователя. |
+
+
+
+
+
+
+<a name="admin-DeleteUserResponse"></a>
+
+### DeleteUserResponse
+DeleteUserResponse — пустой ответ при успешном удалении.
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+
+<a name="admin-Admin"></a>
+
+### Admin
+Admin — административный сервис. Доступен только на административном порту
+сервера (ADMIN_PORT), который публикуется на 127.0.0.1; на публичном порту
+сервис не зарегистрирован. Методы не требуют токена: доступ ограничен сетью.
+
+| Method Name | Request Type | Response Type | Description |
+| ----------- | ------------ | ------------- | ------------|
+| DeleteUser | [DeleteUserRequest](#admin-DeleteUserRequest) | [DeleteUserResponse](#admin-DeleteUserResponse) | DeleteUser безвозвратно удаляет пользователя вместе со всеми секретами; все его токены перестают действовать. Ошибки: NotFound — пользователь не найден; InvalidArgument — неверный логин. |
+
+ 
 
 
 
@@ -145,6 +206,31 @@ auth_key — ключ аутентификации: HKDF(masterKey, &#34;auth&#3
 | ----- | ---- | ----- | ----------- |
 | login | [string](#string) |  | Логин пользователя. |
 | auth_key | [bytes](#bytes) |  | Ключ аутентификации (32 байта), полученный на клиенте. |
+
+
+
+
+
+
+<a name="auth-DeleteAccountRequest"></a>
+
+### DeleteAccountRequest
+DeleteAccountRequest — запрос удаления своей учётки.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| auth_key | [bytes](#bytes) |  | Ключ аутентификации от текущего пароля: одного токена для удаления недостаточно. |
+
+
+
+
+
+
+<a name="auth-DeleteAccountResponse"></a>
+
+### DeleteAccountResponse
+DeleteAccountResponse — пустой ответ при успешном удалении.
 
 
 
@@ -292,6 +378,7 @@ Auth — сервис аутентификации и регистрации п�
 | Login | [LoginRequest](#auth-LoginRequest) | [LoginResponse](#auth-LoginResponse) | Login выполняет вход и возвращает JWT-токен. Ошибки: NotFound — пользователь не найден; Unauthenticated — неверные учётные данные. |
 | Logout | [LogoutRequest](#auth-LogoutRequest) | [LogoutResponse](#auth-LogoutResponse) | Logout отзывает текущий токен или все токены пользователя. Требует JWT-токен в метаданных (authorization: Bearer ...). Ошибка: Unauthenticated — токен отсутствует, истёк или уже отозван. |
 | ChangePassword | [ChangePasswordRequest](#auth-ChangePasswordRequest) stream | [ChangePasswordResponse](#auth-ChangePasswordResponse) | ChangePassword меняет пароль и перешифровывает все секреты в одной транзакции: при любой ошибке ничего не меняется. Клиент передаёт header, затем все свои секреты. Требует JWT-токен. После успеха все прежние токены пользователя отозваны. Ошибки: Unauthenticated — неверный текущий пароль или токен; Aborted — секреты изменились во время смены (нужно повторить); InvalidArgument — некорректные данные. |
+| DeleteAccount | [DeleteAccountRequest](#auth-DeleteAccountRequest) | [DeleteAccountResponse](#auth-DeleteAccountResponse) | DeleteAccount безвозвратно удаляет учётку текущего пользователя вместе со всеми секретами. Требует JWT-токен и ключ аутентификации от текущего пароля. Ошибка: Unauthenticated — неверный пароль или токен. |
 
  
 

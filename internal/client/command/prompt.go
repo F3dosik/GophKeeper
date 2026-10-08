@@ -43,6 +43,8 @@ const (
 )
 
 var (
+	// ErrNotConfirmed возвращается, если пользователь не подтвердил необратимое действие.
+	ErrNotConfirmed = errors.New("действие не подтверждено")
 	// ErrSamePassword возвращается, если новый пароль совпадает с текущим.
 	ErrSamePassword = errors.New("новый пароль совпадает с текущим")
 	// ErrPasswordsMismatch возвращается, когда пароль и подтверждение не совпадают.
@@ -84,6 +86,19 @@ func promptNewPassword(prompt string) (string, error) {
 		return "", ErrPasswordsMismatch
 	}
 	return password, nil
+}
+
+// confirmByTyping просит ввести expected для подтверждения необратимого действия.
+// Ввод логина вместо «y» защищает от случайного подтверждения и от удаления не той учётки.
+func confirmByTyping(expected string) error {
+	answer, err := promptLine(fmt.Sprintf("Для подтверждения введите логин %q: ", expected))
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(answer) != expected {
+		return ErrNotConfirmed
+	}
+	return nil
 }
 
 // validatePassword проверяет, что пароль удовлетворяет минимальным требованиям

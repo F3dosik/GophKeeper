@@ -128,6 +128,15 @@ message ChangePasswordResponse {
     string token = 1;
 }
 
+// DeleteAccountRequest — запрос удаления своей учётки.
+message DeleteAccountRequest {
+    // Ключ аутентификации от текущего пароля: одного токена для удаления недостаточно.
+    bytes auth_key = 1;
+}
+
+// DeleteAccountResponse — пустой ответ при успешном удалении.
+message DeleteAccountResponse {}
+
 // Auth — сервис аутентификации и регистрации пользователей.
 service Auth {
     // CreateUser регистрирует нового пользователя.
@@ -155,4 +164,9 @@ service Auth {
     // Aborted — секреты изменились во время смены (нужно повторить);
     // InvalidArgument — некорректные данные.
     rpc ChangePassword(stream ChangePasswordRequest) returns (ChangePasswordResponse);
+
+    // DeleteAccount безвозвратно удаляет учётку текущего пользователя вместе со всеми
+    // секретами. Требует JWT-токен и ключ аутентификации от текущего пароля.
+    // Ошибка: Unauthenticated — неверный пароль или токен.
+    rpc DeleteAccount(DeleteAccountRequest) returns (DeleteAccountResponse);
 }

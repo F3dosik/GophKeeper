@@ -37,6 +37,9 @@ type AuthClient interface {
 	// ChangePassword передаёт серверу новые учётные данные и все перешифрованные
 	// секреты одним потоком и возвращает новый токен.
 	ChangePassword(ctx context.Context, change domain.PasswordChange, secrets []domain.ReencryptedSecret) (string, error)
+
+	// DeleteAccount удаляет учётку текущего пользователя; authKey подтверждает пароль.
+	DeleteAccount(ctx context.Context, authKey []byte) error
 }
 
 type authClient struct {
@@ -140,5 +143,10 @@ func (c *authClient) streamError(
 	if errors.Is(err, io.EOF) {
 		_, err = stream.CloseAndRecv()
 	}
+	return fromGRPCError(err)
+}
+
+func (c *authClient) DeleteAccount(ctx context.Context, authKey []byte) error {
+	_, err := c.client.DeleteAccount(ctx, pb.DeleteAccountRequest_builder{AuthKey: authKey}.Build())
 	return fromGRPCError(err)
 }

@@ -43,6 +43,14 @@ type AuthService interface {
 	// Возвращает ErrInvalidCredentials при неверном текущем пароле и ErrSecretsChanged,
 	// если секреты изменились во время смены.
 	ChangePassword(ctx context.Context, userID uuid.UUID, change domain.PasswordChange, secrets domain.SecretIterator) (string, error)
+
+	// DeleteAccount удаляет учётку userID со всеми секретами, если authKey
+	// соответствует текущему паролю. Возвращает ErrInvalidCredentials иначе.
+	DeleteAccount(ctx context.Context, userID uuid.UUID, authKey []byte) error
+
+	// DeleteUser удаляет пользователя по логину (административная операция).
+	// Возвращает ErrUserNotFound, если пользователя нет.
+	DeleteUser(ctx context.Context, login string) error
 }
 
 // Контексты HKDF для ключей, выводимых из JWT_SECRET.
@@ -273,4 +281,20 @@ func (s *authService) validatedSecrets(next domain.SecretIterator) domain.Secret
 		}
 		return secret, nil
 	}
+}
+
+// DeleteAccount удаляет учётку пользователя после проверки пароля.
+func (s *authService) DeleteAccount(ctx context.Context, userID uuid.UUID, authKey []byte) error {
+	if err := validateAuthKey(authKey); err != nil {
+		return err
+	}
+	return s.repo.DeleteWithPassword(ctx, userID, crypto.HashAuthKey(authKey))
+}
+
+// DeleteUser удаляет пользователя по логину.
+func (s *authService) DeleteUser(ctx context.Context, login string) error {
+	if err := validateLogin(login); err != nil {
+		return err
+	}
+	return s.repo.DeleteByLogin(ctx, login)
 }

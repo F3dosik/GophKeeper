@@ -29,19 +29,22 @@ var (
 type Commands struct {
 	authService   service.AuthService
 	secretsClient grpcclient.SecretsClient
+	adminClient   grpcclient.AdminClient
 	cfg           *config.Config
 }
 
 // New создаёт Commands с переданными зависимостями: сервисом аутентификации,
-// gRPC клиентом секретов и конфигурацией приложения.
+// gRPC клиентами секретов и административного сервиса и конфигурацией приложения.
 func New(
 	authSvc service.AuthService,
 	secretsClient grpcclient.SecretsClient,
+	adminClient grpcclient.AdminClient,
 	cfg *config.Config,
 ) *Commands {
 	return &Commands{
 		authService:   authSvc,
 		secretsClient: secretsClient,
+		adminClient:   adminClient,
 		cfg:           cfg,
 	}
 }
@@ -106,6 +109,7 @@ func (c *Commands) Execute() error {
 		c.newVersionCmd(),
 		c.newAuthCmd(),
 		c.newSecretCmd(),
+		c.newAdminCmd(),
 		c.newCompletionCmd(root),
 	)
 	return root.Execute()

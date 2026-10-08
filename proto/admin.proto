@@ -1,0 +1,24 @@
+edition = "2023";
+
+package admin;
+
+option go_package = "github.com/F3dosik/GophKeeper/proto/gen";
+
+// DeleteUserRequest — запрос удаления пользователя администратором.
+message DeleteUserRequest {
+    // Логин удаляемого пользователя.
+    string login = 1;
+}
+
+// DeleteUserResponse — пустой ответ при успешном удалении.
+message DeleteUserResponse {}
+
+// Admin — административный сервис. Доступен только на административном порту
+// сервера (ADMIN_PORT), который публикуется на 127.0.0.1; на публичном порту
+// сервис не зарегистрирован. Методы не требуют токена: доступ ограничен сетью.
+service Admin {
+    // DeleteUser безвозвратно удаляет пользователя вместе со всеми секретами;
+    // все его токены перестают действовать.
+    // Ошибки: NotFound — пользователь не найден; InvalidArgument — неверный логин.
+    rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
+}

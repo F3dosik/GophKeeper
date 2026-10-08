@@ -7,6 +7,7 @@ import (
 	"github.com/F3dosik/GophKeeper/internal/domain"
 	"github.com/F3dosik/GophKeeper/internal/server/repository"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -145,4 +146,42 @@ func (r *userRepository) ChangePassword(
 		return 0, fmt.Errorf("userRepository.ChangePassword: commit: %w", err)
 	}
 	return version, nil
+}
+
+// DeleteWithPassword удаляет пользователя при совпадении хеша пароля.
+// Секреты удаляются каскадом (ON DELETE CASCADE), токены перестают проходить
+// проверку IsActive, так как пользователя больше нет.
+func (r *userRepository) DeleteWithPassword(ctx context.Context, userID uuid.UUID, passwordHash []byte) error {
+	var tag pgconn.CommandTag
+	err := repository.WithRetry(ctx, isRetriable, func() error {
+		var err error
+		tag, err = r.pool.Exec(ctx, `
+			DELETE FROM users WHERE id = $1 AND password_hash = $2
+		`, userID, passwordHash)
+		return err
+	})
+	if err != nil {
+		return fmt.Errorf("userRepository.DeleteWithPassword: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.ErrInvalidCredentials
+	}
+	return nil
+}
+
+// DeleteByLogin удаляет пользователя по логину.
+func (r *userRepository) DeleteByLogin(ctx context.Context, login string) error {
+	var tag pgconn.CommandTag
+	err := repository.WithRetry(ctx, isRetriable, func() error {
+		var err error
+		tag, err = r.pool.Exec(ctx, `DELETE FROM users WHERE login = $1`, login)
+		return err
+	})
+	if err != nil {
+		return fmt.Errorf("userRepository.DeleteByLogin: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.ErrUserNotFound
+	}
+	return nil
 }
