@@ -1,7 +1,9 @@
 package service
 
 import (
+	"bytes"
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -11,6 +13,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+)
+
+// Корректные по длине тестовые ключи и соль.
+var (
+	testAuthKey  = bytes.Repeat([]byte{1}, authKeyLength)
+	testWrongKey = bytes.Repeat([]byte{2}, authKeyLength)
+	testSalt     = bytes.Repeat([]byte{3}, saltLength)
 )
 
 // testAuthConfig возвращает конфигурацию с ключами, выведенными из тестового секрета.
@@ -41,11 +50,11 @@ func TestAuthService_Login_Success(t *testing.T) {
 	mockRepo.On("GetByLogin", mock.Anything, "user").
 		Return(&domain.User{
 			ID:           uuid.New(),
-			PasswordHash: crypto.HashAuthKey([]byte("authkey123")),
+			PasswordHash: crypto.HashAuthKey(testAuthKey),
 		}, nil)
 	svc := NewAuthService(mockRepo, mocks.NewTokenRepository(t), testAuthConfig(t))
 
-	token, err := svc.Login(context.Background(), "user", []byte("authkey123"))
+	token, err := svc.Login(context.Background(), "user", testAuthKey)
 
 	assert.NoError(t, err)
 	assert.NotEmpty(t, token)
@@ -56,12 +65,12 @@ func TestAuthService_Login_InvalidCredentials(t *testing.T) {
 	mockRepo := mocks.NewUserRepository(t)
 	mockRepo.On("GetByLogin", mock.Anything, "user").
 		Return(&domain.User{
-			PasswordHash: crypto.HashAuthKey([]byte("correctkey")),
+			PasswordHash: crypto.HashAuthKey(testAuthKey),
 		}, nil)
 
 	svc := NewAuthService(mockRepo, mocks.NewTokenRepository(t), testAuthConfig(t))
 
-	_, err := svc.Login(context.Background(), "user", []byte("wrongkey"))
+	_, err := svc.Login(context.Background(), "user", testWrongKey)
 
 	assert.ErrorIs(t, err, domain.ErrInvalidCredentials)
 	mockRepo.AssertExpectations(t)
@@ -74,7 +83,7 @@ func TestAuthService_Login_UserNotFound(t *testing.T) {
 
 	svc := NewAuthService(mockRepo, mocks.NewTokenRepository(t), testAuthConfig(t))
 
-	_, err := svc.Login(context.Background(), "user", []byte("masterkey123"))
+	_, err := svc.Login(context.Background(), "user", testAuthKey)
 
 	assert.ErrorIs(t, err, domain.ErrInvalidCredentials)
 }
@@ -83,12 +92,12 @@ func TestAuthService_Create_Success(t *testing.T) {
 	mockRepo := mocks.NewUserRepository(t)
 	mockRepo.On("Create", mock.Anything, &domain.User{
 		Login:        "user",
-		PasswordHash: crypto.HashAuthKey([]byte("authkey")),
-		PasswordSalt: []byte("salt"),
+		PasswordHash: crypto.HashAuthKey(testAuthKey),
+		PasswordSalt: testSalt,
 	}).Return(nil)
 
 	svc := NewAuthService(mockRepo, mocks.NewTokenRepository(t), testAuthConfig(t))
-	err := svc.Create(context.Background(), "user", []byte("authkey"), []byte("salt"))
+	err := svc.Create(context.Background(), "user", testAuthKey, testSalt)
 
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
@@ -100,7 +109,7 @@ func TestAuthService_Create_AlreadyExists(t *testing.T) {
 		Return(domain.ErrUserAlreadyExists)
 
 	svc := NewAuthService(mockRepo, mocks.NewTokenRepository(t), testAuthConfig(t))
-	err := svc.Create(context.Background(), "user", []byte("masterkey"), []byte("salt"))
+	err := svc.Create(context.Background(), "user", testAuthKey, testSalt)
 
 	assert.ErrorIs(t, err, domain.ErrUserAlreadyExists)
 }
@@ -108,13 +117,13 @@ func TestAuthService_Create_AlreadyExists(t *testing.T) {
 func TestAuthService_GetSalt_Success(t *testing.T) {
 	mockRepo := mocks.NewUserRepository(t)
 	mockRepo.On("GetByLogin", mock.Anything, "user").
-		Return(&domain.User{PasswordSalt: []byte("salt")}, nil)
+		Return(&domain.User{PasswordSalt: testSalt}, nil)
 
 	svc := NewAuthService(mockRepo, mocks.NewTokenRepository(t), testAuthConfig(t))
 	salt, err := svc.GetSalt(context.Background(), "user")
 
 	assert.NoError(t, err)
-	assert.Equal(t, []byte("salt"), salt)
+	assert.Equal(t, testSalt, salt)
 }
 
 func TestAuthService_GetSalt_UserNotFound_ReturnsDeterministicFakeSalt(t *testing.T) {
@@ -131,4 +140,20 @@ func TestAuthService_GetSalt_UserNotFound_ReturnsDeterministicFakeSalt(t *testin
 	salt2, err := svc.GetSalt(context.Background(), "user")
 	assert.NoError(t, err)
 	assert.Equal(t, salt1, salt2, "fake salt must be deterministic per login")
+}
+
+// Некорректные данные отклоняются до обращения к БД (моки без ожиданий упадут при вызове).
+func TestAuthService_RejectsInvalidInput(t *testing.T) {
+	svc := NewAuthService(mocks.NewUserRepository(t), mocks.NewTokenRepository(t), testAuthConfig(t))
+	ctx := context.Background()
+
+	assert.ErrorIs(t, svc.Create(ctx, "", testAuthKey, testSalt), domain.ErrInvalidArgument)
+	assert.ErrorIs(t, svc.Create(ctx, "user", nil, testSalt), domain.ErrInvalidArgument)
+	assert.ErrorIs(t, svc.Create(ctx, "user", testAuthKey, make([]byte, 1<<20)), domain.ErrInvalidArgument)
+
+	_, err := svc.GetSalt(ctx, strings.Repeat("a", 1<<20))
+	assert.ErrorIs(t, err, domain.ErrInvalidArgument)
+
+	_, err = svc.Login(ctx, "user", []byte("short"))
+	assert.ErrorIs(t, err, domain.ErrInvalidArgument)
 }

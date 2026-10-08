@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/F3dosik/GophKeeper/internal/domain"
@@ -18,6 +19,9 @@ var (
 
 var testLimits = SecretLimits{MaxSize: 64, MaxCount: 3}
 
+// testBlindIndex — корректный blind index (64 hex-символа).
+var testBlindIndex = strings.Repeat("ab", 32)
+
 func TestSecretService_Create_EmptyBlindIndex(t *testing.T) {
 	svc := NewSecretService(mocks.NewSecretRepository(t), testLimits)
 	err := svc.Create(context.Background(), testID, "", testData)
@@ -26,7 +30,7 @@ func TestSecretService_Create_EmptyBlindIndex(t *testing.T) {
 
 func TestSecretService_Create_EmptyData(t *testing.T) {
 	svc := NewSecretService(mocks.NewSecretRepository(t), testLimits)
-	err := svc.Create(context.Background(), testID, "blindindex", []byte{})
+	err := svc.Create(context.Background(), testID, testBlindIndex, []byte{})
 	assert.ErrorIs(t, err, domain.ErrInvalidArgument)
 }
 
@@ -37,7 +41,7 @@ func TestSecretService_Create_AlreadyExists(t *testing.T) {
 		Return(domain.ErrSecretAlreadyExists)
 
 	svc := NewSecretService(mockRepo, testLimits)
-	err := svc.Create(context.Background(), testID, "blindindex", testData)
+	err := svc.Create(context.Background(), testID, testBlindIndex, testData)
 	assert.ErrorIs(t, err, domain.ErrSecretAlreadyExists)
 }
 
@@ -46,19 +50,19 @@ func TestSecretService_Create_Success(t *testing.T) {
 	mockRepo.On("CountByUserID", mock.Anything, testID).Return(testLimits.MaxCount-1, nil)
 	mockRepo.On("Create", mock.Anything, &domain.Secret{
 		UserID:     testID,
-		BlindIndex: "blindindex",
+		BlindIndex: testBlindIndex,
 		Data:       testData,
 	}).Return(nil)
 
 	svc := NewSecretService(mockRepo, testLimits)
-	err := svc.Create(context.Background(), testID, "blindindex", testData)
+	err := svc.Create(context.Background(), testID, testBlindIndex, testData)
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
 }
 
 func TestSecretService_Create_TooLarge(t *testing.T) {
 	svc := NewSecretService(mocks.NewSecretRepository(t), testLimits)
-	err := svc.Create(context.Background(), testID, "blindindex", make([]byte, testLimits.MaxSize+1))
+	err := svc.Create(context.Background(), testID, testBlindIndex, make([]byte, testLimits.MaxSize+1))
 	assert.ErrorIs(t, err, domain.ErrSecretTooLarge)
 }
 
@@ -67,13 +71,13 @@ func TestSecretService_Create_QuotaExceeded(t *testing.T) {
 	mockRepo.On("CountByUserID", mock.Anything, testID).Return(testLimits.MaxCount, nil)
 
 	svc := NewSecretService(mockRepo, testLimits)
-	err := svc.Create(context.Background(), testID, "blindindex", testData)
+	err := svc.Create(context.Background(), testID, testBlindIndex, testData)
 	assert.ErrorIs(t, err, domain.ErrSecretQuotaExceeded)
 }
 
 func TestSecretService_Update_TooLarge(t *testing.T) {
 	svc := NewSecretService(mocks.NewSecretRepository(t), testLimits)
-	err := svc.Update(context.Background(), testID, "blindindex", make([]byte, testLimits.MaxSize+1))
+	err := svc.Update(context.Background(), testID, testBlindIndex, make([]byte, testLimits.MaxSize+1))
 	assert.ErrorIs(t, err, domain.ErrSecretTooLarge)
 }
 
@@ -85,7 +89,7 @@ func TestSecretService_Update_EmptyBlindIndex(t *testing.T) {
 
 func TestSecretService_Update_EmptyData(t *testing.T) {
 	svc := NewSecretService(mocks.NewSecretRepository(t), testLimits)
-	err := svc.Update(context.Background(), testID, "blindindex", []byte{})
+	err := svc.Update(context.Background(), testID, testBlindIndex, []byte{})
 	assert.ErrorIs(t, err, domain.ErrInvalidArgument)
 }
 
@@ -95,7 +99,7 @@ func TestSecretService_Update_NotFound(t *testing.T) {
 		Return(domain.ErrSecretNotFound)
 
 	svc := NewSecretService(mockRepo, testLimits)
-	err := svc.Update(context.Background(), testID, "blindindex", testData)
+	err := svc.Update(context.Background(), testID, testBlindIndex, testData)
 	assert.ErrorIs(t, err, domain.ErrSecretNotFound)
 }
 
@@ -103,12 +107,12 @@ func TestSecretService_Update_Success(t *testing.T) {
 	mockRepo := mocks.NewSecretRepository(t)
 	mockRepo.On("Update", mock.Anything, &domain.Secret{
 		UserID:     testID,
-		BlindIndex: "blindindex",
+		BlindIndex: testBlindIndex,
 		Data:       testData,
 	}).Return(nil)
 
 	svc := NewSecretService(mockRepo, testLimits)
-	err := svc.Update(context.Background(), testID, "blindindex", testData)
+	err := svc.Update(context.Background(), testID, testBlindIndex, testData)
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
 }
@@ -121,48 +125,92 @@ func TestSecretService_GetByBlindIndex_EmptyBlindIndex(t *testing.T) {
 
 func TestSecretService_GetByBlindIndex_NotFound(t *testing.T) {
 	mockRepo := mocks.NewSecretRepository(t)
-	mockRepo.On("GetByBlindIndex", mock.Anything, testID, "blindindex").
+	mockRepo.On("GetByBlindIndex", mock.Anything, testID, testBlindIndex).
 		Return(nil, domain.ErrSecretNotFound)
 
 	svc := NewSecretService(mockRepo, testLimits)
-	_, err := svc.GetByBlindIndex(context.Background(), testID, "blindindex")
+	_, err := svc.GetByBlindIndex(context.Background(), testID, testBlindIndex)
 	assert.ErrorIs(t, err, domain.ErrSecretNotFound)
 }
 
 func TestSecretService_GetByBlindIndex_Success(t *testing.T) {
-	want := &domain.Secret{UserID: testID, BlindIndex: "blindindex", Data: testData}
+	want := &domain.Secret{UserID: testID, BlindIndex: testBlindIndex, Data: testData}
 	mockRepo := mocks.NewSecretRepository(t)
-	mockRepo.On("GetByBlindIndex", mock.Anything, testID, "blindindex").
+	mockRepo.On("GetByBlindIndex", mock.Anything, testID, testBlindIndex).
 		Return(want, nil)
 
 	svc := NewSecretService(mockRepo, testLimits)
-	got, err := svc.GetByBlindIndex(context.Background(), testID, "blindindex")
+	got, err := svc.GetByBlindIndex(context.Background(), testID, testBlindIndex)
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
 
-func TestSecretService_ListByUserID_Success(t *testing.T) {
-	want := []*domain.Secret{
-		{UserID: testID, BlindIndex: "a", Data: testData},
-		{UserID: testID, BlindIndex: "b", Data: testData},
+// secretsWithData возвращает n секретов с упорядоченными ID и данными размера size.
+func secretsWithData(n, size int) []*domain.Secret {
+	secrets := make([]*domain.Secret, n)
+	for i := range secrets {
+		id := uuid.UUID{}
+		id[15] = byte(i + 1)
+		secrets[i] = &domain.Secret{ID: id, UserID: testID, Data: make([]byte, size)}
 	}
-	mockRepo := mocks.NewSecretRepository(t)
-	mockRepo.On("ListByUserID", mock.Anything, testID).Return(want, nil)
-
-	svc := NewSecretService(mockRepo, testLimits)
-	got, err := svc.ListByUserID(context.Background(), testID)
-	assert.NoError(t, err)
-	assert.Equal(t, want, got)
+	return secrets
 }
 
-func TestSecretService_ListByUserID_Empty(t *testing.T) {
-	mockRepo := mocks.NewSecretRepository(t)
-	mockRepo.On("ListByUserID", mock.Anything, testID).Return([]*domain.Secret{}, nil)
+func TestSecretService_ListPage(t *testing.T) {
+	ctx := context.Background()
 
-	svc := NewSecretService(mockRepo, testLimits)
-	got, err := svc.ListByUserID(context.Background(), testID)
-	assert.NoError(t, err)
-	assert.Empty(t, got)
+	t.Run("last page has no token", func(t *testing.T) {
+		rows := secretsWithData(2, 10)
+		mockRepo := mocks.NewSecretRepository(t)
+		mockRepo.On("ListByUserID", mock.Anything, testID, uuid.Nil, MaxPageSize+1).Return(rows, nil)
+
+		page, err := NewSecretService(mockRepo, testLimits).ListPage(ctx, testID, "", 0)
+		assert.NoError(t, err)
+		assert.Equal(t, rows, page.Secrets)
+		assert.Empty(t, page.NextPageToken)
+	})
+
+	t.Run("page size limit sets token to last returned id", func(t *testing.T) {
+		rows := secretsWithData(3, 10)
+		mockRepo := mocks.NewSecretRepository(t)
+		mockRepo.On("ListByUserID", mock.Anything, testID, uuid.Nil, 3).Return(rows, nil)
+
+		page, err := NewSecretService(mockRepo, testLimits).ListPage(ctx, testID, "", 2)
+		assert.NoError(t, err)
+		assert.Len(t, page.Secrets, 2)
+		assert.Equal(t, rows[1].ID.String(), page.NextPageToken)
+	})
+
+	t.Run("token continues after cursor", func(t *testing.T) {
+		after := secretsWithData(1, 0)[0].ID
+		mockRepo := mocks.NewSecretRepository(t)
+		mockRepo.On("ListByUserID", mock.Anything, testID, after, 3).Return([]*domain.Secret{}, nil)
+
+		page, err := NewSecretService(mockRepo, testLimits).ListPage(ctx, testID, after.String(), 2)
+		assert.NoError(t, err)
+		assert.Empty(t, page.Secrets)
+	})
+
+	t.Run("byte budget splits pages but never returns an empty page", func(t *testing.T) {
+		rows := secretsWithData(3, MaxPageBytes) // каждый секрет сам по себе на весь бюджет
+		mockRepo := mocks.NewSecretRepository(t)
+		mockRepo.On("ListByUserID", mock.Anything, testID, uuid.Nil, MaxPageSize+1).Return(rows, nil)
+
+		page, err := NewSecretService(mockRepo, testLimits).ListPage(ctx, testID, "", 0)
+		assert.NoError(t, err)
+		assert.Len(t, page.Secrets, 1)
+		assert.Equal(t, rows[0].ID.String(), page.NextPageToken)
+	})
+
+	t.Run("invalid arguments", func(t *testing.T) {
+		svc := NewSecretService(mocks.NewSecretRepository(t), testLimits)
+		_, err := svc.ListPage(ctx, testID, "", MaxPageSize+1)
+		assert.ErrorIs(t, err, domain.ErrInvalidArgument)
+		_, err = svc.ListPage(ctx, testID, "", -1)
+		assert.ErrorIs(t, err, domain.ErrInvalidArgument)
+		_, err = svc.ListPage(ctx, testID, "not-a-uuid", 0)
+		assert.ErrorIs(t, err, domain.ErrInvalidArgument)
+	})
 }
 
 func TestSecretService_Delete_EmptyBlindIndex(t *testing.T) {
@@ -173,20 +221,20 @@ func TestSecretService_Delete_EmptyBlindIndex(t *testing.T) {
 
 func TestSecretService_Delete_NotFound(t *testing.T) {
 	mockRepo := mocks.NewSecretRepository(t)
-	mockRepo.On("Delete", mock.Anything, testID, "blindindex").
+	mockRepo.On("Delete", mock.Anything, testID, testBlindIndex).
 		Return(domain.ErrSecretNotFound)
 
 	svc := NewSecretService(mockRepo, testLimits)
-	err := svc.Delete(context.Background(), testID, "blindindex")
+	err := svc.Delete(context.Background(), testID, testBlindIndex)
 	assert.ErrorIs(t, err, domain.ErrSecretNotFound)
 }
 
 func TestSecretService_Delete_Success(t *testing.T) {
 	mockRepo := mocks.NewSecretRepository(t)
-	mockRepo.On("Delete", mock.Anything, testID, "blindindex").Return(nil)
+	mockRepo.On("Delete", mock.Anything, testID, testBlindIndex).Return(nil)
 
 	svc := NewSecretService(mockRepo, testLimits)
-	err := svc.Delete(context.Background(), testID, "blindindex")
+	err := svc.Delete(context.Background(), testID, testBlindIndex)
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
 }

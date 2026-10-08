@@ -116,6 +116,7 @@ func TestValidate_Limits(t *testing.T) {
 		{"negative burst", func(c *app.Config) { c.AuthRateBurst = -1 }, "AUTH_RATE_BURST"},
 		{"zero secret size", func(c *app.Config) { c.SecretMaxSize = 0 }, "SECRET_MAX_SIZE"},
 		{"zero secret count", func(c *app.Config) { c.SecretMaxCount = 0 }, "SECRET_MAX_COUNT"},
+		{"secret size above client limit", func(c *app.Config) { c.SecretMaxSize = 33 << 20 }, "must not exceed"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

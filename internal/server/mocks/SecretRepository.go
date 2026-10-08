@@ -110,9 +110,9 @@ func (_m *SecretRepository) GetByBlindIndex(ctx context.Context, userID uuid.UUI
 	return r0, r1
 }
 
-// ListByUserID provides a mock function with given fields: ctx, userID
-func (_m *SecretRepository) ListByUserID(ctx context.Context, userID uuid.UUID) ([]*domain.Secret, error) {
-	ret := _m.Called(ctx, userID)
+// ListByUserID provides a mock function with given fields: ctx, userID, afterID, limit
+func (_m *SecretRepository) ListByUserID(ctx context.Context, userID uuid.UUID, afterID uuid.UUID, limit int) ([]*domain.Secret, error) {
+	ret := _m.Called(ctx, userID, afterID, limit)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListByUserID")
@@ -120,19 +120,19 @@ func (_m *SecretRepository) ListByUserID(ctx context.Context, userID uuid.UUID) 
 
 	var r0 []*domain.Secret
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) ([]*domain.Secret, error)); ok {
-		return rf(ctx, userID)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, int) ([]*domain.Secret, error)); ok {
+		return rf(ctx, userID, afterID, limit)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) []*domain.Secret); ok {
-		r0 = rf(ctx, userID)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, int) []*domain.Secret); ok {
+		r0 = rf(ctx, userID, afterID, limit)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*domain.Secret)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
-		r1 = rf(ctx, userID)
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, uuid.UUID, int) error); ok {
+		r1 = rf(ctx, userID, afterID, limit)
 	} else {
 		r1 = ret.Error(1)
 	}

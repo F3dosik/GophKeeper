@@ -94,17 +94,19 @@ func (r *secretRepository) GetByBlindIndex(
 	return &secret, nil
 }
 
-// ListByUserID возвращает список всех секретов для указанного пользователя.
-func (r *secretRepository) ListByUserID(ctx context.Context, userID uuid.UUID) ([]*domain.Secret, error) {
+// ListByUserID возвращает до limit секретов пользователя с ID больше afterID, упорядоченных по ID.
+func (r *secretRepository) ListByUserID(ctx context.Context, userID, afterID uuid.UUID, limit int) ([]*domain.Secret, error) {
 
 	var rows pgx.Rows
 	err := repository.WithRetry(ctx, isRetriable, func() error {
 		var err error
 		rows, err = r.pool.Query(ctx, `
 			SELECT id, blind_index, data, updated_at, created_at
-			FROM secrets 
-			WHERE user_id = $1
-		`, userID)
+			FROM secrets
+			WHERE user_id = $1 AND id > $2
+			ORDER BY id
+			LIMIT $3
+		`, userID, afterID, limit)
 
 		return err
 	})

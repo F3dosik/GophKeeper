@@ -268,16 +268,18 @@ func TestSecretHandler_DeleteSecret_Unauthenticated(t *testing.T) {
 
 func TestSecretHandler_ListSecrets_Success(t *testing.T) {
 	mockService := mocks.NewSecretService(t)
-	mockService.On("ListByUserID", mock.Anything, testUserID).
-		Return([]*domain.Secret{testSecret}, nil)
+	mockService.On("ListPage", mock.Anything, testUserID, "cursor", 10).
+		Return(&domain.SecretPage{Secrets: []*domain.Secret{testSecret}, NextPageToken: "next"}, nil)
 
 	handler := NewSecretHandler(mockService)
 
-	req := pb.ListSecretsRequest_builder{}.Build()
+	pageSize, token := int32(10), "cursor"
+	req := pb.ListSecretsRequest_builder{PageSize: &pageSize, PageToken: &token}.Build()
 
 	resp, err := handler.ListSecrets(middleware.WithUserID(context.Background(), testUserID), req)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(resp.GetItems()))
+	assert.Equal(t, "next", resp.GetNextPageToken())
 	mockService.AssertExpectations(t)
 }
 

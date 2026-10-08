@@ -47,9 +47,10 @@ type SecretRepository interface {
 	// Возвращает ErrSecretNotFound, если секрет не найден.
 	GetByBlindIndex(ctx context.Context, userID uuid.UUID, blindIndex string) (*Secret, error)
 
-	// ListByUserID возвращает все секреты, принадлежащие пользователю с указанным ID.
+	// ListByUserID возвращает до limit секретов пользователя с ID больше afterID,
+	// упорядоченных по ID (uuid.Nil — с начала). Используется для постраничной выдачи.
 	// При отсутствии секретов возвращает пустой срез без ошибки.
-	ListByUserID(ctx context.Context, userID uuid.UUID) ([]*Secret, error)
+	ListByUserID(ctx context.Context, userID, afterID uuid.UUID, limit int) ([]*Secret, error)
 
 	// Delete удаляет секрет по идентификатору пользователя и blind index.
 	// Возвращает ErrSecretNotFound, если секрет не найден.

@@ -868,11 +868,15 @@ func (b0 SecretItem_builder) Build() *SecretItem {
 	return m0
 }
 
-// ListSecretsRequest — пустой запрос списка секретов текущего пользователя.
+// ListSecretsRequest — запрос страницы списка секретов текущего пользователя.
 type ListSecretsRequest struct {
-	state         protoimpl.MessageState `protogen:"opaque.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_PageSize    int32                  `protobuf:"varint,1,opt,name=page_size,json=pageSize"`
+	xxx_hidden_PageToken   *string                `protobuf:"bytes,2,opt,name=page_token,json=pageToken"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *ListSecretsRequest) Reset() {
@@ -900,24 +904,91 @@ func (x *ListSecretsRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
+func (x *ListSecretsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.xxx_hidden_PageSize
+	}
+	return 0
+}
+
+func (x *ListSecretsRequest) GetPageToken() string {
+	if x != nil {
+		if x.xxx_hidden_PageToken != nil {
+			return *x.xxx_hidden_PageToken
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *ListSecretsRequest) SetPageSize(v int32) {
+	x.xxx_hidden_PageSize = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 2)
+}
+
+func (x *ListSecretsRequest) SetPageToken(v string) {
+	x.xxx_hidden_PageToken = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 2)
+}
+
+func (x *ListSecretsRequest) HasPageSize() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
+}
+
+func (x *ListSecretsRequest) HasPageToken() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+}
+
+func (x *ListSecretsRequest) ClearPageSize() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
+	x.xxx_hidden_PageSize = 0
+}
+
+func (x *ListSecretsRequest) ClearPageToken() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_PageToken = nil
+}
+
 type ListSecretsRequest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
+	// Максимум секретов на странице (1–100, по умолчанию 100). Сервер может вернуть
+	// меньше, чтобы ответ не превышал 4 MiB, но не меньше одного секрета.
+	PageSize *int32
+	// Курсор из next_page_token предыдущего ответа; пустой — первая страница.
+	PageToken *string
 }
 
 func (b0 ListSecretsRequest_builder) Build() *ListSecretsRequest {
 	m0 := &ListSecretsRequest{}
 	b, x := &b0, m0
 	_, _ = b, x
+	if b.PageSize != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 2)
+		x.xxx_hidden_PageSize = *b.PageSize
+	}
+	if b.PageToken != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 2)
+		x.xxx_hidden_PageToken = b.PageToken
+	}
 	return m0
 }
 
-// ListSecretsResponse — ответ со списком секретов.
+// ListSecretsResponse — страница списка секретов.
 type ListSecretsResponse struct {
-	state            protoimpl.MessageState `protogen:"opaque.v1"`
-	xxx_hidden_Items *[]*SecretItem         `protobuf:"bytes,1,rep,name=items"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state                    protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Items         *[]*SecretItem         `protobuf:"bytes,1,rep,name=items"`
+	xxx_hidden_NextPageToken *string                `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken"`
+	XXX_raceDetectHookData   protoimpl.RaceDetectHookData
+	XXX_presence             [1]uint32
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *ListSecretsResponse) Reset() {
@@ -954,15 +1025,44 @@ func (x *ListSecretsResponse) GetItems() []*SecretItem {
 	return nil
 }
 
+func (x *ListSecretsResponse) GetNextPageToken() string {
+	if x != nil {
+		if x.xxx_hidden_NextPageToken != nil {
+			return *x.xxx_hidden_NextPageToken
+		}
+		return ""
+	}
+	return ""
+}
+
 func (x *ListSecretsResponse) SetItems(v []*SecretItem) {
 	x.xxx_hidden_Items = &v
+}
+
+func (x *ListSecretsResponse) SetNextPageToken(v string) {
+	x.xxx_hidden_NextPageToken = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 2)
+}
+
+func (x *ListSecretsResponse) HasNextPageToken() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+}
+
+func (x *ListSecretsResponse) ClearNextPageToken() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_NextPageToken = nil
 }
 
 type ListSecretsResponse_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
-	// Все секреты текущего пользователя.
+	// Секреты текущей страницы.
 	Items []*SecretItem
+	// Курсор следующей страницы; пустой, если страница последняя.
+	NextPageToken *string
 }
 
 func (b0 ListSecretsResponse_builder) Build() *ListSecretsResponse {
@@ -970,6 +1070,10 @@ func (b0 ListSecretsResponse_builder) Build() *ListSecretsResponse {
 	b, x := &b0, m0
 	_, _ = b, x
 	x.xxx_hidden_Items = &b.Items
+	if b.NextPageToken != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 2)
+		x.xxx_hidden_NextPageToken = b.NextPageToken
+	}
 	return m0
 }
 
@@ -1010,10 +1114,14 @@ const file_proto_secrets_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x14\n" +
-	"\x12ListSecretsRequest\"@\n" +
+	"updated_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"P\n" +
+	"\x12ListSecretsRequest\x12\x1b\n" +
+	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\"h\n" +
 	"\x13ListSecretsResponse\x12)\n" +
-	"\x05items\x18\x01 \x03(\v2\x13.secrets.SecretItemR\x05items2\xfe\x02\n" +
+	"\x05items\x18\x01 \x03(\v2\x13.secrets.SecretItemR\x05items\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken2\xfe\x02\n" +
 	"\aSecrets\x12H\n" +
 	"\vListSecrets\x12\x1b.secrets.ListSecretsRequest\x1a\x1c.secrets.ListSecretsResponse\x12K\n" +
 	"\fCreateSecret\x12\x1c.secrets.CreateSecretRequest\x1a\x1d.secrets.CreateSecretResponse\x12K\n" +

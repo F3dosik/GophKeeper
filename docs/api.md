@@ -289,7 +289,13 @@ GetSecretResponse — ответ с зашифрованным секретом 
 <a name="secrets-ListSecretsRequest"></a>
 
 ### ListSecretsRequest
-ListSecretsRequest — пустой запрос списка секретов текущего пользователя.
+ListSecretsRequest — запрос страницы списка секретов текущего пользователя.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| page_size | [int32](#int32) |  | Максимум секретов на странице (1–100, по умолчанию 100). Сервер может вернуть меньше, чтобы ответ не превышал 4 MiB, но не меньше одного секрета. |
+| page_token | [string](#string) |  | Курсор из next_page_token предыдущего ответа; пустой — первая страница. |
 
 
 
@@ -299,12 +305,13 @@ ListSecretsRequest — пустой запрос списка секретов �
 <a name="secrets-ListSecretsResponse"></a>
 
 ### ListSecretsResponse
-ListSecretsResponse — ответ со списком секретов.
+ListSecretsResponse — страница списка секретов.
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| items | [SecretItem](#secrets-SecretItem) | repeated | Все секреты текущего пользователя. |
+| items | [SecretItem](#secrets-SecretItem) | repeated | Секреты текущей страницы. |
+| next_page_token | [string](#string) |  | Курсор следующей страницы; пустой, если страница последняя. |
 
 
 
@@ -387,7 +394,7 @@ Secrets — сервис управления зашифрованными се�
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
-| ListSecrets | [ListSecretsRequest](#secrets-ListSecretsRequest) | [ListSecretsResponse](#secrets-ListSecretsResponse) | ListSecrets возвращает все секреты текущего пользователя. |
+| ListSecrets | [ListSecretsRequest](#secrets-ListSecretsRequest) | [ListSecretsResponse](#secrets-ListSecretsResponse) | ListSecrets возвращает страницу секретов текущего пользователя. Ошибка: InvalidArgument — неверный page_size или page_token. |
 | CreateSecret | [CreateSecretRequest](#secrets-CreateSecretRequest) | [CreateSecretResponse](#secrets-CreateSecretResponse) | CreateSecret создаёт новый секрет. Ошибка: AlreadyExists — секрет с таким blind_index уже существует. |
 | UpdateSecret | [UpdateSecretRequest](#secrets-UpdateSecretRequest) | [UpdateSecretResponse](#secrets-UpdateSecretResponse) | UpdateSecret обновляет существующий секрет. Ошибка: NotFound — секрет с таким blind_index не найден. |
 | GetSecret | [GetSecretRequest](#secrets-GetSecretRequest) | [GetSecretResponse](#secrets-GetSecretResponse) | GetSecret возвращает секрет по blind_index. Ошибка: NotFound — секрет не найден. |

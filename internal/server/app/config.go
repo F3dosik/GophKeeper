@@ -20,6 +20,7 @@ const (
 	defaultAuthRateBurst  = 10      // запросов к Auth подряд с одного IP
 	defaultSecretMaxSize  = 1 << 20 // 1 MiB зашифрованных данных на секрет
 	defaultSecretMaxCount = 1000    // секретов на пользователя
+	maxSecretMaxSize      = 32 << 20
 )
 
 // Config содержит конфигурацию сервера.
@@ -139,6 +140,11 @@ func (c *Config) Validate() error {
 
 	if c.SecretMaxSize <= 0 || c.SecretMaxCount <= 0 {
 		return fmt.Errorf("SECRET_MAX_SIZE and SECRET_MAX_COUNT must be positive")
+	}
+
+	// Клиент принимает ответы до 64 MiB; страница списка содержит хотя бы один секрет.
+	if c.SecretMaxSize > maxSecretMaxSize {
+		return fmt.Errorf("SECRET_MAX_SIZE must not exceed %d bytes", maxSecretMaxSize)
 	}
 
 	return nil

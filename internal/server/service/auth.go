@@ -87,6 +87,15 @@ func NewAuthService(repo domain.UserRepository, tokens domain.TokenRepository, c
 // Create регистрирует нового пользователя.
 // В БД сохраняется SHA-256 от authKey, а не сам ключ: утечка БД не позволяет войти под пользователем.
 func (s *authService) Create(ctx context.Context, login string, authKey, salt []byte) error {
+	if err := validateLogin(login); err != nil {
+		return err
+	}
+	if err := validateAuthKey(authKey); err != nil {
+		return err
+	}
+	if err := validateSalt(salt); err != nil {
+		return err
+	}
 	return s.repo.Create(ctx, &domain.User{
 		Login:        login,
 		PasswordHash: crypto.HashAuthKey(authKey),
@@ -98,6 +107,9 @@ func (s *authService) Create(ctx context.Context, login string, authKey, salt []
 // Для несуществующего логина возвращает детерминированную соль, выведенную
 // из логина и ключа фиктивных солей, чтобы ответ был неотличим от реального пользователя.
 func (s *authService) GetSalt(ctx context.Context, login string) ([]byte, error) {
+	if err := validateLogin(login); err != nil {
+		return nil, err
+	}
 	user, err := s.repo.GetByLogin(ctx, login)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
@@ -113,6 +125,12 @@ func (s *authService) GetSalt(ctx context.Context, login string) ([]byte, error)
 // Отсутствие пользователя и неверный authKey возвращают одинаковый ErrInvalidCredentials,
 // чтобы скрыть факт существования логина.
 func (s *authService) Login(ctx context.Context, login string, authKey []byte) (string, error) {
+	if err := validateLogin(login); err != nil {
+		return "", err
+	}
+	if err := validateAuthKey(authKey); err != nil {
+		return "", err
+	}
 	user, err := s.repo.GetByLogin(ctx, login)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {

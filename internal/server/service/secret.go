@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/F3dosik/GophKeeper/internal/domain"
 	"github.com/google/uuid"
@@ -23,8 +24,10 @@ type SecretService interface {
 	// Возвращает ErrSecretNotFound если секрет с указанным blindIndex не существует.
 	GetByBlindIndex(ctx context.Context, userID uuid.UUID, blindIndex string) (*domain.Secret, error)
 
-	// ListByUserID возвращает список всех секретов для указанного пользователя.
-	ListByUserID(ctx context.Context, userID uuid.UUID) ([]*domain.Secret, error)
+	// ListPage возвращает страницу секретов пользователя начиная с курсора pageToken
+	// (пустой — с начала). pageSize 0 означает размер по умолчанию.
+	// Возвращает ErrInvalidArgument при неверном pageSize или pageToken.
+	ListPage(ctx context.Context, userID uuid.UUID, pageToken string, pageSize int) (*domain.SecretPage, error)
 
 	// Delete удаляет секрет по userID и blindIndex.
 	// Возвращает ErrSecretNotFound если секрет с указанным blindIndex не существует.
@@ -53,8 +56,11 @@ func NewSecretService(repo domain.SecretRepository, limits SecretLimits) SecretS
 
 // Create регистрирует новый секрет.
 func (s *secretService) Create(ctx context.Context, userID uuid.UUID, blindIndex string, data []byte) error {
-	if blindIndex == "" || len(data) == 0 {
-		return domain.ErrInvalidArgument
+	if err := validateBlindIndex(blindIndex); err != nil {
+		return err
+	}
+	if len(data) == 0 {
+		return fmt.Errorf("%w: secret data is empty", domain.ErrInvalidArgument)
 	}
 	if len(data) > s.limits.MaxSize {
 		return domain.ErrSecretTooLarge
@@ -77,8 +83,11 @@ func (s *secretService) Create(ctx context.Context, userID uuid.UUID, blindIndex
 
 // Update изменяет существующую приватную информацию.
 func (s *secretService) Update(ctx context.Context, userID uuid.UUID, blindIndex string, data []byte) error {
-	if blindIndex == "" || len(data) == 0 {
-		return domain.ErrInvalidArgument
+	if err := validateBlindIndex(blindIndex); err != nil {
+		return err
+	}
+	if len(data) == 0 {
+		return fmt.Errorf("%w: secret data is empty", domain.ErrInvalidArgument)
 	}
 	if len(data) > s.limits.MaxSize {
 		return domain.ErrSecretTooLarge
@@ -92,21 +101,66 @@ func (s *secretService) Update(ctx context.Context, userID uuid.UUID, blindIndex
 
 // GetByBlindIndex получает секрет по userID и blindIndex.
 func (s *secretService) GetByBlindIndex(ctx context.Context, userID uuid.UUID, blindIndex string) (*domain.Secret, error) {
-	if blindIndex == "" {
-		return nil, domain.ErrInvalidArgument
+	if err := validateBlindIndex(blindIndex); err != nil {
+		return nil, err
 	}
 	return s.repo.GetByBlindIndex(ctx, userID, blindIndex)
 }
 
-// ListByUserID возвращает список всех секретов для указанного пользователя.
-func (s *secretService) ListByUserID(ctx context.Context, userID uuid.UUID) ([]*domain.Secret, error) {
-	return s.repo.ListByUserID(ctx, userID)
+// Ограничения страницы списка секретов.
+const (
+	// MaxPageSize — максимум секретов на странице.
+	MaxPageSize = 100
+	// MaxPageBytes — ориентир на суммарный размер данных страницы; страница всегда
+	// содержит хотя бы один секрет, даже если он больше.
+	MaxPageBytes = 4 << 20
+)
+
+// ListPage возвращает страницу секретов. Страница ограничена и количеством, и суммарным
+// размером данных, чтобы ответ помещался в лимит размера gRPC-сообщения клиента.
+func (s *secretService) ListPage(
+	ctx context.Context, userID uuid.UUID, pageToken string, pageSize int,
+) (*domain.SecretPage, error) {
+	if pageSize == 0 {
+		pageSize = MaxPageSize
+	}
+	if pageSize < 0 || pageSize > MaxPageSize {
+		return nil, fmt.Errorf("%w: page size must be 1-%d", domain.ErrInvalidArgument, MaxPageSize)
+	}
+
+	after := uuid.Nil
+	if pageToken != "" {
+		var err error
+		if after, err = uuid.Parse(pageToken); err != nil {
+			return nil, fmt.Errorf("%w: bad page token", domain.ErrInvalidArgument)
+		}
+	}
+
+	// Запрашиваем на один больше, чтобы понять, есть ли следующая страница.
+	rows, err := s.repo.ListByUserID(ctx, userID, after, pageSize+1)
+	if err != nil {
+		return nil, err
+	}
+
+	page := &domain.SecretPage{Secrets: make([]*domain.Secret, 0, min(len(rows), pageSize))}
+	size := 0
+	for _, secret := range rows {
+		full := len(page.Secrets) == pageSize ||
+			(len(page.Secrets) > 0 && size+len(secret.Data) > MaxPageBytes)
+		if full {
+			page.NextPageToken = page.Secrets[len(page.Secrets)-1].ID.String()
+			break
+		}
+		page.Secrets = append(page.Secrets, secret)
+		size += len(secret.Data)
+	}
+	return page, nil
 }
 
 // Delete удаляет секрет по userID и blindIndex.
 func (s *secretService) Delete(ctx context.Context, userID uuid.UUID, blindIndex string) error {
-	if blindIndex == "" {
-		return domain.ErrInvalidArgument
+	if err := validateBlindIndex(blindIndex); err != nil {
+		return err
 	}
 	return s.repo.Delete(ctx, userID, blindIndex)
 }

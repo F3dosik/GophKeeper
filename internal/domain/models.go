@@ -31,6 +31,13 @@ type Secret struct {
 	CreatedAt  time.Time
 }
 
+// SecretPage — страница списка секретов.
+type SecretPage struct {
+	Secrets []*Secret
+	// NextPageToken — курсор следующей страницы; пустой, если страница последняя.
+	NextPageToken string
+}
+
 // SecretType определяет тип хранимого секрета.
 type SecretType string
 

@@ -82,29 +82,29 @@ func (_m *SecretService) GetByBlindIndex(ctx context.Context, userID uuid.UUID, 
 	return r0, r1
 }
 
-// ListByUserID provides a mock function with given fields: ctx, userID
-func (_m *SecretService) ListByUserID(ctx context.Context, userID uuid.UUID) ([]*domain.Secret, error) {
-	ret := _m.Called(ctx, userID)
+// ListPage provides a mock function with given fields: ctx, userID, pageToken, pageSize
+func (_m *SecretService) ListPage(ctx context.Context, userID uuid.UUID, pageToken string, pageSize int) (*domain.SecretPage, error) {
+	ret := _m.Called(ctx, userID, pageToken, pageSize)
 
 	if len(ret) == 0 {
-		panic("no return value specified for ListByUserID")
+		panic("no return value specified for ListPage")
 	}
 
-	var r0 []*domain.Secret
+	var r0 *domain.SecretPage
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) ([]*domain.Secret, error)); ok {
-		return rf(ctx, userID)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, string, int) (*domain.SecretPage, error)); ok {
+		return rf(ctx, userID, pageToken, pageSize)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) []*domain.Secret); ok {
-		r0 = rf(ctx, userID)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, string, int) *domain.SecretPage); ok {
+		r0 = rf(ctx, userID, pageToken, pageSize)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*domain.Secret)
+			r0 = ret.Get(0).(*domain.SecretPage)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
-		r1 = rf(ctx, userID)
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, string, int) error); ok {
+		r1 = rf(ctx, userID, pageToken, pageSize)
 	} else {
 		r1 = ret.Error(1)
 	}
