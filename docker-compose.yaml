@@ -56,6 +56,7 @@ services:
       - "${SERVER_PORT:-50051}:50051"
     volumes:
       # Сертификаты из `make certs`; пути внутри контейнера задаются в TLS_CERT_FILE / TLS_KEY_FILE.
+      # Ключ CA хранится в ./ca и сюда не попадает.
       - ./certs:/certs:ro
     depends_on:
       migrate:
