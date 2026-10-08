@@ -12,7 +12,9 @@ import (
 const (
 	defaultServerPort = "50051"
 	defaultLogLevel   = string(logger.ModeDevelopment)
-	defaultTokenTTL   = 24 * time.Hour
+	// Короткий срок жизни ограничивает ущерб от украденного токена; клиент получает
+	// новый токен при каждой проверке мастер-пароля, поэтому частый вход не нужен.
+	defaultTokenTTL = time.Hour
 
 	defaultAuthRateLimit  = 30      // запросов к Auth в минуту с одного IP
 	defaultAuthRateBurst  = 10      // запросов к Auth подряд с одного IP

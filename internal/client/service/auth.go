@@ -5,7 +5,9 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
 
 	"github.com/F3dosik/GophKeeper/internal/client/grpcclient"
 	"github.com/F3dosik/GophKeeper/internal/client/session"
@@ -28,6 +30,10 @@ type AuthService interface {
 	// пароль дал бы другие ключи, и секрет был бы сохранён в недоступном для пользователя виде.
 	// Возвращает domain.ErrInvalidCredentials, если пароль неверный.
 	Unlock(ctx context.Context, login, password string) ([]byte, error)
+
+	// Logout отзывает токен на сервере и удаляет локальную сессию.
+	// allSessions == true отзывает все токены пользователя (выход на всех устройствах).
+	Logout(ctx context.Context, allSessions bool) error
 }
 
 // authService реализует AuthService.
@@ -36,11 +42,14 @@ type authService struct {
 	client grpcclient.AuthClient
 	// sessionPath — путь к файлу для хранения сессии пользователя (логин + JWT токен).
 	sessionPath string
+	// tokens — токен, с которым соединение выполняет запросы; обновляется после входа.
+	tokens *grpcclient.TokenStore
 }
 
-// NewAuthService создаёт новый authService с заданным gRPC клиентом и путём к файлу сессии.
-func NewAuthService(client grpcclient.AuthClient, sessionPath string) AuthService {
-	return &authService{client: client, sessionPath: sessionPath}
+// NewAuthService создаёт новый authService с заданным gRPC клиентом, путём к файлу сессии
+// и хранилищем токена соединения (может быть nil, если обновлять токен в соединении не нужно).
+func NewAuthService(client grpcclient.AuthClient, sessionPath string, tokens *grpcclient.TokenStore) AuthService {
+	return &authService{client: client, sessionPath: sessionPath, tokens: tokens}
 }
 
 // CreateUser регистрирует нового пользователя.
@@ -83,7 +92,7 @@ func (s *authService) Login(ctx context.Context, login, password string) error {
 		return fmt.Errorf("authService.Login: %w", err)
 	}
 
-	if err := session.Save(s.sessionPath, &session.Session{Login: login, Token: token}); err != nil {
+	if err := s.saveSession(login, token); err != nil {
 		return fmt.Errorf("authService.Login: %w", err)
 	}
 
@@ -91,8 +100,9 @@ func (s *authService) Login(ctx context.Context, login, password string) error {
 }
 
 // Unlock получает соль пользователя, деривирует masterKey через Argon2id и проверяет
-// пароль, выполняя Login с производным ключом аутентификации. Новый токен не сохраняется:
-// цель вызова — только проверка пароля.
+// пароль, выполняя Login с производным ключом аутентификации. Полученный новый токен
+// сохраняется в сессию и используется соединением, поэтому короткий срок жизни токена
+// не требует частого повторного входа.
 func (s *authService) Unlock(ctx context.Context, login, password string) ([]byte, error) {
 	salt, err := s.client.GetSalt(ctx, login)
 	if err != nil {
@@ -104,7 +114,11 @@ func (s *authService) Unlock(ctx context.Context, login, password string) ([]byt
 	if err != nil {
 		return nil, fmt.Errorf("authService.Unlock: %w", err)
 	}
-	if _, err := s.client.Login(ctx, domain.Credentials{Login: login, AuthKey: authKey}); err != nil {
+	token, err := s.client.Login(ctx, domain.Credentials{Login: login, AuthKey: authKey})
+	if err != nil {
+		return nil, fmt.Errorf("authService.Unlock: %w", err)
+	}
+	if err := s.saveSession(login, token); err != nil {
 		return nil, fmt.Errorf("authService.Unlock: %w", err)
 	}
 
@@ -116,4 +130,29 @@ func (s *authService) Unlock(ctx context.Context, login, password string) ([]byt
 // из того же masterKey с другим info.
 func deriveAuthKey(password string, salt []byte) ([]byte, error) {
 	return crypto.HKDF(crypto.DeriveKey(password, salt), crypto.InfoAuth)
+}
+
+// Logout отзывает токен на сервере, затем удаляет файл сессии.
+// Если отзывается только текущий токен, а сервер его уже не принимает (истёк или отозван),
+// локальная сессия всё равно удаляется: такой токен и так бесполезен.
+func (s *authService) Logout(ctx context.Context, allSessions bool) error {
+	err := s.client.Logout(ctx, allSessions)
+	if err != nil && (allSessions || !errors.Is(err, domain.ErrInvalidCredentials)) {
+		return fmt.Errorf("authService.Logout: %w", err)
+	}
+
+	if err := os.Remove(s.sessionPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("authService.Logout: %w", err)
+	}
+	s.tokens.SetToken("")
+	return nil
+}
+
+// saveSession сохраняет сессию в файл и передаёт токен соединению.
+func (s *authService) saveSession(login, token string) error {
+	if err := session.Save(s.sessionPath, &session.Session{Login: login, Token: token}); err != nil {
+		return err
+	}
+	s.tokens.SetToken(token)
+	return nil
 }

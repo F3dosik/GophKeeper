@@ -127,6 +127,43 @@ func (_m *PBAuthClient) Login(ctx context.Context, in *gen.LoginRequest, opts ..
 	return r0, r1
 }
 
+// Logout provides a mock function with given fields: ctx, in, opts
+func (_m *PBAuthClient) Logout(ctx context.Context, in *gen.LogoutRequest, opts ...grpc.CallOption) (*gen.LogoutResponse, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, in)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Logout")
+	}
+
+	var r0 *gen.LogoutResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *gen.LogoutRequest, ...grpc.CallOption) (*gen.LogoutResponse, error)); ok {
+		return rf(ctx, in, opts...)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, *gen.LogoutRequest, ...grpc.CallOption) *gen.LogoutResponse); ok {
+		r0 = rf(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*gen.LogoutResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, *gen.LogoutRequest, ...grpc.CallOption) error); ok {
+		r1 = rf(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // NewPBAuthClient creates a new instance of PBAuthClient. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewPBAuthClient(t interface {

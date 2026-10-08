@@ -10,12 +10,10 @@ import (
 
 	"github.com/F3dosik/GophKeeper/internal/client/grpcclient"
 	"github.com/F3dosik/GophKeeper/internal/client/service"
-	"github.com/F3dosik/GophKeeper/internal/client/session"
 	pb "github.com/F3dosik/GophKeeper/proto/gen"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 // clientKit — набор клиентских зависимостей для одного тестового пользователя.
@@ -26,16 +24,19 @@ type clientKit struct {
 	SessionPath string
 	Auth        service.AuthService
 	Secrets     service.SecretsService
-	conn        *grpc.ClientConn
+	// Tokens — токен соединения; как и в клиенте, общий для Auth и Secrets.
+	Tokens *grpcclient.TokenStore
+	conn   *grpc.ClientConn
 }
 
-// newClientKit поднимает gRPC-соединение с тестовым сервером без TLS,
-// создаёт AuthService и возвращает kit с уникальным логином. SecretsService
-// заполняется после вызова Login через initSecretsService.
+// newClientKit поднимает gRPC-соединение с тестовым сервером без TLS так же,
+// как cmd/client, создаёт AuthService и возвращает kit с уникальным логином.
+// SecretsService заполняется после вызова Login через initSecretsService.
 func newClientKit(t *testing.T) *clientKit {
 	t.Helper()
 
-	conn, err := grpc.NewClient(serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	tokens := grpcclient.NewTokenStore("")
+	conn, err := grpcclient.Dial(serverAddr, "", true, tokens)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = conn.Close() })
 
@@ -47,29 +48,21 @@ func newClientKit(t *testing.T) *clientKit {
 		Login:       login,
 		Password:    "test-password-123",
 		SessionPath: sessionPath,
-		Auth:        service.NewAuthService(authClient, sessionPath),
+		Auth:        service.NewAuthService(authClient, sessionPath, tokens),
+		Tokens:      tokens,
 		conn:        conn,
 	}
 }
 
-// initSecretsService создаёт SecretsService с использованием мастер-ключа,
-// деривированного из пароля. Должен вызываться после Login.
-// Для secrets-операций нужен новый conn с авторизационным интерцептором,
-// поэтому подменяем conn внутри kit.
+// initSecretsService проверяет пароль через Unlock и создаёт SecretsService
+// на том же соединении, что и AuthService. Должен вызываться после Login.
 func (k *clientKit) initSecretsService(ctx context.Context, t *testing.T) {
 	t.Helper()
-
-	sess, err := session.Load(k.SessionPath)
-	require.NoError(t, err)
-
-	authConn, err := grpcclient.Dial(serverAddr, "", true, sess.Token)
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = authConn.Close() })
 
 	masterKey, err := k.Auth.Unlock(ctx, k.Login, k.Password)
 	require.NoError(t, err)
 
-	secretsClient := grpcclient.NewSecretsClient(pb.NewSecretsClient(authConn))
+	secretsClient := grpcclient.NewSecretsClient(pb.NewSecretsClient(k.conn))
 	secretsSvc, err := service.NewSecretsService(secretsClient, masterKey)
 	require.NoError(t, err)
 	k.Secrets = secretsSvc

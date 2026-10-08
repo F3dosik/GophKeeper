@@ -4,6 +4,7 @@ package grpchandler
 import (
 	"context"
 
+	"github.com/F3dosik/GophKeeper/internal/server/middleware"
 	"github.com/F3dosik/GophKeeper/internal/server/service"
 	pb "github.com/F3dosik/GophKeeper/proto/gen"
 )
@@ -58,4 +59,20 @@ func (h *authHandler) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
 	}
 
 	return pb.LoginResponse_builder{Token: &token}.Build(), nil
+}
+
+// Logout отзывает токен, с которым выполнен запрос, или все токены пользователя.
+// Метод не публичный: AuthInterceptor уже проверил токен и положил claims в контекст.
+func (h *authHandler) Logout(ctx context.Context, req *pb.LogoutRequest) (*pb.LogoutResponse, error) {
+	claims, err := middleware.ClaimsFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := h.authService.Logout(
+		ctx, claims.UserID, claims.TokenID, claims.ExpiresAt.Time, req.GetAllSessions(),
+	); err != nil {
+		return nil, toGRPCError(err)
+	}
+	return pb.LogoutResponse_builder{}.Build(), nil
 }

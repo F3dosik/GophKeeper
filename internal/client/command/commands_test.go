@@ -8,7 +8,10 @@ import (
 
 	"github.com/F3dosik/GophKeeper/internal/client/command"
 	"github.com/F3dosik/GophKeeper/internal/client/config"
+	"github.com/F3dosik/GophKeeper/internal/client/mocks"
+	"github.com/F3dosik/GophKeeper/internal/client/service"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -43,11 +46,22 @@ func TestExecute_UnknownCommand(t *testing.T) {
 	_ = buf
 }
 
-func TestLogout_RemovesSessionFile(t *testing.T) {
+// logoutCommands возвращает Commands с реальным AuthService поверх мока gRPC-клиента,
+// который ожидает Logout с флагом allSessions.
+func logoutCommands(t *testing.T, sessionPath string, allSessions bool) *command.Commands {
+	t.Helper()
+
+	mockAuth := mocks.NewAuthClient(t)
+	mockAuth.On("Logout", mock.Anything, allSessions).Return(nil)
+	authSvc := service.NewAuthService(mockAuth, sessionPath, nil)
+	return command.New(authSvc, nil, &config.Config{SessionPath: sessionPath})
+}
+
+func TestLogout_RevokesTokenAndRemovesSessionFile(t *testing.T) {
 	sessionPath := filepath.Join(t.TempDir(), "session")
 	require.NoError(t, os.WriteFile(sessionPath, []byte(`{"login":"u","token":"t"}`), 0600))
 
-	cmds := command.New(nil, nil, &config.Config{SessionPath: sessionPath})
+	cmds := logoutCommands(t, sessionPath, false)
 	out := captureStdout(t, func() {
 		os.Args = []string{"gophkeeper", "auth", "logout"}
 		err := cmds.Execute()
@@ -56,7 +70,21 @@ func TestLogout_RemovesSessionFile(t *testing.T) {
 
 	_, err := os.Stat(sessionPath)
 	assert.True(t, os.IsNotExist(err), "session file should be removed")
-	assert.Contains(t, out, "Сессия удалена")
+	assert.Contains(t, out, "токен отозван")
+}
+
+func TestLogout_AllSessions(t *testing.T) {
+	sessionPath := filepath.Join(t.TempDir(), "session")
+	require.NoError(t, os.WriteFile(sessionPath, []byte(`{"login":"u","token":"t"}`), 0600))
+
+	cmds := logoutCommands(t, sessionPath, true)
+	out := captureStdout(t, func() {
+		os.Args = []string{"gophkeeper", "auth", "logout", "--all"}
+		err := cmds.Execute()
+		require.NoError(t, err)
+	})
+
+	assert.Contains(t, out, "на всех устройствах")
 }
 
 func TestLogout_MissingSessionFile_NoError(t *testing.T) {

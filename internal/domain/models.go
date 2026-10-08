@@ -16,6 +16,8 @@ type User struct {
 	Login        string
 	PasswordHash []byte
 	PasswordSalt []byte
+	// TokenVersion — версия токенов пользователя; токены с другой версией недействительны.
+	TokenVersion int
 	CreatedAt    time.Time
 }
 

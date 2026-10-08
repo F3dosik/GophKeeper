@@ -19,6 +19,10 @@ type AuthClient interface {
 
 	// Login аутентифицирует пользователя и возвращает JWT токен.
 	Login(ctx context.Context, creds domain.Credentials) (string, error)
+
+	// Logout отзывает на сервере текущий токен или, если allSessions == true,
+	// все токены пользователя.
+	Logout(ctx context.Context, allSessions bool) error
 }
 
 type authClient struct {
@@ -57,4 +61,10 @@ func (c *authClient) Login(ctx context.Context, creds domain.Credentials) (strin
 		return "", fromGRPCError(err)
 	}
 	return resp.GetToken(), nil
+}
+
+func (c *authClient) Logout(ctx context.Context, allSessions bool) error {
+	req := pb.LogoutRequest_builder{AllSessions: &allSessions}.Build()
+	_, err := c.client.Logout(ctx, req)
+	return fromGRPCError(err)
 }

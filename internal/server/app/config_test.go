@@ -32,7 +32,7 @@ func TestLoad_Defaults(t *testing.T) {
 	assert.Equal(t, "development", cfg.LogLevel)
 	assert.Equal(t, "postgres://localhost/db", cfg.DatabaseURL)
 	assert.Equal(t, testJWTSecret, cfg.JWTSecret)
-	assert.Equal(t, 24*time.Hour, cfg.TokenTTL)
+	assert.Equal(t, time.Hour, cfg.TokenTTL)
 	assert.Equal(t, 30, cfg.AuthRateLimit)
 	assert.Equal(t, 10, cfg.AuthRateBurst)
 	assert.Equal(t, 1<<20, cfg.SecretMaxSize)

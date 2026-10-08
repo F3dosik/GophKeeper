@@ -599,6 +599,128 @@ func (b0 LoginResponse_builder) Build() *LoginResponse {
 	return m0
 }
 
+// LogoutRequest — запрос на выход.
+type LogoutRequest struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_AllSessions bool                   `protobuf:"varint,1,opt,name=all_sessions,json=allSessions"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *LogoutRequest) Reset() {
+	*x = LogoutRequest{}
+	mi := &file_proto_auth_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LogoutRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LogoutRequest) ProtoMessage() {}
+
+func (x *LogoutRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *LogoutRequest) GetAllSessions() bool {
+	if x != nil {
+		return x.xxx_hidden_AllSessions
+	}
+	return false
+}
+
+func (x *LogoutRequest) SetAllSessions(v bool) {
+	x.xxx_hidden_AllSessions = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 1)
+}
+
+func (x *LogoutRequest) HasAllSessions() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
+}
+
+func (x *LogoutRequest) ClearAllSessions() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
+	x.xxx_hidden_AllSessions = false
+}
+
+type LogoutRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// true — отозвать все токены пользователя (выйти на всех устройствах),
+	// false — только токен, с которым выполнен запрос.
+	AllSessions *bool
+}
+
+func (b0 LogoutRequest_builder) Build() *LogoutRequest {
+	m0 := &LogoutRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	if b.AllSessions != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 1)
+		x.xxx_hidden_AllSessions = *b.AllSessions
+	}
+	return m0
+}
+
+// LogoutResponse — пустой ответ при успешном выходе.
+type LogoutResponse struct {
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LogoutResponse) Reset() {
+	*x = LogoutResponse{}
+	mi := &file_proto_auth_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LogoutResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LogoutResponse) ProtoMessage() {}
+
+func (x *LogoutResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_auth_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+type LogoutResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 LogoutResponse_builder) Build() *LogoutResponse {
+	m0 := &LogoutResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
+}
+
 var File_proto_auth_proto protoreflect.FileDescriptor
 
 const file_proto_auth_proto_rawDesc = "" +
@@ -618,14 +740,18 @@ const file_proto_auth_proto_rawDesc = "" +
 	"\fLoginRequest\x123\n" +
 	"\vcredentials\x18\x01 \x01(\v2\x11.auth.CredentialsR\vcredentials\"%\n" +
 	"\rLoginResponse\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token2\xb1\x01\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\"2\n" +
+	"\rLogoutRequest\x12!\n" +
+	"\fall_sessions\x18\x01 \x01(\bR\vallSessions\"\x10\n" +
+	"\x0eLogoutResponse2\xe6\x01\n" +
 	"\x04Auth\x12?\n" +
 	"\n" +
 	"CreateUser\x12\x17.auth.CreateUserRequest\x1a\x18.auth.CreateUserResponse\x126\n" +
 	"\aGetSalt\x12\x14.auth.GetSaltRequest\x1a\x15.auth.GetSaltResponse\x120\n" +
-	"\x05Login\x12\x12.auth.LoginRequest\x1a\x13.auth.LoginResponseB)Z'github.com/F3dosik/GophKeeper/proto/genb\beditionsp\xe8\a"
+	"\x05Login\x12\x12.auth.LoginRequest\x1a\x13.auth.LoginResponse\x123\n" +
+	"\x06Logout\x12\x13.auth.LogoutRequest\x1a\x14.auth.LogoutResponseB)Z'github.com/F3dosik/GophKeeper/proto/genb\beditionsp\xe8\a"
 
-var file_proto_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_proto_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_proto_auth_proto_goTypes = []any{
 	(*Credentials)(nil),        // 0: auth.Credentials
 	(*CreateUserRequest)(nil),  // 1: auth.CreateUserRequest
@@ -634,6 +760,8 @@ var file_proto_auth_proto_goTypes = []any{
 	(*GetSaltResponse)(nil),    // 4: auth.GetSaltResponse
 	(*LoginRequest)(nil),       // 5: auth.LoginRequest
 	(*LoginResponse)(nil),      // 6: auth.LoginResponse
+	(*LogoutRequest)(nil),      // 7: auth.LogoutRequest
+	(*LogoutResponse)(nil),     // 8: auth.LogoutResponse
 }
 var file_proto_auth_proto_depIdxs = []int32{
 	0, // 0: auth.CreateUserRequest.credentials:type_name -> auth.Credentials
@@ -641,11 +769,13 @@ var file_proto_auth_proto_depIdxs = []int32{
 	1, // 2: auth.Auth.CreateUser:input_type -> auth.CreateUserRequest
 	3, // 3: auth.Auth.GetSalt:input_type -> auth.GetSaltRequest
 	5, // 4: auth.Auth.Login:input_type -> auth.LoginRequest
-	2, // 5: auth.Auth.CreateUser:output_type -> auth.CreateUserResponse
-	4, // 6: auth.Auth.GetSalt:output_type -> auth.GetSaltResponse
-	6, // 7: auth.Auth.Login:output_type -> auth.LoginResponse
-	5, // [5:8] is the sub-list for method output_type
-	2, // [2:5] is the sub-list for method input_type
+	7, // 5: auth.Auth.Logout:input_type -> auth.LogoutRequest
+	2, // 6: auth.Auth.CreateUser:output_type -> auth.CreateUserResponse
+	4, // 7: auth.Auth.GetSalt:output_type -> auth.GetSaltResponse
+	6, // 8: auth.Auth.Login:output_type -> auth.LoginResponse
+	8, // 9: auth.Auth.Logout:output_type -> auth.LogoutResponse
+	6, // [6:10] is the sub-list for method output_type
+	2, // [2:6] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name
 	2, // [2:2] is the sub-list for extension extendee
 	0, // [0:2] is the sub-list for field type_name
@@ -662,7 +792,7 @@ func file_proto_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_auth_proto_rawDesc), len(file_proto_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

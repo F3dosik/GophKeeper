@@ -37,8 +37,9 @@ func New(ctx context.Context, cfg *Config, logger *zap.SugaredLogger) (*App, err
 
 	userRepo := postgres.NewUserRepository(pool)
 	secretRepo := postgres.NewSecretRepository(pool)
+	tokenRepo := postgres.NewTokenRepository(pool)
 
-	authService := service.NewAuthService(userRepo, cfg.JWTSecret, cfg.TokenTTL)
+	authService := service.NewAuthService(userRepo, tokenRepo, cfg.JWTSecret, cfg.TokenTTL)
 	secretService := service.NewSecretService(secretRepo, service.SecretLimits{
 		MaxSize:  cfg.SecretMaxSize,
 		MaxCount: cfg.SecretMaxCount,
@@ -53,7 +54,7 @@ func New(ctx context.Context, cfg *Config, logger *zap.SugaredLogger) (*App, err
 			middleware.RateLimitInterceptor(
 				middleware.NewIPRateLimiter(cfg.AuthRateLimit, cfg.AuthRateBurst), logger,
 			),
-			middleware.AuthInterceptor(cfg.JWTSecret, logger),
+			middleware.AuthInterceptor(cfg.JWTSecret, tokenRepo, logger),
 		),
 		// Сообщения больше секрета максимального размера (плюс запас на служебные поля)
 		// отклоняются до разбора и не расходуют память сервера.

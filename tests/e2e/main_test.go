@@ -31,6 +31,7 @@ const testJWTSecret = "e2e-jwt-secret-that-is-32-chars!!"
 var migrationPaths = []string{
 	"../../migrations/000001_init.up.sql",
 	"../../migrations/000002_auth_key_hash.up.sql",
+	"../../migrations/000003_token_revocation.up.sql",
 }
 
 // serverAddr — адрес in-process gRPC сервера, заполняется в TestMain.
@@ -89,8 +90,9 @@ func startTestServer(pool *pgxpool.Pool) (stop func(), addr string, err error) {
 
 	userRepo := postgres.NewUserRepository(pool)
 	secretRepo := postgres.NewSecretRepository(pool)
+	tokenRepo := postgres.NewTokenRepository(pool)
 
-	authService := service.NewAuthService(userRepo, testJWTSecret, time.Hour)
+	authService := service.NewAuthService(userRepo, tokenRepo, testJWTSecret, time.Hour)
 	secretService := service.NewSecretService(secretRepo, service.SecretLimits{
 		MaxSize: 1 << 20, MaxCount: 1000,
 	})
@@ -101,7 +103,7 @@ func startTestServer(pool *pgxpool.Pool) (stop func(), addr string, err error) {
 	server := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			middleware.LoggingInterceptor(log),
-			middleware.AuthInterceptor(testJWTSecret, log),
+			middleware.AuthInterceptor(testJWTSecret, tokenRepo, log),
 		),
 	)
 	pb.RegisterAuthServer(server, authHandler)

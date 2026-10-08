@@ -46,10 +46,10 @@ func (r *userRepository) GetByLogin(ctx context.Context, login string) (*domain.
 
 	err := repository.WithRetry(ctx, isRetriable, func() error {
 		return r.pool.QueryRow(ctx, `
-			SELECT id, password_hash, password_salt, created_at
+			SELECT id, password_hash, password_salt, token_version, created_at
 			FROM users
 			WHERE login = $1
-		`, login).Scan(&user.ID, &user.PasswordHash, &user.PasswordSalt, &user.CreatedAt)
+		`, login).Scan(&user.ID, &user.PasswordHash, &user.PasswordSalt, &user.TokenVersion, &user.CreatedAt)
 	})
 
 	if err != nil {

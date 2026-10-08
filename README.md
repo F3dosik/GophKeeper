@@ -33,7 +33,7 @@
 | `JWT_SECRET`   | Секрет для подписи JWT (≥ 32 символа)            | `your-super-secret-key-min-32-chars`                        |
 | `SERVER_PORT`  | Порт gRPC-сервера (по умолчанию `50051`)         | `50051`                                                     |
 | `LOG_LEVEL`    | `development` или `production`                   | `development`                                               |
-| `TOKEN_TTL`    | Время жизни JWT (по умолчанию `24h`)             | `1h`, `30m`, `24h`                                          |
+| `TOKEN_TTL`    | Время жизни JWT (по умолчанию `1h`)              | `30m`, `1h`                                                 |
 | `TLS_CERT_FILE`| Сертификат сервера (PEM), путь внутри контейнера | `/certs/server.crt`                                         |
 | `TLS_KEY_FILE` | Приватный ключ сервера (PEM)                     | `/certs/server.key`                                         |
 
@@ -97,6 +97,17 @@ gophkeeper secret get --name gmail --type credentials
 
 Соль хранится на сервере, ключи выводятся из пароля, поэтому секреты, созданные на одной машине, читаются на любой другой под той же учёткой.
 
+## Сессии и отзыв токенов
+
+После `auth login` клиент хранит JWT в файле сессии. Каждая операция с секретами проверяет мастер-пароль на сервере и получает новый токен, поэтому срок жизни токена можно держать коротким (`TOKEN_TTL`, по умолчанию 1 час): если файл сессии украдут, токен скоро истечёт сам.
+
+Токены можно отозвать раньше срока:
+
+- `auth logout` отзывает токен текущего устройства (его `jti` попадает в таблицу `revoked_tokens`);
+- `auth logout --all` отзывает все токены пользователя (увеличивается `users.token_version`). Используйте эту команду, если устройство потеряно или файл сессии мог утечь.
+
+Сервер проверяет отзыв при каждом запросе.
+
 ## Схема ключей
 
 ```
@@ -133,7 +144,8 @@ source ~/.bashrc
 # регистрация и вход
 gophkeeper auth register alice
 gophkeeper auth login alice
-gophkeeper auth logout
+gophkeeper auth logout          # отозвать токен этого устройства
+gophkeeper auth logout --all    # отозвать токены на всех устройствах
 
 # создание секретов
 gophkeeper secret create --name gmail --type credentials
