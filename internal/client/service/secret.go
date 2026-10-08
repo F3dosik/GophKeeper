@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/F3dosik/GophKeeper/internal/client/grpcclient"
 	"github.com/F3dosik/GophKeeper/internal/domain"
@@ -70,7 +71,7 @@ func NewSecretsService(client grpcclient.SecretsClient, masterKey []byte) (Secre
 
 // encryptPayload сериализует payload в JSON и шифрует его через AES-256-GCM.
 func (s *secretsService) encryptPayload(payload *domain.SecretPayload) ([]byte, error) {
-	plaintext, err := json.Marshal(payload)
+	plaintext, err := padPayload(payload)
 	if err != nil {
 		return nil, fmt.Errorf("encode payload: %w", err)
 	}
@@ -79,6 +80,32 @@ func (s *secretsService) encryptPayload(payload *domain.SecretPayload) ([]byte, 
 		return nil, fmt.Errorf("encrypt payload: %w", err)
 	}
 	return ciphertext, nil
+}
+
+// paddingBlock — размер блока, до которого дополняется открытый текст секрета.
+const paddingBlock = 256
+
+// paddedPayload — формат открытого текста секрета: payload и поле-заполнитель.
+// Поле pad при расшифровке игнорируется, в том числе клиентами без этого поля.
+type paddedPayload struct {
+	*domain.SecretPayload
+	Pad string `json:"pad"`
+}
+
+// padPayload сериализует payload в JSON и дополняет его пробелами в поле pad так,
+// чтобы длина была кратна paddingBlock. AES-GCM сохраняет длину открытого текста,
+// и без дополнения сервер по размеру шифротекста оценил бы длину пароля или заметки.
+func padPayload(payload *domain.SecretPayload) ([]byte, error) {
+	base, err := json.Marshal(paddedPayload{SecretPayload: payload})
+	if err != nil {
+		return nil, err
+	}
+	// Пробелы кодируются в JSON один к одному, поэтому длину можно рассчитать заранее.
+	padLen := (paddingBlock - len(base)%paddingBlock) % paddingBlock
+	if padLen == 0 {
+		return base, nil
+	}
+	return json.Marshal(paddedPayload{SecretPayload: payload, Pad: strings.Repeat(" ", padLen)})
 }
 
 // decryptPayload расшифровывает данные, десериализует их в SecretPayload и проверяет,
