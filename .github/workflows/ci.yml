@@ -33,6 +33,10 @@ jobs:
       - name: Unit-тесты (-race)
         run: go test -race ./...
       - name: E2E-тесты (testcontainers, PostgreSQL)
+        # Образ из зеркала: анонимные загрузки с Docker Hub на общих раннерах
+        # упираются в лимит запросов (toomanyrequests).
+        env:
+          E2E_POSTGRES_IMAGE: mirror.gcr.io/library/postgres:18-alpine
         run: go test -tags=e2e ./tests/e2e/...
       - name: govulncheck
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
