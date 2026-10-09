@@ -1,26 +1,75 @@
-html {
-    background-color: rgba(27, 38, 54, 1);
-    text-align: center;
-    color: white;
+:root {
+  --bg: #181a1f;
+  --panel: #21242b;
+  --panel-2: #2a2e37;
+  --border: #353a45;
+  --text: #e6e8ec;
+  --muted: #9aa1ad;
+  --accent: #5b8def;
+  --accent-hover: #6f9bf2;
+  --danger: #e5604e;
+  --ok: #4caf7d;
+  --radius: 8px;
+  color-scheme: dark;
 }
+
+* { box-sizing: border-box; }
+
+html, body, #app { height: 100%; margin: 0; }
 
 body {
-    margin: 0;
-    color: white;
-    font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
-    "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-    sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", sans-serif;
+  font-size: 14px;
+  user-select: none;
 }
 
-@font-face {
-    font-family: "Nunito";
-    font-style: normal;
-    font-weight: 400;
-    src: local(""),
-    url("assets/fonts/nunito-v16-latin-regular.woff2") format("woff2");
+input, textarea, select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  user-select: text;
 }
 
-#app {
-    height: 100vh;
-    text-align: center;
+input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+textarea { resize: vertical; min-height: 120px; }
+
+button {
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
 }
+
+button:hover:not(:disabled) { border-color: var(--muted); }
+button:disabled { opacity: 0.5; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.primary:hover:not(:disabled) { background: var(--accent-hover); }
+button.danger { color: var(--danger); }
+button.danger.primary { background: var(--danger); border-color: var(--danger); color: #fff; }
+button.link { border: none; background: none; color: var(--accent); padding: 4px; }
+
+label { display: flex; flex-direction: column; gap: 6px; color: var(--muted); }
+label > span { font-size: 12px; }
+
+.error { color: var(--danger); }
+.ok { color: var(--ok); }
+.muted { color: var(--muted); }
+.row { display: flex; gap: 8px; align-items: center; }
+.stack { display: flex; flex-direction: column; gap: 14px; }
+.spacer { flex: 1; }
+
+/* Экраны вне хранилища: настройки, вход, разблокировка. */
+.center-screen { display: flex; align-items: center; justify-content: center; height: 100%; padding: 24px; }
+.card { width: 100%; max-width: 420px; padding: 28px; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; }
+.card h1 { margin: 0 0 4px; font-size: 20px; }
+.card p.lead { margin: 0 0 20px; color: var(--muted); }

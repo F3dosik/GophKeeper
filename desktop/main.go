@@ -4,6 +4,7 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 
 	"github.com/F3dosik/GophKeeper/desktop/backend"
 	"github.com/wailsapp/wails/v2"
@@ -13,20 +14,27 @@ import (
 )
 
 func main() {
-	dir, err := backend.DefaultDir()
-	if err != nil {
-		log.Fatal(err)
+	// GOPHKEEPER_DESKTOP_DIR задаёт другой каталог данных: вторая учётка, разработка, тесты.
+	dir := os.Getenv("GOPHKEEPER_DESKTOP_DIR")
+	if dir == "" {
+		var err error
+		if dir, err = backend.DefaultDir(); err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	ui := &wailsUI{}
 	app := backend.NewApp(backend.Options{Dir: dir, UI: ui})
 
-	err = wails.Run(&options.App{
+	err := wails.Run(&options.App{
 		Title:     "GophKeeper",
 		Width:     1000,
 		Height:    700,
 		MinWidth:  720,
 		MinHeight: 480,
+		// GOPHKEEPER_DESKTOP_HIDDEN=1 запускает без окна: для автотестов интерфейса
+		// через браузер в режиме wails dev.
+		StartHidden: os.Getenv("GOPHKEEPER_DESKTOP_HIDDEN") == "1",
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},

@@ -158,13 +158,18 @@ func (a *App) ChooseCACert() (string, error) {
 }
 
 // CheckServer проверяет, что сервер доступен по адресу address и его сертификат
-// подписан caPEM (пустой — системные корневые сертификаты).
-func (a *App) CheckServer(address, caPEM string) (string, error) {
+// подписан caPEM (пустой — системные корневые сертификаты). useSavedCA — проверить
+// с сохранённым ранее сертификатом: интерфейс не хранит его содержимое.
+func (a *App) CheckServer(address, caPEM string, useSavedCA bool) (string, error) {
 	if err := checkAddress(address); err != nil {
 		return "", err
 	}
+	ca, err := a.resolveCACert(caPEM, useSavedCA)
+	if err != nil {
+		return "", err
+	}
 	conn, err := grpcclient.DialWithOptions(address, grpcclient.DialOptions{
-		CACertPEM: []byte(caPEM),
+		CACertPEM: ca,
 		Insecure:  a.opts.Insecure,
 	})
 	if err != nil {
@@ -182,15 +187,15 @@ func (a *App) CheckServer(address, caPEM string) (string, error) {
 }
 
 // SaveSettings сохраняет настройки и переподключается к серверу. Хранилище при этом
-// блокируется; логин сохраняется, если сервер не менялся.
-func (a *App) SaveSettings(address, caPEM string, autoLockMinutes int) error {
+// блокируется; логин сохраняется, если сервер не менялся. useSavedCA — оставить
+// сохранённый сертификат; иначе сохраняется caPEM (пустой — системные сертификаты).
+func (a *App) SaveSettings(address, caPEM string, useSavedCA bool, autoLockMinutes int) error {
 	if err := checkAddress(address); err != nil {
 		return err
 	}
-	if caPEM != "" {
-		if err := checkCACert([]byte(caPEM)); err != nil {
-			return err
-		}
+	ca, err := a.resolveCACert(caPEM, useSavedCA)
+	if err != nil {
+		return err
 	}
 	if autoLockMinutes < 0 || autoLockMinutes > 24*60 {
 		return validationError("Автоблокировка — от 0 до 1440 минут")
@@ -199,7 +204,7 @@ func (a *App) SaveSettings(address, caPEM string, autoLockMinutes int) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	settings := Settings{ServerAddress: strings.TrimSpace(address), AutoLockMinutes: autoLockMinutes}
-	if err := saveSettings(a.opts.Dir, settings, []byte(caPEM)); err != nil {
+	if err := saveSettings(a.opts.Dir, settings, ca); err != nil {
 		return toUIError(err)
 	}
 	if settings.ServerAddress != a.settings.ServerAddress {
@@ -364,6 +369,25 @@ func (a *App) openVaultLocked() error {
 	}
 	a.vault = v
 	return nil
+}
+
+// resolveCACert возвращает сертификат для подключения: сохранённый (useSavedCA)
+// или переданный, проверив, что это PEM.
+func (a *App) resolveCACert(caPEM string, useSavedCA bool) ([]byte, error) {
+	if useSavedCA {
+		ca, err := loadCACert(a.opts.Dir)
+		if err != nil {
+			return nil, toUIError(err)
+		}
+		return ca, nil
+	}
+	if caPEM == "" {
+		return nil, nil
+	}
+	if err := checkCACert([]byte(caPEM)); err != nil {
+		return nil, err
+	}
+	return []byte(caPEM), nil
 }
 
 // checkAddress проверяет формат адреса сервера.

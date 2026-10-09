@@ -105,11 +105,11 @@ func TestE2E_Desktop_FullFlow(t *testing.T) {
 	_, err := app.SignIn("x", "y")
 	assert.Equal(t, backend.CodeNotConfigured, errorCode(t, err))
 
-	assert.Equal(t, backend.CodeValidation, errorCode(t, app.SaveSettings("no-port", "", 5)))
-	msg, err := app.CheckServer(serverAddr, "")
+	assert.Equal(t, backend.CodeValidation, errorCode(t, app.SaveSettings("no-port", "", false, 5)))
+	msg, err := app.CheckServer(serverAddr, "", false)
 	require.NoError(t, err)
 	assert.Contains(t, msg, "Сервер доступен")
-	require.NoError(t, app.SaveSettings(serverAddr, "", 5))
+	require.NoError(t, app.SaveSettings(serverAddr, "", false, 5))
 	assert.True(t, app.GetState().Configured)
 
 	// Регистрация и вход.
@@ -207,7 +207,9 @@ func TestE2E_Desktop_ClipboardIsCleared(t *testing.T) {
 func TestE2E_Desktop_SettingsPersistAcrossRestart(t *testing.T) {
 	dir := t.TempDir()
 	first := newDesktopApp(t, dir, &fakeUI{})
-	require.NoError(t, first.SaveSettings(serverAddr, "", 7))
+	require.NoError(t, first.SaveSettings(serverAddr, "", false, 7))
+	// Повторное сохранение с useSavedCA не теряет настройки сертификата.
+	require.NoError(t, first.SaveSettings(serverAddr, "", true, 7))
 	login := "desk-" + uuid.NewString()
 	require.NoError(t, first.Register(login, "desktop-pass-1"))
 	_, err := first.SignIn(login, "desktop-pass-1")
@@ -229,7 +231,7 @@ func TestE2E_Desktop_TemporaryPassword(t *testing.T) {
 	require.NoError(t, err)
 
 	app := newDesktopApp(t, t.TempDir(), &fakeUI{})
-	require.NoError(t, app.SaveSettings(serverAddr, "", 5))
+	require.NoError(t, app.SaveSettings(serverAddr, "", false, 5))
 
 	changeRequired, err := app.SignIn(admin.Login, tempPassword)
 	require.NoError(t, err)

@@ -4,7 +4,7 @@ import {backend} from '../models';
 
 export function ChangePassword(arg1:string,arg2:string,arg3:number,arg4:number):Promise<void>;
 
-export function CheckServer(arg1:string,arg2:string):Promise<string>;
+export function CheckServer(arg1:string,arg2:string,arg3:boolean):Promise<string>;
 
 export function ChooseCACert():Promise<string>;
 
@@ -34,7 +34,7 @@ export function Register(arg1:string,arg2:string):Promise<void>;
 
 export function SaveSecret(arg1:backend.SecretInput,arg2:boolean):Promise<void>;
 
-export function SaveSettings(arg1:string,arg2:string,arg3:number):Promise<void>;
+export function SaveSettings(arg1:string,arg2:string,arg3:boolean,arg4:number):Promise<void>;
 
 export function SignIn(arg1:string,arg2:string):Promise<boolean>;
 

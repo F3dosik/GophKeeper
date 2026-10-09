@@ -86,3 +86,20 @@ func TestValidators(t *testing.T) {
 		assert.Error(t, err, "%v", bad)
 	}
 }
+
+func TestResolveCACert(t *testing.T) {
+	dir := t.TempDir()
+	app := NewApp(Options{Dir: dir})
+	require.NoError(t, saveSettings(dir, Settings{ServerAddress: "h:1"}, []byte("SAVED")))
+
+	ca, err := app.resolveCACert("", true)
+	require.NoError(t, err)
+	assert.Equal(t, []byte("SAVED"), ca, "saved certificate is reused without the UI knowing it")
+
+	ca, err = app.resolveCACert("", false)
+	require.NoError(t, err)
+	assert.Nil(t, ca, "empty means system roots")
+
+	_, err = app.resolveCACert("garbage", false)
+	assert.Error(t, err)
+}

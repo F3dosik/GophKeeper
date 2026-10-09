@@ -6,8 +6,8 @@ export function ChangePassword(arg1, arg2, arg3, arg4) {
   return window['go']['backend']['App']['ChangePassword'](arg1, arg2, arg3, arg4);
 }
 
-export function CheckServer(arg1, arg2) {
-  return window['go']['backend']['App']['CheckServer'](arg1, arg2);
+export function CheckServer(arg1, arg2, arg3) {
+  return window['go']['backend']['App']['CheckServer'](arg1, arg2, arg3);
 }
 
 export function ChooseCACert() {
@@ -66,8 +66,8 @@ export function SaveSecret(arg1, arg2) {
   return window['go']['backend']['App']['SaveSecret'](arg1, arg2);
 }
 
-export function SaveSettings(arg1, arg2, arg3) {
-  return window['go']['backend']['App']['SaveSettings'](arg1, arg2, arg3);
+export function SaveSettings(arg1, arg2, arg3, arg4) {
+  return window['go']['backend']['App']['SaveSettings'](arg1, arg2, arg3, arg4);
 }
 
 export function SignIn(arg1, arg2) {
