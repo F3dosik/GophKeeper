@@ -1,5 +1,7 @@
 # GophKeeper
 
+[![CI](https://github.com/F3dosik/GophKeeper/actions/workflows/ci.yml/badge.svg)](https://github.com/F3dosik/GophKeeper/actions/workflows/ci.yml)
+
 Клиент-серверный менеджер паролей и приватных данных. Сервер работает в Docker, клиент — кроссплатформенный CLI-бинарь.
 
 ## Возможности
@@ -362,6 +364,20 @@ gophkeeper secret create --name github --type credentials --generate
 При входе в систему и операциях с секретами клиент интерактивно запрашивает мастер-пароль. Перед операцией с секретами пароль проверяется на сервере: при ошибке клиент сообщает «неверный мастер-пароль» и ничего не шифрует и не отправляет. При успешной проверке клиент получает новый токен, поэтому активному пользователю не нужно повторять `auth login` после истечения `TOKEN_TTL`.
 
 Если вывод `secret get` или `secret list` завершился ошибкой «нарушена целостность», значит, сервер вернул не тот секрет, который запрашивался. Это признак компрометации сервера.
+
+## CI и релизы
+
+`.github/workflows/ci.yml` запускается на каждый PR и push в `main`:
+
+- Go: `go vet`, unit-тесты с `-race`, e2e-тесты (PostgreSQL в testcontainers), `govulncheck`;
+- фронтенд: `svelte-check --fail-on-warnings` и сборка;
+- сборки CLI для Linux/macOS/Windows и десктоп-приложения на трёх ОС (Linux, Windows, macOS universal) — результаты доступны в артефактах запуска.
+
+Релиз — по тегу: CI собирает всё заново и публикует GitHub Release с бинарями CLI, архивами приложения и `SHA256SUMS`.
+
+```bash
+git tag v1.0.0 && git push origin v1.0.0
+```
 
 ## Разработка
 
