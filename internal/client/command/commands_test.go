@@ -5,6 +5,7 @@ import (
 	"github.com/F3dosik/GophKeeper/internal/domain"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -165,4 +166,26 @@ func TestAdminListUsers(t *testing.T) {
 	assert.Contains(t, out, "alice")
 	assert.Contains(t, out, "постоянный")
 	assert.Contains(t, out, "временный до")
+}
+
+func TestGenerate(t *testing.T) {
+	run := func(args ...string) string {
+		var out string
+		out = captureStdout(t, func() {
+			os.Args = append([]string{"gophkeeper", "generate"}, args...)
+			require.NoError(t, command.New(nil, nil, nil, &config.Config{}).Execute())
+		})
+		return strings.TrimSpace(out)
+	}
+
+	assert.Len(t, run(), 20)
+	assert.Regexp(t, `^[A-Za-z0-9]{32}$`, run("--length", "32", "--no-symbols"))
+	// Пробел как разделитель: в словах EFF бывают дефисы (t-shirt), но не пробелы.
+	assert.Len(t, strings.Fields(run("--words", "6", "--separator", " ")), 6)
+}
+
+func TestSecretCreate_GenerateOnlyForCredentials(t *testing.T) {
+	os.Args = []string{"gophkeeper", "secret", "create", "--name", "n", "--type", "text", "--generate"}
+	err := command.New(nil, nil, nil, &config.Config{}).Execute()
+	assert.ErrorContains(t, err, "credentials")
 }

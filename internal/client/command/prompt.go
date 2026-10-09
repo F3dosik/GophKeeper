@@ -129,16 +129,20 @@ func promptLine(prompt string) (string, error) {
 // для text — одна строка текста;
 // для binary — путь к файлу, содержимое которого читается с диска;
 // для card — реквизиты карты; введённые данные валидируются через CardSecret.Validate.
-func promptSecretData(t domain.SecretType) (json.RawMessage, error) {
+//
+// generatedPassword, если не пуст, используется как пароль credentials вместо ввода.
+func promptSecretData(t domain.SecretType, generatedPassword string) (json.RawMessage, error) {
 	switch t {
 	case domain.SecretTypeCredentials:
 		login, err := promptLine(promptSecretCredLogin)
 		if err != nil {
 			return nil, err
 		}
-		password, err := promptPassword(promptSecretCredPassword)
-		if err != nil {
-			return nil, err
+		password := generatedPassword
+		if password == "" {
+			if password, err = promptPassword(promptSecretCredPassword); err != nil {
+				return nil, err
+			}
 		}
 		return json.Marshal(&domain.CredentialsSecret{Login: login, Password: password})
 	case domain.SecretTypeText:

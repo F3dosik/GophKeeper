@@ -1,6 +1,7 @@
 <script lang="ts">
   import { api, errorText } from '../lib/api'
   import PasswordInput from './PasswordInput.svelte'
+  import SuggestPassphrase from './SuggestPassphrase.svelte'
 
   // Вход или регистрация. После входа с временным паролем вызывает
   // onsignedin с changeRequired = true: нужно задать постоянный пароль.
@@ -66,6 +67,7 @@
         <span>Повторите мастер-пароль</span>
         <PasswordInput bind:value={confirm} />
       </label>
+      <SuggestPassphrase onpick={(p) => { password = p; confirm = p }} />
       <p class="muted" style="margin: 0">
         Мастер-пароль нельзя восстановить: секреты шифруются ключом из него, и сервер его не знает.
       </p>

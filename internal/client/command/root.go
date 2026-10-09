@@ -110,6 +110,7 @@ func (c *Commands) Execute() error {
 		c.newAuthCmd(),
 		c.newSecretCmd(),
 		c.newAdminCmd(),
+		c.newGenerateCmd(),
 		c.newCompletionCmd(root),
 	)
 	return root.Execute()

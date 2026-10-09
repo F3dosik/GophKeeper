@@ -108,3 +108,22 @@ func TestResolveCACert(t *testing.T) {
 	_, err = app.resolveCACert("garbage", false)
 	assert.Error(t, err)
 }
+
+func TestGenerate(t *testing.T) {
+	app := NewApp(Options{Dir: t.TempDir()})
+
+	g, err := app.GeneratePassword(GeneratorOptions{Length: 24, Lower: true, Digits: true})
+	require.NoError(t, err)
+	assert.Regexp(t, `^[a-z0-9]{24}$`, g.Password)
+	assert.Equal(t, 124, g.EntropyBits) // 24·log2(36) ≈ 124.1 минус малая поправка на «есть цифра и буква»
+	assert.NotEmpty(t, g.Strength)
+
+	p, err := app.GeneratePassphrase(6)
+	require.NoError(t, err)
+	assert.Equal(t, 77, p.EntropyBits)
+
+	_, err = app.GeneratePassword(GeneratorOptions{Length: 20})
+	assert.ErrorContains(t, err, "VALIDATION")
+	_, err = app.GeneratePassphrase(2)
+	assert.ErrorContains(t, err, "VALIDATION")
+}
