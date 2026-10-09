@@ -373,6 +373,8 @@ gophkeeper secret create --name github --type credentials --generate
 - фронтенд: `svelte-check --fail-on-warnings` и сборка;
 - сборки CLI для Linux/macOS/Windows и десктоп-приложения на трёх ОС (Linux, Windows, macOS universal) — результаты доступны в артефактах запуска.
 
+Кроме того, `govulncheck.yml` раз в неделю проверяет `main` на уязвимости в зависимостях: они публикуются постоянно, и код может стать уязвимым без единого коммита.
+
 Релиз — по тегу: CI собирает всё заново и публикует GitHub Release с бинарями CLI, архивами приложения и `SHA256SUMS`.
 
 ```bash
