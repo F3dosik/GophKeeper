@@ -3,6 +3,8 @@
   import { secretTypes, typeIcon } from '../lib/format'
   import ChangePassword from './ChangePassword.svelte'
   import DeleteAccount from './DeleteAccount.svelte'
+  import ExportDialog from './ExportDialog.svelte'
+  import ImportDialog from './ImportDialog.svelte'
   import Modal from './Modal.svelte'
   import SecretDetail from './SecretDetail.svelte'
   import SecretForm from './SecretForm.svelte'
@@ -20,7 +22,7 @@
   let selected: { name: string; type: string } | null = $state(null)
   let mode: 'view' | 'create' | 'edit' = $state('view')
   let editing: Secret | null = $state(null)
-  let dialog: '' | 'password' | 'delete-account' | 'delete-secret' | 'menu' = $state('')
+  let dialog: '' | 'password' | 'delete-account' | 'delete-secret' | 'menu' | 'export' | 'import' = $state('')
   let notice = $state('')
   let error = $state('')
   let noticeTimer: ReturnType<typeof setTimeout> | undefined
@@ -159,6 +161,8 @@
   <Modal title={login} onclose={() => (dialog = '')}>
     <div class="stack menu">
       <button onclick={() => (dialog = 'password')}>Сменить мастер-пароль</button>
+      <button onclick={() => (dialog = 'export')}>Экспорт хранилища…</button>
+      <button onclick={() => (dialog = 'import')}>Импорт из файла…</button>
       <button onclick={() => { dialog = ''; onsettings() }}>Настройки подключения</button>
       <button onclick={() => logout(false)}>Выйти</button>
       <button onclick={() => logout(true)}>Выйти на всех устройствах</button>
@@ -167,6 +171,10 @@
   </Modal>
 {:else if dialog === 'password'}
   <ChangePassword onclose={() => (dialog = '')} ondone={() => { dialog = ''; showNotice('Пароль изменён') }} />
+{:else if dialog === 'export'}
+  <ExportDialog onclose={() => (dialog = '')} ondone={(path) => { dialog = ''; showNotice(`Экспорт сохранён: ${path}`) }} />
+{:else if dialog === 'import'}
+  <ImportDialog onclose={() => (dialog = '')} ondone={() => { dialog = ''; reload() }} />
 {:else if dialog === 'delete-account'}
   <DeleteAccount {login} onclose={() => (dialog = '')} ondone={() => { dialog = ''; onsignedout() }} />
 {:else if dialog === 'delete-secret' && selected}

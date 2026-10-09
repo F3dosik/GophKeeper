@@ -305,3 +305,55 @@ func TestE2E_Desktop_NoAdminOnPublicPort(t *testing.T) {
 	_, err = app.AdminListUsers()
 	assert.Equal(t, vault.CodeNotSupported, errorCode(t, err))
 }
+
+func TestE2E_Desktop_ExportImport(t *testing.T) {
+	ui := &fakeUI{}
+	src := newDesktopApp(t, t.TempDir(), ui)
+	require.NoError(t, src.SaveSettings(serverAddr, "", false, 5))
+	login := "exp-" + uuid.NewString()
+	require.NoError(t, src.Register(login, "desktop-pass-1"))
+	_, err := src.SignIn(login, "desktop-pass-1")
+	require.NoError(t, err)
+	require.NoError(t, src.SaveSecret(backend.SecretInput{Name: "github", Type: "credentials", Login: "me", Password: "p1"}, false))
+	require.NoError(t, src.SaveSecret(backend.SecretInput{Name: "note", Type: "text", Text: "hello"}, false))
+
+	// Экспорт: короткий пароль отклоняется, затем файл сохраняется туда, куда указал диалог.
+	assert.Equal(t, backend.CodeValidation, errorCode(t, func() error { _, err := src.ExportVault("short"); return err }()))
+	file := filepath.Join(t.TempDir(), "vault.gkx")
+	ui.savePath = file
+	path, err := src.ExportVault("export-pass-123")
+	require.NoError(t, err)
+	assert.Equal(t, file, path)
+	stat, err := os.Stat(file)
+	require.NoError(t, err)
+	assert.Equal(t, os.FileMode(0o600), stat.Mode().Perm())
+
+	// Импорт в другую учётку.
+	dst := newDesktopApp(t, t.TempDir(), ui)
+	require.NoError(t, dst.SaveSettings(serverAddr, "", false, 5))
+	other := "imp-" + uuid.NewString()
+	require.NoError(t, dst.Register(other, "desktop-pass-2"))
+	_, err = dst.SignIn(other, "desktop-pass-2")
+	require.NoError(t, err)
+	require.NoError(t, dst.SaveSecret(backend.SecretInput{Name: "note", Type: "text", Text: "mine"}, false))
+
+	_, err = dst.ImportVault(file, "wrong-password-1", false)
+	assert.Equal(t, vault.CodeWrongPassword, errorCode(t, err))
+
+	result, err := dst.ImportVault(file, "export-pass-123", false)
+	require.NoError(t, err)
+	assert.Equal(t, login, result.SourceLogin)
+	assert.Equal(t, 2, result.Total)
+	assert.Equal(t, 1, result.Created)
+	assert.Equal(t, 1, result.Skipped, "existing note is kept")
+	note, err := dst.GetSecret("note", "text")
+	require.NoError(t, err)
+	assert.Equal(t, "mine", note.Text)
+
+	result, err = dst.ImportVault(file, "export-pass-123", true)
+	require.NoError(t, err)
+	assert.Equal(t, 2, result.Updated)
+	note, err = dst.GetSecret("note", "text")
+	require.NoError(t, err)
+	assert.Equal(t, "hello", note.Text, "overwrite replaces the existing note")
+}
