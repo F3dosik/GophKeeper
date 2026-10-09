@@ -80,3 +80,14 @@ func TestLoad_Insecure(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, cfg.Insecure)
 }
+
+func TestLoad_ServerPortIsOptional(t *testing.T) {
+	t.Setenv("GOPHKEEPER_SERVER", "192.168.1.5")
+	cfg, err := config.Load()
+	require.NoError(t, err)
+	assert.Equal(t, "192.168.1.5:50051", cfg.ServerAddress)
+
+	t.Setenv("GOPHKEEPER_SERVER", "http://bad")
+	_, err = config.Load()
+	assert.Error(t, err)
+}
