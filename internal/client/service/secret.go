@@ -43,6 +43,12 @@ type SecretsService interface {
 	// ключами, выведенными из newMasterKey, вместе с новыми blind index.
 	// Используется при смене пароля.
 	Reencrypt(ctx context.Context, newMasterKey []byte) ([]domain.ReencryptedSecret, error)
+
+	// Wipe обнуляет ключ blind index и отпускает шифр. После вызова сервис непригоден.
+	// Ключ AES внутри шифра стандартной библиотеки обнулить нельзя: он станет мусором
+	// и будет собран сборщиком, поэтому Wipe уменьшает, но не исключает время жизни
+	// ключей в памяти.
+	Wipe()
 }
 
 // secretsService реализует SecretsService.
@@ -260,4 +266,11 @@ func (s *secretsService) Reencrypt(ctx context.Context, newMasterKey []byte) ([]
 		})
 	}
 	return result, nil
+}
+
+// Wipe обнуляет ключи сервиса.
+func (s *secretsService) Wipe() {
+	clear(s.hmacKey)
+	s.hmacKey = nil
+	s.cipher = nil
 }

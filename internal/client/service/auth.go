@@ -57,6 +57,11 @@ type AuthService interface {
 	// подтверждая пароль на сервере, и удаляет локальную сессию.
 	// Возвращает domain.ErrInvalidCredentials при неверном пароле.
 	DeleteAccount(ctx context.Context, login, password string) error
+
+	// RefreshToken получает новый токен по уже выведенному мастер-ключу, без пароля
+	// и без Argon2id, и сохраняет его в сессию. Нужен клиентам, которые держат хранилище
+	// разблокированным дольше срока жизни токена.
+	RefreshToken(ctx context.Context, login string, masterKey []byte) error
 }
 
 // Reencryptor перешифровывает все секреты пользователя ключами от newMasterKey.
@@ -307,5 +312,24 @@ func (s *authService) DeleteAccount(ctx context.Context, login, password string)
 		return fmt.Errorf("authService.DeleteAccount: учётка удалена, но не удалось удалить сессию: %w", err)
 	}
 	s.tokens.SetToken("")
+	return nil
+}
+
+// RefreshToken получает новый токен по мастер-ключу и сохраняет сессию.
+func (s *authService) RefreshToken(ctx context.Context, login string, masterKey []byte) error {
+	authKey, err := crypto.HKDF(masterKey, crypto.InfoAuth)
+	if err != nil {
+		return fmt.Errorf("authService.RefreshToken: %w", err)
+	}
+	token, changeRequired, err := s.client.Login(ctx, domain.Credentials{Login: login, AuthKey: authKey})
+	if err != nil {
+		return fmt.Errorf("authService.RefreshToken: %w", err)
+	}
+	if changeRequired {
+		return fmt.Errorf("authService.RefreshToken: %w", domain.ErrPasswordChangeRequired)
+	}
+	if err := s.saveSession(login, token); err != nil {
+		return fmt.Errorf("authService.RefreshToken: %w", err)
+	}
 	return nil
 }

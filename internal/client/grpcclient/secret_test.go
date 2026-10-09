@@ -252,3 +252,12 @@ func TestSecretsClient_DeleteSecret(t *testing.T) {
 		assert.ErrorIs(t, err, domain.ErrInvalidCredentials)
 	})
 }
+
+func TestFromGRPCError_Unavailable(t *testing.T) {
+	mockPB := mocks.NewPBSecretsClient(t)
+	mockPB.On("ListSecrets", mock.Anything, mock.Anything, mock.Anything).
+		Return(nil, status.Error(codes.Unavailable, "connection refused"))
+
+	_, err := grpcclient.NewSecretsClient(mockPB).ListSecrets(context.Background())
+	assert.ErrorIs(t, err, domain.ErrUnavailable)
+}
