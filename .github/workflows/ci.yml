@@ -1,0 +1,146 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  WAILS_VERSION: v2.16.0
+  NODE_VERSION: "22"
+
+jobs:
+  go:
+    name: Go — vet, тесты, e2e, govulncheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: go vet
+        run: |
+          go vet ./...
+          go vet -tags=e2e ./tests/...
+      - name: Unit-тесты (-race)
+        run: go test -race ./...
+      - name: E2E-тесты (testcontainers, PostgreSQL)
+        run: go test -tags=e2e ./tests/e2e/...
+      - name: govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+  frontend:
+    name: Фронтенд — svelte-check и сборка
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: desktop/frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: desktop/frontend/package-lock.json
+      - run: npm ci
+      - run: npx svelte-check --tsconfig ./tsconfig.json --fail-on-warnings
+      - run: npm run build
+
+  cli:
+    name: CLI — сборка для всех платформ
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # git describe для версии в бинаре
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - run: make build-client-all
+      - uses: actions/upload-artifact@v7
+        with:
+          name: cli
+          path: bin/
+          if-no-files-found: error
+
+  desktop:
+    name: Десктоп — ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-amd64
+            os: ubuntu-24.04
+            platform: linux/amd64
+            tags: -tags webkit2_41
+          - name: windows-amd64
+            os: windows-latest
+            platform: windows/amd64
+            tags: ""
+          - name: macos-universal
+            os: macos-latest
+            platform: darwin/universal
+            tags: ""
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: desktop/frontend/package-lock.json
+      - name: Системные библиотеки (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+      - name: Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@${{ env.WAILS_VERSION }}
+      - name: Сборка
+        working-directory: desktop
+        shell: bash
+        run: wails build -clean -platform ${{ matrix.platform }} ${{ matrix.tags }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: desktop-${{ matrix.name }}
+          path: desktop/build/bin/
+          if-no-files-found: error
+
+  release:
+    name: Релиз
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [go, frontend, cli, desktop]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+      - name: Упаковка
+        working-directory: dist
+        run: |
+          mkdir release
+          # CLI — отдельными файлами, десктоп — архивами (на macOS это каталог .app).
+          cp cli/* release/
+          for dir in desktop-*/; do
+            name="${dir%/}"
+            (cd "$name" && zip -qr "../release/gophkeeper-${name}-${GITHUB_REF_NAME}.zip" .)
+          done
+          (cd release && sha256sum * > SHA256SUMS)
+          ls -la release
+      - name: GitHub Release
+        working-directory: dist/release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release create "$GITHUB_REF_NAME" ./* --title "$GITHUB_REF_NAME" --generate-notes --verify-tag

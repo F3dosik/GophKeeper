@@ -1,4 +1,4 @@
-.PHONY: help generate docs build-client build-client-all build-server test test-e2e test-cover docker-up docker-down certs ca-encrypt desktop-dev desktop-build desktop-build-windows clean
+.PHONY: help generate docs build-client build-client-all build-server test test-e2e test-cover docker-up docker-down backup restore certs ca-encrypt desktop-dev desktop-build desktop-build-windows clean
 
 # Версия и дата сборки — подставляются в бинарь клиента через -ldflags.
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -9,6 +9,11 @@ LDFLAGS := -X github.com/F3dosik/GophKeeper/internal/client/command.Version=$(VE
 SHELL := /bin/bash
 
 BIN_DIR := bin
+
+# Резервные копии: каталог и владелец файлов, создаваемых сервисом backup.
+BACKUP_DIR := backups
+export BACKUP_UID ?= $(shell id -u)
+export BACKUP_GID ?= $(shell id -g)
 
 # Десктоп-клиент (Wails). WAILS — путь к CLI: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 # На Ubuntu 24.04+ есть только WebKitGTK 4.1, для него нужен тег webkit2_41.
@@ -37,6 +42,8 @@ help:
 	@echo "  test-cover        — покрытие тестами"
 	@echo "  docker-up         — поднять сервер в docker-compose"
 	@echo "  docker-down       — остановить docker-compose"
+	@echo "  backup            — резервная копия базы сейчас → backups/manual-*.dump"
+	@echo "  restore FILE=...  — восстановить базу из копии (с подтверждением)"
 	@echo "  certs             — сгенерировать CA и TLS-сертификат сервера (CERT_HOSTS=...)"
 	@echo "  ca-encrypt        — зашифровать паролем существующий ключ CA"
 	@echo "  desktop-dev       — десктоп-клиент в режиме разработки (горячая перезагрузка)"
@@ -166,7 +173,36 @@ desktop-build-windows:
 	cd $(DESKTOP_DIR) && $(WAILS) build -platform windows/amd64
 
 docker-up:
+	@mkdir -p $(BACKUP_DIR)
 	docker compose up -d --build
+
+# Разовая копия. Имя manual-* не попадает под ротацию сервиса backup.
+backup:
+	@mkdir -p $(BACKUP_DIR)
+	@f=$(BACKUP_DIR)/manual-$$(date -u +%Y%m%dT%H%M%SZ).dump; \
+	if docker compose exec -T db sh -c 'pg_dump -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -Fc' > $$f.tmp; then \
+		mv $$f.tmp $$f && chmod 600 $$f && echo "Копия: $$f ($$(wc -c < $$f) байт)"; \
+	else \
+		rm -f $$f.tmp; echo "Не удалось сделать копию"; exit 1; \
+	fi
+
+# Восстановление из копии. Сервер останавливается на время восстановления и запускается
+# снова даже при ошибке; восстановление идёт одной транзакцией, поэтому при ошибке база
+# остаётся прежней. После восстановления все токены отзываются: в копии старые версии
+# токенов и список отозванных, без этого отозванные после копии токены снова заработали бы.
+restore:
+	@test -n "$(FILE)" || { echo "Укажите копию: make restore FILE=$(BACKUP_DIR)/gophkeeper-<время>.dump"; exit 1; }
+	@test -f "$(FILE)" || { echo "Файл $(FILE) не найден"; exit 1; }
+	@echo "Данные сервера будут заменены копией $(FILE). Всё, что создано после неё, пропадёт."
+	@read -p "Для продолжения введите yes: " answer && [ "$$answer" = yes ] || { echo "Отменено"; exit 1; }
+	@docker compose stop gophkeeper; status=0; \
+	docker compose exec -T db sh -c 'pg_restore -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" --clean --if-exists --no-owner --single-transaction' < "$(FILE)" \
+	&& docker compose exec -T db sh -c 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -q -v ON_ERROR_STOP=1 -c "UPDATE users SET token_version = token_version + 1; DELETE FROM revoked_tokens;"' \
+	|| status=$$?; \
+	docker compose start gophkeeper; \
+	if [ $$status -eq 0 ]; then echo "Восстановлено. Все сессии завершены: пользователям нужно снова войти."; \
+	else echo "Восстановление не удалось, база не изменилась"; fi; \
+	exit $$status
 
 docker-down:
 	docker compose down

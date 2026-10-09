@@ -11,5 +11,5 @@ RUN apk add --no-cache ca-certificates \
 COPY --from=builder /server /server
 USER gophkeeper
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
-    CMD nc -z localhost 50051 || exit 1
+    CMD nc -z localhost "${SERVER_PORT:-50051}" || exit 1
 ENTRYPOINT ["/server"]

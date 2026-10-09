@@ -23,6 +23,9 @@ certs/*.key
 certs/*.crt
 ca/
 
+# Резервные копии базы
+backups/
+
 # Go
 vendor/
 
