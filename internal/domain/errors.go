@@ -55,6 +55,10 @@ var (
 	// (codes.Unimplemented): например, административный метод вызван на публичном порту.
 	ErrNotSupported = errors.New("not supported by this server")
 
+	// ErrUnavailable возвращается клиенту, если сервер недоступен или не ответил вовремя
+	// (codes.Unavailable, codes.DeadlineExceeded).
+	ErrUnavailable = errors.New("server unavailable")
+
 	// ErrResourceExhausted возвращается клиенту, когда сервер отклонил запрос из-за лимита
 	// (частоты запросов или квоты хранилища).
 	ErrResourceExhausted = errors.New("limit exceeded")

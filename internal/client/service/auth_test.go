@@ -1,6 +1,7 @@
 package service_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -364,4 +365,24 @@ func TestAuthService_DeleteAccount(t *testing.T) {
 		_, err := os.Stat(path)
 		assert.NoError(t, err)
 	})
+}
+
+func TestAuthService_RefreshToken(t *testing.T) {
+	masterKey := bytes.Repeat([]byte{7}, 32)
+	authKey, err := crypto.HKDF(masterKey, crypto.InfoAuth)
+	require.NoError(t, err)
+
+	mockAuth := mocks.NewAuthClient(t)
+	mockAuth.On("Login", mock.Anything, domain.Credentials{Login: "user", AuthKey: authKey}).
+		Return("fresh-token", false, nil)
+
+	sessionPath := t.TempDir() + "/session"
+	tokens := grpcclient.NewTokenStore("old")
+	svc := service.NewAuthService(mockAuth, sessionPath, tokens)
+
+	require.NoError(t, svc.RefreshToken(context.Background(), "user", masterKey))
+	assert.Equal(t, "fresh-token", tokens.Token())
+	sess, err := session.Load(sessionPath)
+	require.NoError(t, err)
+	assert.Equal(t, "fresh-token", sess.Token)
 }
