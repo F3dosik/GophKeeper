@@ -9,6 +9,7 @@ package gen
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	unsafe "unsafe"
 )
@@ -19,6 +20,710 @@ const (
 	// Verify that runtime/protoimpl is sufficiently up-to-date.
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
+
+// UserInfo — сведения о пользователе для администратора. Содержимое секретов
+// администратору недоступно: оно зашифровано ключом пользователя.
+type UserInfo struct {
+	state                                 protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Login                      *string                `protobuf:"bytes,1,opt,name=login"`
+	xxx_hidden_CreatedAt                  *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=created_at,json=createdAt"`
+	xxx_hidden_SecretCount                int32                  `protobuf:"varint,3,opt,name=secret_count,json=secretCount"`
+	xxx_hidden_TemporaryPasswordExpiresAt *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=temporary_password_expires_at,json=temporaryPasswordExpiresAt"`
+	xxx_hidden_KdfTime                    uint32                 `protobuf:"varint,5,opt,name=kdf_time,json=kdfTime"`
+	xxx_hidden_KdfMemoryKib               uint32                 `protobuf:"varint,6,opt,name=kdf_memory_kib,json=kdfMemoryKib"`
+	XXX_raceDetectHookData                protoimpl.RaceDetectHookData
+	XXX_presence                          [1]uint32
+	unknownFields                         protoimpl.UnknownFields
+	sizeCache                             protoimpl.SizeCache
+}
+
+func (x *UserInfo) Reset() {
+	*x = UserInfo{}
+	mi := &file_proto_admin_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UserInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UserInfo) ProtoMessage() {}
+
+func (x *UserInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_admin_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *UserInfo) GetLogin() string {
+	if x != nil {
+		if x.xxx_hidden_Login != nil {
+			return *x.xxx_hidden_Login
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *UserInfo) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_CreatedAt
+	}
+	return nil
+}
+
+func (x *UserInfo) GetSecretCount() int32 {
+	if x != nil {
+		return x.xxx_hidden_SecretCount
+	}
+	return 0
+}
+
+func (x *UserInfo) GetTemporaryPasswordExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_TemporaryPasswordExpiresAt
+	}
+	return nil
+}
+
+func (x *UserInfo) GetKdfTime() uint32 {
+	if x != nil {
+		return x.xxx_hidden_KdfTime
+	}
+	return 0
+}
+
+func (x *UserInfo) GetKdfMemoryKib() uint32 {
+	if x != nil {
+		return x.xxx_hidden_KdfMemoryKib
+	}
+	return 0
+}
+
+func (x *UserInfo) SetLogin(v string) {
+	x.xxx_hidden_Login = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 6)
+}
+
+func (x *UserInfo) SetCreatedAt(v *timestamppb.Timestamp) {
+	x.xxx_hidden_CreatedAt = v
+}
+
+func (x *UserInfo) SetSecretCount(v int32) {
+	x.xxx_hidden_SecretCount = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 6)
+}
+
+func (x *UserInfo) SetTemporaryPasswordExpiresAt(v *timestamppb.Timestamp) {
+	x.xxx_hidden_TemporaryPasswordExpiresAt = v
+}
+
+func (x *UserInfo) SetKdfTime(v uint32) {
+	x.xxx_hidden_KdfTime = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 6)
+}
+
+func (x *UserInfo) SetKdfMemoryKib(v uint32) {
+	x.xxx_hidden_KdfMemoryKib = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 5, 6)
+}
+
+func (x *UserInfo) HasLogin() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
+}
+
+func (x *UserInfo) HasCreatedAt() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_CreatedAt != nil
+}
+
+func (x *UserInfo) HasSecretCount() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
+}
+
+func (x *UserInfo) HasTemporaryPasswordExpiresAt() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_TemporaryPasswordExpiresAt != nil
+}
+
+func (x *UserInfo) HasKdfTime() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 4)
+}
+
+func (x *UserInfo) HasKdfMemoryKib() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 5)
+}
+
+func (x *UserInfo) ClearLogin() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
+	x.xxx_hidden_Login = nil
+}
+
+func (x *UserInfo) ClearCreatedAt() {
+	x.xxx_hidden_CreatedAt = nil
+}
+
+func (x *UserInfo) ClearSecretCount() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
+	x.xxx_hidden_SecretCount = 0
+}
+
+func (x *UserInfo) ClearTemporaryPasswordExpiresAt() {
+	x.xxx_hidden_TemporaryPasswordExpiresAt = nil
+}
+
+func (x *UserInfo) ClearKdfTime() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 4)
+	x.xxx_hidden_KdfTime = 0
+}
+
+func (x *UserInfo) ClearKdfMemoryKib() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 5)
+	x.xxx_hidden_KdfMemoryKib = 0
+}
+
+type UserInfo_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// Логин.
+	Login *string
+	// Время регистрации.
+	CreatedAt *timestamppb.Timestamp
+	// Число секретов.
+	SecretCount *int32
+	// Для временного пароля — время, до которого им можно войти; не задано,
+	// если пароль постоянный.
+	TemporaryPasswordExpiresAt *timestamppb.Timestamp
+	// Параметры Argon2id пользователя: проходы и память в КиБ.
+	KdfTime      *uint32
+	KdfMemoryKib *uint32
+}
+
+func (b0 UserInfo_builder) Build() *UserInfo {
+	m0 := &UserInfo{}
+	b, x := &b0, m0
+	_, _ = b, x
+	if b.Login != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 6)
+		x.xxx_hidden_Login = b.Login
+	}
+	x.xxx_hidden_CreatedAt = b.CreatedAt
+	if b.SecretCount != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 6)
+		x.xxx_hidden_SecretCount = *b.SecretCount
+	}
+	x.xxx_hidden_TemporaryPasswordExpiresAt = b.TemporaryPasswordExpiresAt
+	if b.KdfTime != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 6)
+		x.xxx_hidden_KdfTime = *b.KdfTime
+	}
+	if b.KdfMemoryKib != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 6)
+		x.xxx_hidden_KdfMemoryKib = *b.KdfMemoryKib
+	}
+	return m0
+}
+
+// ListUsersRequest — запрос страницы списка пользователей.
+type ListUsersRequest struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_PageSize    int32                  `protobuf:"varint,1,opt,name=page_size,json=pageSize"`
+	xxx_hidden_PageToken   *string                `protobuf:"bytes,2,opt,name=page_token,json=pageToken"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *ListUsersRequest) Reset() {
+	*x = ListUsersRequest{}
+	mi := &file_proto_admin_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListUsersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListUsersRequest) ProtoMessage() {}
+
+func (x *ListUsersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_admin_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ListUsersRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.xxx_hidden_PageSize
+	}
+	return 0
+}
+
+func (x *ListUsersRequest) GetPageToken() string {
+	if x != nil {
+		if x.xxx_hidden_PageToken != nil {
+			return *x.xxx_hidden_PageToken
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *ListUsersRequest) SetPageSize(v int32) {
+	x.xxx_hidden_PageSize = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 2)
+}
+
+func (x *ListUsersRequest) SetPageToken(v string) {
+	x.xxx_hidden_PageToken = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 2)
+}
+
+func (x *ListUsersRequest) HasPageSize() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
+}
+
+func (x *ListUsersRequest) HasPageToken() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+}
+
+func (x *ListUsersRequest) ClearPageSize() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
+	x.xxx_hidden_PageSize = 0
+}
+
+func (x *ListUsersRequest) ClearPageToken() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_PageToken = nil
+}
+
+type ListUsersRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	// Максимум пользователей на странице (1–100, по умолчанию 100).
+	PageSize *int32
+	// Курсор из next_page_token; пустой — первая страница.
+	PageToken *string
+}
+
+func (b0 ListUsersRequest_builder) Build() *ListUsersRequest {
+	m0 := &ListUsersRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	if b.PageSize != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 2)
+		x.xxx_hidden_PageSize = *b.PageSize
+	}
+	if b.PageToken != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 2)
+		x.xxx_hidden_PageToken = b.PageToken
+	}
+	return m0
+}
+
+// ListUsersResponse — страница списка пользователей, по возрастанию логина.
+type ListUsersResponse struct {
+	state                    protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Users         *[]*UserInfo           `protobuf:"bytes,1,rep,name=users"`
+	xxx_hidden_NextPageToken *string                `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken"`
+	XXX_raceDetectHookData   protoimpl.RaceDetectHookData
+	XXX_presence             [1]uint32
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
+}
+
+func (x *ListUsersResponse) Reset() {
+	*x = ListUsersResponse{}
+	mi := &file_proto_admin_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListUsersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListUsersResponse) ProtoMessage() {}
+
+func (x *ListUsersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_admin_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ListUsersResponse) GetUsers() []*UserInfo {
+	if x != nil {
+		if x.xxx_hidden_Users != nil {
+			return *x.xxx_hidden_Users
+		}
+	}
+	return nil
+}
+
+func (x *ListUsersResponse) GetNextPageToken() string {
+	if x != nil {
+		if x.xxx_hidden_NextPageToken != nil {
+			return *x.xxx_hidden_NextPageToken
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *ListUsersResponse) SetUsers(v []*UserInfo) {
+	x.xxx_hidden_Users = &v
+}
+
+func (x *ListUsersResponse) SetNextPageToken(v string) {
+	x.xxx_hidden_NextPageToken = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 2)
+}
+
+func (x *ListUsersResponse) HasNextPageToken() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+}
+
+func (x *ListUsersResponse) ClearNextPageToken() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_NextPageToken = nil
+}
+
+type ListUsersResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Users []*UserInfo
+	// Курсор следующей страницы; пустой, если страница последняя.
+	NextPageToken *string
+}
+
+func (b0 ListUsersResponse_builder) Build() *ListUsersResponse {
+	m0 := &ListUsersResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Users = &b.Users
+	if b.NextPageToken != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 2)
+		x.xxx_hidden_NextPageToken = b.NextPageToken
+	}
+	return m0
+}
+
+// GetUserRequest — запрос сведений о пользователе.
+type GetUserRequest struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Login       *string                `protobuf:"bytes,1,opt,name=login"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *GetUserRequest) Reset() {
+	*x = GetUserRequest{}
+	mi := &file_proto_admin_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetUserRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetUserRequest) ProtoMessage() {}
+
+func (x *GetUserRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_admin_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *GetUserRequest) GetLogin() string {
+	if x != nil {
+		if x.xxx_hidden_Login != nil {
+			return *x.xxx_hidden_Login
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *GetUserRequest) SetLogin(v string) {
+	x.xxx_hidden_Login = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 1)
+}
+
+func (x *GetUserRequest) HasLogin() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
+}
+
+func (x *GetUserRequest) ClearLogin() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
+	x.xxx_hidden_Login = nil
+}
+
+type GetUserRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Login *string
+}
+
+func (b0 GetUserRequest_builder) Build() *GetUserRequest {
+	m0 := &GetUserRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	if b.Login != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 1)
+		x.xxx_hidden_Login = b.Login
+	}
+	return m0
+}
+
+// GetUserResponse — сведения о пользователе.
+type GetUserResponse struct {
+	state           protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_User *UserInfo              `protobuf:"bytes,1,opt,name=user"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *GetUserResponse) Reset() {
+	*x = GetUserResponse{}
+	mi := &file_proto_admin_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetUserResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetUserResponse) ProtoMessage() {}
+
+func (x *GetUserResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_admin_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *GetUserResponse) GetUser() *UserInfo {
+	if x != nil {
+		return x.xxx_hidden_User
+	}
+	return nil
+}
+
+func (x *GetUserResponse) SetUser(v *UserInfo) {
+	x.xxx_hidden_User = v
+}
+
+func (x *GetUserResponse) HasUser() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_User != nil
+}
+
+func (x *GetUserResponse) ClearUser() {
+	x.xxx_hidden_User = nil
+}
+
+type GetUserResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	User *UserInfo
+}
+
+func (b0 GetUserResponse_builder) Build() *GetUserResponse {
+	m0 := &GetUserResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_User = b.User
+	return m0
+}
+
+// RevokeSessionsRequest — запрос завершения всех сессий пользователя.
+type RevokeSessionsRequest struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Login       *string                `protobuf:"bytes,1,opt,name=login"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *RevokeSessionsRequest) Reset() {
+	*x = RevokeSessionsRequest{}
+	mi := &file_proto_admin_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeSessionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeSessionsRequest) ProtoMessage() {}
+
+func (x *RevokeSessionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_admin_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *RevokeSessionsRequest) GetLogin() string {
+	if x != nil {
+		if x.xxx_hidden_Login != nil {
+			return *x.xxx_hidden_Login
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *RevokeSessionsRequest) SetLogin(v string) {
+	x.xxx_hidden_Login = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 1)
+}
+
+func (x *RevokeSessionsRequest) HasLogin() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
+}
+
+func (x *RevokeSessionsRequest) ClearLogin() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
+	x.xxx_hidden_Login = nil
+}
+
+type RevokeSessionsRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Login *string
+}
+
+func (b0 RevokeSessionsRequest_builder) Build() *RevokeSessionsRequest {
+	m0 := &RevokeSessionsRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	if b.Login != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 1)
+		x.xxx_hidden_Login = b.Login
+	}
+	return m0
+}
+
+// RevokeSessionsResponse — пустой ответ.
+type RevokeSessionsResponse struct {
+	state         protoimpl.MessageState `protogen:"opaque.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokeSessionsResponse) Reset() {
+	*x = RevokeSessionsResponse{}
+	mi := &file_proto_admin_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeSessionsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeSessionsResponse) ProtoMessage() {}
+
+func (x *RevokeSessionsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_admin_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+type RevokeSessionsResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+}
+
+func (b0 RevokeSessionsResponse_builder) Build() *RevokeSessionsResponse {
+	m0 := &RevokeSessionsResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	return m0
+}
 
 // DeleteUserRequest — запрос удаления пользователя администратором.
 type DeleteUserRequest struct {
@@ -32,7 +737,7 @@ type DeleteUserRequest struct {
 
 func (x *DeleteUserRequest) Reset() {
 	*x = DeleteUserRequest{}
-	mi := &file_proto_admin_proto_msgTypes[0]
+	mi := &file_proto_admin_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -44,7 +749,7 @@ func (x *DeleteUserRequest) String() string {
 func (*DeleteUserRequest) ProtoMessage() {}
 
 func (x *DeleteUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_admin_proto_msgTypes[0]
+	mi := &file_proto_admin_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -109,7 +814,7 @@ type DeleteUserResponse struct {
 
 func (x *DeleteUserResponse) Reset() {
 	*x = DeleteUserResponse{}
-	mi := &file_proto_admin_proto_msgTypes[1]
+	mi := &file_proto_admin_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -121,7 +826,7 @@ func (x *DeleteUserResponse) String() string {
 func (*DeleteUserResponse) ProtoMessage() {}
 
 func (x *DeleteUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_admin_proto_msgTypes[1]
+	mi := &file_proto_admin_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -148,27 +853,70 @@ var File_proto_admin_proto protoreflect.FileDescriptor
 
 const file_proto_admin_proto_rawDesc = "" +
 	"\n" +
-	"\x11proto/admin.proto\x12\x05admin\")\n" +
+	"\x11proto/admin.proto\x12\x05admin\x1a\x1fgoogle/protobuf/timestamp.proto\"\x9e\x02\n" +
+	"\bUserInfo\x12\x14\n" +
+	"\x05login\x18\x01 \x01(\tR\x05login\x129\n" +
+	"\n" +
+	"created_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12!\n" +
+	"\fsecret_count\x18\x03 \x01(\x05R\vsecretCount\x12]\n" +
+	"\x1dtemporary_password_expires_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\x1atemporaryPasswordExpiresAt\x12\x19\n" +
+	"\bkdf_time\x18\x05 \x01(\rR\akdfTime\x12$\n" +
+	"\x0ekdf_memory_kib\x18\x06 \x01(\rR\fkdfMemoryKib\"N\n" +
+	"\x10ListUsersRequest\x12\x1b\n" +
+	"\tpage_size\x18\x01 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\"b\n" +
+	"\x11ListUsersResponse\x12%\n" +
+	"\x05users\x18\x01 \x03(\v2\x0f.admin.UserInfoR\x05users\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"&\n" +
+	"\x0eGetUserRequest\x12\x14\n" +
+	"\x05login\x18\x01 \x01(\tR\x05login\"6\n" +
+	"\x0fGetUserResponse\x12#\n" +
+	"\x04user\x18\x01 \x01(\v2\x0f.admin.UserInfoR\x04user\"-\n" +
+	"\x15RevokeSessionsRequest\x12\x14\n" +
+	"\x05login\x18\x01 \x01(\tR\x05login\"\x18\n" +
+	"\x16RevokeSessionsResponse\")\n" +
 	"\x11DeleteUserRequest\x12\x14\n" +
 	"\x05login\x18\x01 \x01(\tR\x05login\"\x14\n" +
-	"\x12DeleteUserResponse2J\n" +
+	"\x12DeleteUserResponse2\x93\x02\n" +
 	"\x05Admin\x12A\n" +
 	"\n" +
-	"DeleteUser\x12\x18.admin.DeleteUserRequest\x1a\x19.admin.DeleteUserResponseB)Z'github.com/F3dosik/GophKeeper/proto/genb\beditionsp\xe8\a"
+	"DeleteUser\x12\x18.admin.DeleteUserRequest\x1a\x19.admin.DeleteUserResponse\x12>\n" +
+	"\tListUsers\x12\x17.admin.ListUsersRequest\x1a\x18.admin.ListUsersResponse\x128\n" +
+	"\aGetUser\x12\x15.admin.GetUserRequest\x1a\x16.admin.GetUserResponse\x12M\n" +
+	"\x0eRevokeSessions\x12\x1c.admin.RevokeSessionsRequest\x1a\x1d.admin.RevokeSessionsResponseB)Z'github.com/F3dosik/GophKeeper/proto/genb\beditionsp\xe8\a"
 
-var file_proto_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_proto_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_proto_admin_proto_goTypes = []any{
-	(*DeleteUserRequest)(nil),  // 0: admin.DeleteUserRequest
-	(*DeleteUserResponse)(nil), // 1: admin.DeleteUserResponse
+	(*UserInfo)(nil),               // 0: admin.UserInfo
+	(*ListUsersRequest)(nil),       // 1: admin.ListUsersRequest
+	(*ListUsersResponse)(nil),      // 2: admin.ListUsersResponse
+	(*GetUserRequest)(nil),         // 3: admin.GetUserRequest
+	(*GetUserResponse)(nil),        // 4: admin.GetUserResponse
+	(*RevokeSessionsRequest)(nil),  // 5: admin.RevokeSessionsRequest
+	(*RevokeSessionsResponse)(nil), // 6: admin.RevokeSessionsResponse
+	(*DeleteUserRequest)(nil),      // 7: admin.DeleteUserRequest
+	(*DeleteUserResponse)(nil),     // 8: admin.DeleteUserResponse
+	(*timestamppb.Timestamp)(nil),  // 9: google.protobuf.Timestamp
 }
 var file_proto_admin_proto_depIdxs = []int32{
-	0, // 0: admin.Admin.DeleteUser:input_type -> admin.DeleteUserRequest
-	1, // 1: admin.Admin.DeleteUser:output_type -> admin.DeleteUserResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	9, // 0: admin.UserInfo.created_at:type_name -> google.protobuf.Timestamp
+	9, // 1: admin.UserInfo.temporary_password_expires_at:type_name -> google.protobuf.Timestamp
+	0, // 2: admin.ListUsersResponse.users:type_name -> admin.UserInfo
+	0, // 3: admin.GetUserResponse.user:type_name -> admin.UserInfo
+	7, // 4: admin.Admin.DeleteUser:input_type -> admin.DeleteUserRequest
+	1, // 5: admin.Admin.ListUsers:input_type -> admin.ListUsersRequest
+	3, // 6: admin.Admin.GetUser:input_type -> admin.GetUserRequest
+	5, // 7: admin.Admin.RevokeSessions:input_type -> admin.RevokeSessionsRequest
+	8, // 8: admin.Admin.DeleteUser:output_type -> admin.DeleteUserResponse
+	2, // 9: admin.Admin.ListUsers:output_type -> admin.ListUsersResponse
+	4, // 10: admin.Admin.GetUser:output_type -> admin.GetUserResponse
+	6, // 11: admin.Admin.RevokeSessions:output_type -> admin.RevokeSessionsResponse
+	8, // [8:12] is the sub-list for method output_type
+	4, // [4:8] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_proto_admin_proto_init() }
@@ -182,7 +930,7 @@ func file_proto_admin_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_admin_proto_rawDesc), len(file_proto_admin_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

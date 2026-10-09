@@ -107,7 +107,7 @@ func New(ctx context.Context, cfg *Config, logger *zap.SugaredLogger) (*App, err
 			AllowRegistration: true,
 			AllowTemporary:    true,
 		}))
-		pb.RegisterAdminServer(a.adminServer, grpchandler.NewAdminHandler(authService))
+		pb.RegisterAdminServer(a.adminServer, grpchandler.NewAdminHandler(service.NewAdminService(userRepo, tokenRepo)))
 	}
 
 	return a, nil

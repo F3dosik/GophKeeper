@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/F3dosik/GophKeeper/internal/client/command"
 	"github.com/F3dosik/GophKeeper/internal/client/config"
@@ -147,4 +148,21 @@ func TestAdminDeleteUser(t *testing.T) {
 		captureStdout(t, func() { err = run(admin, "bob", "--yes") })
 		assert.ErrorContains(t, err, "ADMIN_PORT")
 	})
+}
+
+func TestAdminListUsers(t *testing.T) {
+	expires := time.Now().Add(time.Hour)
+	admin := mocks.NewAdminClient(t)
+	admin.On("ListUsers", mock.Anything).Return([]*domain.UserInfo{
+		{Login: "alice", CreatedAt: time.Now(), SecretCount: 5},
+		{Login: "bob", CreatedAt: time.Now(), PasswordExpiresAt: &expires},
+	}, nil)
+
+	out := captureStdout(t, func() {
+		os.Args = []string{"gophkeeper", "admin", "list-users"}
+		require.NoError(t, command.New(nil, nil, admin, &config.Config{}).Execute())
+	})
+	assert.Contains(t, out, "alice")
+	assert.Contains(t, out, "постоянный")
+	assert.Contains(t, out, "временный до")
 }

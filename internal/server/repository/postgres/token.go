@@ -8,6 +8,7 @@ import (
 	"github.com/F3dosik/GophKeeper/internal/domain"
 	"github.com/F3dosik/GophKeeper/internal/server/repository"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -72,6 +73,25 @@ func (r *tokenRepository) RevokeAll(ctx context.Context, userID uuid.UUID) error
 	})
 	if err != nil {
 		return fmt.Errorf("tokenRepository.RevokeAll: %w", err)
+	}
+	return nil
+}
+
+// RevokeAllByLogin увеличивает версию токенов пользователя с логином login.
+func (r *tokenRepository) RevokeAllByLogin(ctx context.Context, login string) error {
+	var tag pgconn.CommandTag
+	err := repository.WithRetry(ctx, isRetriable, func() error {
+		var err error
+		tag, err = r.pool.Exec(ctx, `
+			UPDATE users SET token_version = token_version + 1 WHERE login = $1
+		`, login)
+		return err
+	})
+	if err != nil {
+		return fmt.Errorf("tokenRepository.RevokeAllByLogin: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.ErrUserNotFound
 	}
 	return nil
 }

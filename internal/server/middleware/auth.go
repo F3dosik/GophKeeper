@@ -26,7 +26,10 @@ var publicMethods = map[string]bool{
 	pb.Auth_Login_FullMethodName:      true,
 	// Административные методы не требуют токена: сервис Admin регистрируется только на
 	// административном порту, доступном с localhost; на публичном порту его нет.
-	pb.Admin_DeleteUser_FullMethodName: true,
+	pb.Admin_DeleteUser_FullMethodName:     true,
+	pb.Admin_ListUsers_FullMethodName:      true,
+	pb.Admin_GetUser_FullMethodName:        true,
+	pb.Admin_RevokeSessions_FullMethodName: true,
 }
 
 // passwordChangeMethods — методы, доступные с токеном временного пароля.

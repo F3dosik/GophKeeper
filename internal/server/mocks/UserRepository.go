@@ -128,6 +128,66 @@ func (_m *UserRepository) GetByLogin(ctx context.Context, login string) (*domain
 	return r0, r1
 }
 
+// GetInfo provides a mock function with given fields: ctx, login
+func (_m *UserRepository) GetInfo(ctx context.Context, login string) (*domain.UserInfo, error) {
+	ret := _m.Called(ctx, login)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetInfo")
+	}
+
+	var r0 *domain.UserInfo
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (*domain.UserInfo, error)); ok {
+		return rf(ctx, login)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) *domain.UserInfo); ok {
+		r0 = rf(ctx, login)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*domain.UserInfo)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, login)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListInfo provides a mock function with given fields: ctx, afterLogin, limit
+func (_m *UserRepository) ListInfo(ctx context.Context, afterLogin string, limit int) ([]*domain.UserInfo, error) {
+	ret := _m.Called(ctx, afterLogin, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListInfo")
+	}
+
+	var r0 []*domain.UserInfo
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, int) ([]*domain.UserInfo, error)); ok {
+		return rf(ctx, afterLogin, limit)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, int) []*domain.UserInfo); ok {
+		r0 = rf(ctx, afterLogin, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*domain.UserInfo)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, int) error); ok {
+		r1 = rf(ctx, afterLogin, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // NewUserRepository creates a new instance of UserRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewUserRepository(t interface {

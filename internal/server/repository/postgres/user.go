@@ -7,6 +7,7 @@ import (
 	"github.com/F3dosik/GophKeeper/internal/domain"
 	"github.com/F3dosik/GophKeeper/internal/server/repository"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -184,4 +185,72 @@ func (r *userRepository) DeleteByLogin(ctx context.Context, login string) error 
 		return domain.ErrUserNotFound
 	}
 	return nil
+}
+
+// userInfoQuery выбирает сведения о пользователях вместе с числом их секретов.
+const userInfoQuery = `
+	SELECT u.login, u.created_at, u.password_expires_at, u.kdf_time, u.kdf_memory_kib, u.kdf_threads,
+	       (SELECT count(*) FROM secrets s WHERE s.user_id = u.id)
+	FROM users u
+`
+
+// scanUserInfo читает строку userInfoQuery.
+func scanUserInfo(row pgx.Row) (*domain.UserInfo, error) {
+	var info domain.UserInfo
+	var kdfTime, kdfMemory int64
+	var kdfThreads int16
+	err := row.Scan(&info.Login, &info.CreatedAt, &info.PasswordExpiresAt,
+		&kdfTime, &kdfMemory, &kdfThreads, &info.SecretCount)
+	if err != nil {
+		return nil, err
+	}
+	info.KDF = domain.KDFParams{Time: uint32(kdfTime), MemoryKiB: uint32(kdfMemory), Threads: uint8(kdfThreads)}
+	return &info, nil
+}
+
+// ListInfo возвращает страницу пользователей по возрастанию логина.
+func (r *userRepository) ListInfo(ctx context.Context, afterLogin string, limit int) ([]*domain.UserInfo, error) {
+	var result []*domain.UserInfo
+	err := repository.WithRetry(ctx, isRetriable, func() error {
+		rows, err := r.pool.Query(ctx, userInfoQuery+`
+			WHERE u.login > $1
+			ORDER BY u.login
+			LIMIT $2
+		`, afterLogin, limit)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		result = result[:0]
+		for rows.Next() {
+			info, err := scanUserInfo(rows)
+			if err != nil {
+				return err
+			}
+			result = append(result, info)
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, fmt.Errorf("userRepository.ListInfo: %w", err)
+	}
+	return result, nil
+}
+
+// GetInfo возвращает сведения о пользователе по логину.
+func (r *userRepository) GetInfo(ctx context.Context, login string) (*domain.UserInfo, error) {
+	var info *domain.UserInfo
+	err := repository.WithRetry(ctx, isRetriable, func() error {
+		var err error
+		info, err = scanUserInfo(r.pool.QueryRow(ctx, userInfoQuery+` WHERE u.login = $1`, login))
+		return err
+	})
+	if err != nil {
+		if isNoRows(err) {
+			return nil, domain.ErrUserNotFound
+		}
+		return nil, fmt.Errorf("userRepository.GetInfo: %w", err)
+	}
+	return info, nil
 }

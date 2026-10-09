@@ -81,6 +81,24 @@ func (_m *TokenRepository) RevokeAll(ctx context.Context, userID uuid.UUID) erro
 	return r0
 }
 
+// RevokeAllByLogin provides a mock function with given fields: ctx, login
+func (_m *TokenRepository) RevokeAllByLogin(ctx context.Context, login string) error {
+	ret := _m.Called(ctx, login)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RevokeAllByLogin")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = rf(ctx, login)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // NewTokenRepository creates a new instance of TokenRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewTokenRepository(t interface {

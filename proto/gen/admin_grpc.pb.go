@@ -19,7 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Admin_DeleteUser_FullMethodName = "/admin.Admin/DeleteUser"
+	Admin_DeleteUser_FullMethodName     = "/admin.Admin/DeleteUser"
+	Admin_ListUsers_FullMethodName      = "/admin.Admin/ListUsers"
+	Admin_GetUser_FullMethodName        = "/admin.Admin/GetUser"
+	Admin_RevokeSessions_FullMethodName = "/admin.Admin/RevokeSessions"
 )
 
 // AdminClient is the client API for Admin service.
@@ -34,6 +37,16 @@ type AdminClient interface {
 	// все его токены перестают действовать.
 	// Ошибки: NotFound — пользователь не найден; InvalidArgument — неверный логин.
 	DeleteUser(ctx context.Context, in *DeleteUserRequest, opts ...grpc.CallOption) (*DeleteUserResponse, error)
+	// ListUsers возвращает страницу списка пользователей.
+	// Ошибка: InvalidArgument — неверный page_size или page_token.
+	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
+	// GetUser возвращает сведения о пользователе.
+	// Ошибка: NotFound — пользователь не найден.
+	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error)
+	// RevokeSessions отзывает все токены пользователя: на всех устройствах
+	// потребуется войти заново. Пароль и секреты не меняются.
+	// Ошибка: NotFound — пользователь не найден.
+	RevokeSessions(ctx context.Context, in *RevokeSessionsRequest, opts ...grpc.CallOption) (*RevokeSessionsResponse, error)
 }
 
 type adminClient struct {
@@ -54,6 +67,36 @@ func (c *adminClient) DeleteUser(ctx context.Context, in *DeleteUserRequest, opt
 	return out, nil
 }
 
+func (c *adminClient) ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListUsersResponse)
+	err := c.cc.Invoke(ctx, Admin_ListUsers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminClient) GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetUserResponse)
+	err := c.cc.Invoke(ctx, Admin_GetUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminClient) RevokeSessions(ctx context.Context, in *RevokeSessionsRequest, opts ...grpc.CallOption) (*RevokeSessionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RevokeSessionsResponse)
+	err := c.cc.Invoke(ctx, Admin_RevokeSessions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminServer is the server API for Admin service.
 // All implementations must embed UnimplementedAdminServer
 // for forward compatibility.
@@ -66,6 +109,16 @@ type AdminServer interface {
 	// все его токены перестают действовать.
 	// Ошибки: NotFound — пользователь не найден; InvalidArgument — неверный логин.
 	DeleteUser(context.Context, *DeleteUserRequest) (*DeleteUserResponse, error)
+	// ListUsers возвращает страницу списка пользователей.
+	// Ошибка: InvalidArgument — неверный page_size или page_token.
+	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
+	// GetUser возвращает сведения о пользователе.
+	// Ошибка: NotFound — пользователь не найден.
+	GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error)
+	// RevokeSessions отзывает все токены пользователя: на всех устройствах
+	// потребуется войти заново. Пароль и секреты не меняются.
+	// Ошибка: NotFound — пользователь не найден.
+	RevokeSessions(context.Context, *RevokeSessionsRequest) (*RevokeSessionsResponse, error)
 	mustEmbedUnimplementedAdminServer()
 }
 
@@ -78,6 +131,15 @@ type UnimplementedAdminServer struct{}
 
 func (UnimplementedAdminServer) DeleteUser(context.Context, *DeleteUserRequest) (*DeleteUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteUser not implemented")
+}
+func (UnimplementedAdminServer) ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListUsers not implemented")
+}
+func (UnimplementedAdminServer) GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetUser not implemented")
+}
+func (UnimplementedAdminServer) RevokeSessions(context.Context, *RevokeSessionsRequest) (*RevokeSessionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokeSessions not implemented")
 }
 func (UnimplementedAdminServer) mustEmbedUnimplementedAdminServer() {}
 func (UnimplementedAdminServer) testEmbeddedByValue()               {}
@@ -118,6 +180,60 @@ func _Admin_DeleteUser_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Admin_ListUsers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListUsersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServer).ListUsers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Admin_ListUsers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServer).ListUsers(ctx, req.(*ListUsersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Admin_GetUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServer).GetUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Admin_GetUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServer).GetUser(ctx, req.(*GetUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Admin_RevokeSessions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeSessionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServer).RevokeSessions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Admin_RevokeSessions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServer).RevokeSessions(ctx, req.(*RevokeSessionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Admin_ServiceDesc is the grpc.ServiceDesc for Admin service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -128,6 +244,18 @@ var Admin_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteUser",
 			Handler:    _Admin_DeleteUser_Handler,
+		},
+		{
+			MethodName: "ListUsers",
+			Handler:    _Admin_ListUsers_Handler,
+		},
+		{
+			MethodName: "GetUser",
+			Handler:    _Admin_GetUser_Handler,
+		},
+		{
+			MethodName: "RevokeSessions",
+			Handler:    _Admin_RevokeSessions_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

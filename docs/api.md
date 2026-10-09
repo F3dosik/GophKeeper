@@ -6,6 +6,13 @@
 - [admin.proto](#admin-proto)
     - [DeleteUserRequest](#admin-DeleteUserRequest)
     - [DeleteUserResponse](#admin-DeleteUserResponse)
+    - [GetUserRequest](#admin-GetUserRequest)
+    - [GetUserResponse](#admin-GetUserResponse)
+    - [ListUsersRequest](#admin-ListUsersRequest)
+    - [ListUsersResponse](#admin-ListUsersResponse)
+    - [RevokeSessionsRequest](#admin-RevokeSessionsRequest)
+    - [RevokeSessionsResponse](#admin-RevokeSessionsResponse)
+    - [UserInfo](#admin-UserInfo)
   
     - [Admin](#admin-Admin)
   
@@ -80,6 +87,114 @@ DeleteUserResponse — пустой ответ при успешном удал�
 
 
 
+
+<a name="admin-GetUserRequest"></a>
+
+### GetUserRequest
+GetUserRequest — запрос сведений о пользователе.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| login | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="admin-GetUserResponse"></a>
+
+### GetUserResponse
+GetUserResponse — сведения о пользователе.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| user | [UserInfo](#admin-UserInfo) |  |  |
+
+
+
+
+
+
+<a name="admin-ListUsersRequest"></a>
+
+### ListUsersRequest
+ListUsersRequest — запрос страницы списка пользователей.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| page_size | [int32](#int32) |  | Максимум пользователей на странице (1–100, по умолчанию 100). |
+| page_token | [string](#string) |  | Курсор из next_page_token; пустой — первая страница. |
+
+
+
+
+
+
+<a name="admin-ListUsersResponse"></a>
+
+### ListUsersResponse
+ListUsersResponse — страница списка пользователей, по возрастанию логина.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| users | [UserInfo](#admin-UserInfo) | repeated |  |
+| next_page_token | [string](#string) |  | Курсор следующей страницы; пустой, если страница последняя. |
+
+
+
+
+
+
+<a name="admin-RevokeSessionsRequest"></a>
+
+### RevokeSessionsRequest
+RevokeSessionsRequest — запрос завершения всех сессий пользователя.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| login | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="admin-RevokeSessionsResponse"></a>
+
+### RevokeSessionsResponse
+RevokeSessionsResponse — пустой ответ.
+
+
+
+
+
+
+<a name="admin-UserInfo"></a>
+
+### UserInfo
+UserInfo — сведения о пользователе для администратора. Содержимое секретов
+администратору недоступно: оно зашифровано ключом пользователя.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| login | [string](#string) |  | Логин. |
+| created_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  | Время регистрации. |
+| secret_count | [int32](#int32) |  | Число секретов. |
+| temporary_password_expires_at | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  | Для временного пароля — время, до которого им можно войти; не задано, если пароль постоянный. |
+| kdf_time | [uint32](#uint32) |  | Параметры Argon2id пользователя: проходы и память в КиБ. |
+| kdf_memory_kib | [uint32](#uint32) |  |  |
+
+
+
+
+
  
 
  
@@ -97,6 +212,9 @@ Admin — административный сервис. Доступен тол
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
 | DeleteUser | [DeleteUserRequest](#admin-DeleteUserRequest) | [DeleteUserResponse](#admin-DeleteUserResponse) | DeleteUser безвозвратно удаляет пользователя вместе со всеми секретами; все его токены перестают действовать. Ошибки: NotFound — пользователь не найден; InvalidArgument — неверный логин. |
+| ListUsers | [ListUsersRequest](#admin-ListUsersRequest) | [ListUsersResponse](#admin-ListUsersResponse) | ListUsers возвращает страницу списка пользователей. Ошибка: InvalidArgument — неверный page_size или page_token. |
+| GetUser | [GetUserRequest](#admin-GetUserRequest) | [GetUserResponse](#admin-GetUserResponse) | GetUser возвращает сведения о пользователе. Ошибка: NotFound — пользователь не найден. |
+| RevokeSessions | [RevokeSessionsRequest](#admin-RevokeSessionsRequest) | [RevokeSessionsResponse](#admin-RevokeSessionsResponse) | RevokeSessions отзывает все токены пользователя: на всех устройствах потребуется войти заново. Пароль и секреты не меняются. Ошибка: NotFound — пользователь не найден. |
 
  
 

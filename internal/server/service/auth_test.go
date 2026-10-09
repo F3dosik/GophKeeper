@@ -331,14 +331,3 @@ func TestAuthService_DeleteAccount(t *testing.T) {
 		assert.ErrorIs(t, err, domain.ErrInvalidArgument)
 	})
 }
-
-func TestAuthService_DeleteUser(t *testing.T) {
-	repo := mocks.NewUserRepository(t)
-	repo.On("DeleteByLogin", mock.Anything, "bob").Return(nil)
-	repo.On("DeleteByLogin", mock.Anything, "ghost").Return(domain.ErrUserNotFound)
-	svc := NewAuthService(repo, mocks.NewTokenRepository(t), testAuthConfig(t))
-
-	assert.NoError(t, svc.DeleteUser(context.Background(), "bob"))
-	assert.ErrorIs(t, svc.DeleteUser(context.Background(), "ghost"), domain.ErrUserNotFound)
-	assert.ErrorIs(t, svc.DeleteUser(context.Background(), ""), domain.ErrInvalidArgument)
-}
