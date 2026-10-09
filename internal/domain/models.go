@@ -36,6 +36,23 @@ type Secret struct {
 	CreatedAt  time.Time
 }
 
+// UserInfo — сведения о пользователе для администратора.
+type UserInfo struct {
+	Login       string
+	CreatedAt   time.Time
+	SecretCount int
+	// PasswordExpiresAt задан, если пароль временный.
+	PasswordExpiresAt *time.Time
+	KDF               KDFParams
+}
+
+// UserPage — страница списка пользователей.
+type UserPage struct {
+	Users []*UserInfo
+	// NextPageToken — курсор следующей страницы; пустой, если страница последняя.
+	NextPageToken string
+}
+
 // Registration — данные регистрации пользователя.
 type Registration struct {
 	Login   string

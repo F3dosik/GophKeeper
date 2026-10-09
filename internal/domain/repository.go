@@ -32,6 +32,14 @@ type UserRepository interface {
 	// DeleteByLogin удаляет пользователя (и каскадом его секреты) по логину.
 	// Возвращает ErrUserNotFound, если пользователя нет.
 	DeleteByLogin(ctx context.Context, login string) error
+
+	// ListInfo возвращает до limit пользователей с логином больше afterLogin
+	// (по возрастанию логина; пустой afterLogin — с начала) с числом их секретов.
+	ListInfo(ctx context.Context, afterLogin string, limit int) ([]*UserInfo, error)
+
+	// GetInfo возвращает сведения о пользователе.
+	// Возвращает ErrUserNotFound, если пользователя нет.
+	GetInfo(ctx context.Context, login string) (*UserInfo, error)
 }
 
 // TokenRepository хранит состояние отзыва JWT-токенов.
@@ -46,6 +54,10 @@ type TokenRepository interface {
 
 	// RevokeAll отзывает все токены пользователя, увеличивая его версию токенов.
 	RevokeAll(ctx context.Context, userID uuid.UUID) error
+
+	// RevokeAllByLogin — как RevokeAll, но по логину.
+	// Возвращает ErrUserNotFound, если пользователя нет.
+	RevokeAllByLogin(ctx context.Context, login string) error
 }
 
 // SecretRepository определяет методы для работы с зашифрованными секретами в хранилище.

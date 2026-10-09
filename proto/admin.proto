@@ -4,6 +4,58 @@ package admin;
 
 option go_package = "github.com/F3dosik/GophKeeper/proto/gen";
 
+import "google/protobuf/timestamp.proto";
+
+// UserInfo — сведения о пользователе для администратора. Содержимое секретов
+// администратору недоступно: оно зашифровано ключом пользователя.
+message UserInfo {
+    // Логин.
+    string login = 1;
+    // Время регистрации.
+    google.protobuf.Timestamp created_at = 2;
+    // Число секретов.
+    int32 secret_count = 3;
+    // Для временного пароля — время, до которого им можно войти; не задано,
+    // если пароль постоянный.
+    google.protobuf.Timestamp temporary_password_expires_at = 4;
+    // Параметры Argon2id пользователя: проходы и память в КиБ.
+    uint32 kdf_time = 5;
+    uint32 kdf_memory_kib = 6;
+}
+
+// ListUsersRequest — запрос страницы списка пользователей.
+message ListUsersRequest {
+    // Максимум пользователей на странице (1–100, по умолчанию 100).
+    int32 page_size = 1;
+    // Курсор из next_page_token; пустой — первая страница.
+    string page_token = 2;
+}
+
+// ListUsersResponse — страница списка пользователей, по возрастанию логина.
+message ListUsersResponse {
+    repeated UserInfo users = 1;
+    // Курсор следующей страницы; пустой, если страница последняя.
+    string next_page_token = 2;
+}
+
+// GetUserRequest — запрос сведений о пользователе.
+message GetUserRequest {
+    string login = 1;
+}
+
+// GetUserResponse — сведения о пользователе.
+message GetUserResponse {
+    UserInfo user = 1;
+}
+
+// RevokeSessionsRequest — запрос завершения всех сессий пользователя.
+message RevokeSessionsRequest {
+    string login = 1;
+}
+
+// RevokeSessionsResponse — пустой ответ.
+message RevokeSessionsResponse {}
+
 // DeleteUserRequest — запрос удаления пользователя администратором.
 message DeleteUserRequest {
     // Логин удаляемого пользователя.
@@ -21,4 +73,17 @@ service Admin {
     // все его токены перестают действовать.
     // Ошибки: NotFound — пользователь не найден; InvalidArgument — неверный логин.
     rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
+
+    // ListUsers возвращает страницу списка пользователей.
+    // Ошибка: InvalidArgument — неверный page_size или page_token.
+    rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+
+    // GetUser возвращает сведения о пользователе.
+    // Ошибка: NotFound — пользователь не найден.
+    rpc GetUser(GetUserRequest) returns (GetUserResponse);
+
+    // RevokeSessions отзывает все токены пользователя: на всех устройствах
+    // потребуется войти заново. Пароль и секреты не меняются.
+    // Ошибка: NotFound — пользователь не найден.
+    rpc RevokeSessions(RevokeSessionsRequest) returns (RevokeSessionsResponse);
 }
