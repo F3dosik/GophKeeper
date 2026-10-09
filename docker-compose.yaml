@@ -5,7 +5,7 @@ services:
       - .env
     ports:
       # Только с localhost: Docker обходит ufw, поэтому 0.0.0.0 открыл бы БД в сеть.
-      - "127.0.0.1:5433:5432"
+      - "127.0.0.1:${DB_PORT:-5433}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/18/docker
     healthcheck:
@@ -53,7 +53,8 @@ services:
     env_file:
       - .env
     ports:
-      - "${SERVER_PORT:-50051}:50051"
+      # Сервер слушает SERVER_PORT и внутри контейнера, поэтому порт одинаковый с обеих сторон.
+      - "${SERVER_PORT:-50051}:${SERVER_PORT:-50051}"
       # Административный порт (ADMIN_PORT): регистрация, в том числе с временным паролем.
       # Публикуется только на 127.0.0.1 — доступен лишь с машины сервера.
       - "127.0.0.1:${ADMIN_PORT:-50052}:${ADMIN_PORT:-50052}"
@@ -64,6 +65,24 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+
+  # Периодическое резервное копирование: pg_dump в ./backups с ротацией (scripts/backup.sh).
+  # Интервал и число копий — BACKUP_INTERVAL и BACKUP_KEEP в .env.
+  backup:
+    image: postgres:18-alpine
+    env_file:
+      - .env
+    # Файлы копий принадлежат пользователю, запустившему make docker-up (см. Makefile),
+    # чтобы их можно было копировать без sudo.
+    user: "${BACKUP_UID:-1000}:${BACKUP_GID:-1000}"
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup.sh:/backup.sh:ro
+    entrypoint: ["/bin/sh", "/backup.sh"]
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   pgdata:
