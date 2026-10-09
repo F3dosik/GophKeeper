@@ -111,6 +111,8 @@ func (c *Commands) Execute() error {
 		c.newSecretCmd(),
 		c.newAdminCmd(),
 		c.newGenerateCmd(),
+		c.newExportCmd(),
+		c.newImportCmd(),
 		c.newCompletionCmd(root),
 	)
 	return root.Execute()

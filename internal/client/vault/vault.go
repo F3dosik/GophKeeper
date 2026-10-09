@@ -31,8 +31,8 @@ import (
 const (
 	defaultRequestTimeout = 30 * time.Second
 	defaultRefreshMargin  = 10 * time.Minute
-	// changePasswordTimeout больше обычного: перешифровываются все секреты.
-	changePasswordTimeout = 5 * time.Minute
+	// bulkTimeout — для операций над всеми секретами (смена пароля, экспорт).
+	bulkTimeout = 5 * time.Minute
 )
 
 // Config — параметры Vault.
@@ -255,6 +255,23 @@ func (v *Vault) ListSecrets(ctx context.Context) ([]SecretSummary, error) {
 	return result, err
 }
 
+// ExportSecrets возвращает все секреты с содержимым — для экспорта хранилища в файл.
+func (v *Vault) ExportSecrets(ctx context.Context) ([]domain.SecretPayload, error) {
+	var result []domain.SecretPayload
+	err := v.withSecrets(ctx, bulkTimeout, func(ctx context.Context, svc service.SecretsService) error {
+		infos, err := svc.ListSecrets(ctx)
+		if err != nil {
+			return err
+		}
+		result = make([]domain.SecretPayload, 0, len(infos))
+		for _, info := range infos {
+			result = append(result, info.SecretPayload)
+		}
+		return nil
+	})
+	return result, err
+}
+
 // GetSecret возвращает секрет с содержимым.
 func (v *Vault) GetSecret(ctx context.Context, name string, secretType domain.SecretType) (*domain.SecretInfo, error) {
 	var result *domain.SecretInfo
@@ -291,7 +308,7 @@ func (v *Vault) DeleteSecret(ctx context.Context, name string, secretType domain
 // и оставляет хранилище разблокированным новым паролем. Остальные устройства
 // после смены должны войти заново.
 func (v *Vault) ChangePassword(ctx context.Context, oldPassword, newPassword string, kdf domain.KDFParams) error {
-	err := v.withSecrets(ctx, changePasswordTimeout, func(ctx context.Context, svc service.SecretsService) error {
+	err := v.withSecrets(ctx, bulkTimeout, func(ctx context.Context, svc service.SecretsService) error {
 		reencrypt := func(newMasterKey []byte) ([]domain.ReencryptedSecret, error) {
 			return svc.Reencrypt(ctx, newMasterKey)
 		}
