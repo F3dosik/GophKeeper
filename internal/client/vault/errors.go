@@ -42,6 +42,7 @@ const (
 	CodeInvalidArgument        Code = "INVALID_ARGUMENT"
 	CodeUnavailable            Code = "UNAVAILABLE"
 	CodeBadCertificate         Code = "BAD_CERTIFICATE"
+	CodeNotSupported           Code = "NOT_SUPPORTED"
 	CodeInternal               Code = "INTERNAL"
 )
 
@@ -63,6 +64,7 @@ var codes = []struct {
 	{domain.ErrAlreadyExists, CodeAlreadyExists},
 	{domain.ErrInvalidArgument, CodeInvalidArgument},
 	{domain.ErrUnavailable, CodeUnavailable},
+	{domain.ErrNotSupported, CodeNotSupported},
 	{grpcclient.ErrBadCACert, CodeBadCertificate},
 	{grpcclient.ErrInsecureWithCert, CodeBadCertificate},
 }

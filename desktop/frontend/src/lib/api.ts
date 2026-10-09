@@ -8,6 +8,8 @@ export type SecretSummary = backend.SecretSummary
 export type Secret = backend.Secret
 export type ChosenFile = backend.ChosenFile
 export type SecretInput = backend.SecretInput
+export type UserRow = backend.UserRow
+export type TemporaryUser = backend.TemporaryUser
 
 /** Ошибка вызова Go-метода: code — категория (WRONG_PASSWORD, LOCKED, ...). */
 export class AppError extends Error {
@@ -62,6 +64,11 @@ export const api = {
   deleteSecret: (name: string, type: string) => call(Go.DeleteSecret(name, type)),
   chooseFile: () => call(Go.ChooseFile()),
   exportFile: (name: string) => call(Go.ExportFile(name)),
+
+  adminListUsers: () => call(Go.AdminListUsers()),
+  adminCreateTemporaryUser: (login: string) => call(Go.AdminCreateTemporaryUser(login)),
+  adminRevokeSessions: (login: string) => call(Go.AdminRevokeSessions(login)),
+  adminDeleteUser: (login: string) => call(Go.AdminDeleteUser(login)),
 }
 
 /** Текст ошибки для показа пользователю. */

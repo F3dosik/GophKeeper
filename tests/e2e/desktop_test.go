@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"sync"
@@ -18,6 +19,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
 )
 
 // fakeUI подменяет оболочку Wails: диалоги возвращают заданные пути, буфер обмена
@@ -245,4 +247,61 @@ func TestE2E_Desktop_TemporaryPassword(t *testing.T) {
 	assert.Equal(t, backend.CodeValidation, errorCode(t, app.CompletePasswordChange(tempPassword, tempPassword)))
 	require.NoError(t, app.CompletePasswordChange(tempPassword, "own-desktop-pass"))
 	assert.True(t, app.GetState().Unlocked)
+}
+
+func TestE2E_Desktop_AdminMode(t *testing.T) {
+	ctx := context.Background()
+
+	// Тестовый сервер e2e регистрирует сервис Admin — как административный порт.
+	app := newDesktopApp(t, t.TempDir(), &fakeUI{})
+	require.NoError(t, app.SaveSettings(serverAddr, "", false, 5))
+	require.True(t, app.GetState().AdminMode)
+
+	created, err := app.AdminCreateTemporaryUser("adm-" + uuid.NewString())
+	require.NoError(t, err)
+	assert.NotEmpty(t, created.Password)
+	assert.NotEmpty(t, created.ExpiresAt)
+
+	rows, err := app.AdminListUsers()
+	require.NoError(t, err)
+	var row *backend.UserRow
+	for i := range rows {
+		if rows[i].Login == created.Login {
+			row = &rows[i]
+		}
+	}
+	require.NotNil(t, row)
+	assert.NotEmpty(t, row.TemporaryUntil)
+	assert.False(t, row.TemporaryExpired)
+
+	// Пользователь входит выданным паролем и задаёт свой; сессии затем завершаются администратором.
+	user := newClientKit(t)
+	user.Login = created.Login
+	_, err = user.Auth.Login(ctx, created.Login, created.Password)
+	require.NoError(t, err)
+	require.NoError(t, user.Auth.ChangePassword(ctx, created.Login, created.Password, "own-password-123", domain.DefaultKDFParams, nil))
+	token := user.Tokens.Token()
+	require.NoError(t, listWithToken(ctx, t, token))
+
+	require.NoError(t, app.AdminRevokeSessions(created.Login))
+	assert.ErrorIs(t, listWithToken(ctx, t, token), domain.ErrInvalidCredentials)
+
+	require.NoError(t, app.AdminDeleteUser(created.Login))
+	assert.Equal(t, vault.CodeNotFound, errorCode(t, app.AdminDeleteUser(created.Login)))
+}
+
+// На публичном порту сервиса Admin нет: режим администратора выключен.
+func TestE2E_Desktop_NoAdminOnPublicPort(t *testing.T) {
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	server := grpc.NewServer() // ни одного сервиса: Admin отвечает Unimplemented
+	go func() { _ = server.Serve(lis) }()
+	t.Cleanup(server.Stop)
+
+	app := newDesktopApp(t, t.TempDir(), &fakeUI{})
+	require.NoError(t, app.SaveSettings(lis.Addr().String(), "", false, 5))
+	assert.False(t, app.GetState().AdminMode)
+
+	_, err = app.AdminListUsers()
+	assert.Equal(t, vault.CodeNotSupported, errorCode(t, err))
 }

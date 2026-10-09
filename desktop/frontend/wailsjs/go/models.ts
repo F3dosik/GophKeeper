@@ -111,6 +111,7 @@ export namespace backend {
 	    autoLockMinutes: number;
 	    login: string;
 	    unlocked: boolean;
+	    adminMode: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new State(source);
@@ -124,6 +125,47 @@ export namespace backend {
 	        this.autoLockMinutes = source["autoLockMinutes"];
 	        this.login = source["login"];
 	        this.unlocked = source["unlocked"];
+	        this.adminMode = source["adminMode"];
+	    }
+	}
+	export class TemporaryUser {
+	    login: string;
+	    password: string;
+	    expiresAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TemporaryUser(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.login = source["login"];
+	        this.password = source["password"];
+	        this.expiresAt = source["expiresAt"];
+	    }
+	}
+	export class UserRow {
+	    login: string;
+	    createdAt: string;
+	    secretCount: number;
+	    temporaryUntil: string;
+	    temporaryExpired: boolean;
+	    kdfTime: number;
+	    kdfMemoryMiB: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new UserRow(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.login = source["login"];
+	        this.createdAt = source["createdAt"];
+	        this.secretCount = source["secretCount"];
+	        this.temporaryUntil = source["temporaryUntil"];
+	        this.temporaryExpired = source["temporaryExpired"];
+	        this.kdfTime = source["kdfTime"];
+	        this.kdfMemoryMiB = source["kdfMemoryMiB"];
 	    }
 	}
 

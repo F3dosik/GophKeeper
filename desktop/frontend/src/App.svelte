@@ -7,6 +7,7 @@
   import TemporaryPassword from './components/TemporaryPassword.svelte'
   import Unlock from './components/Unlock.svelte'
   import Vault from './components/Vault.svelte'
+  import AdminPanel from './components/AdminPanel.svelte'
 
   // Экран выбирается по состоянию бэкенда: не настроено → настройки, нет учётки →
   // вход, заблокировано → разблокировка, иначе — хранилище.
@@ -59,6 +60,8 @@
     onsaved={() => { showSettings = false; refresh() }}
     oncancel={appState.configured ? () => (showSettings = false) : undefined}
   />
+{:else if appState.adminMode}
+  <AdminPanel serverAddress={appState.serverAddress} onsettings={() => (showSettings = true)} />
 {:else if pendingChange}
   <TemporaryPassword
     login={pendingChange.login}

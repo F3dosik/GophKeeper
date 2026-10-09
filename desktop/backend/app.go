@@ -49,6 +49,9 @@ type State struct {
 	Login string `json:"login"`
 	// Unlocked — хранилище разблокировано.
 	Unlocked bool `json:"unlocked"`
+	// AdminMode — приложение подключено к административному порту сервера: доступна
+	// только административная панель, хранилища там нет.
+	AdminMode bool `json:"adminMode"`
 }
 
 // App — методы приложения для интерфейса. Все методы безопасны для одновременного вызова.
@@ -59,6 +62,7 @@ type App struct {
 	ctx      context.Context
 	settings Settings
 	vault    *vault.Vault
+	admin    *adminConn
 
 	clipMu  sync.Mutex
 	clipGen uint64
@@ -105,6 +109,7 @@ func Startup(a *App, ctx context.Context) error {
 func Shutdown(a *App) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	a.closeAdminLocked()
 	if a.vault != nil {
 		_ = a.vault.Close()
 		a.vault = nil
@@ -128,6 +133,7 @@ func (a *App) GetState() State {
 		state.Login = a.vault.CurrentLogin()
 		state.Unlocked = a.vault.IsUnlocked()
 	}
+	state.AdminMode = a.admin != nil && a.admin.active
 	return state
 }
 
@@ -370,6 +376,7 @@ func (a *App) openVaultLocked() error {
 		return toUIError(err)
 	}
 	a.vault = v
+	a.openAdminLocked(caPEM)
 	return nil
 }
 
