@@ -8,6 +8,7 @@ import (
 
 	"github.com/F3dosik/GophKeeper/desktop/backend"
 	"github.com/wailsapp/wails/v2"
+	"github.com/wailsapp/wails/v2/pkg/logger"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -39,6 +40,17 @@ func main() {
 			Assets: assets,
 		},
 		BackgroundColour: &options.RGBA{R: 24, G: 26, B: 31, A: 1},
+		// Защита релизной сборки. DevTools в ней выключены самим Wails (включаются только
+		// флагами -debug и -devtools у wails build); остальное задаём явно.
+		//
+		// Без контекстного меню браузера нельзя открыть «Просмотреть код» или перезагрузить
+		// страницу; копирование и вставка работают сочетаниями клавиш.
+		EnableDefaultContextMenu: false,
+		// Файл, случайно брошенный в окно, WebView открыл бы вместо приложения.
+		DragAndDrop: &options.DragAndDrop{DisableWebViewDrop: true},
+		// В лог не должны попадать мастер-пароль и содержимое секретов (см. logger.go).
+		Logger:             newRedactedLogger(logger.NewDefaultLogger()),
+		LogLevelProduction: logger.ERROR,
 		OnStartup: func(ctx context.Context) {
 			ui.ctx = ctx
 			if err := backend.Startup(app, ctx); err != nil {
