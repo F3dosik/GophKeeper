@@ -16,6 +16,8 @@ export function CheckServer(arg1:string,arg2:string,arg3:boolean):Promise<string
 
 export function ChooseCACert():Promise<string>;
 
+export function ChooseExportFile():Promise<backend.ChosenFile>;
+
 export function ChooseFile():Promise<backend.ChosenFile>;
 
 export function CompletePasswordChange(arg1:string,arg2:string):Promise<void>;
@@ -28,6 +30,8 @@ export function DeleteSecret(arg1:string,arg2:string):Promise<void>;
 
 export function ExportFile(arg1:string):Promise<string>;
 
+export function ExportVault(arg1:string):Promise<string>;
+
 export function GeneratePassphrase(arg1:number):Promise<backend.Generated>;
 
 export function GeneratePassword(arg1:backend.GeneratorOptions):Promise<backend.Generated>;
@@ -35,6 +39,8 @@ export function GeneratePassword(arg1:backend.GeneratorOptions):Promise<backend.
 export function GetSecret(arg1:string,arg2:string):Promise<backend.Secret>;
 
 export function GetState():Promise<backend.State>;
+
+export function ImportVault(arg1:string,arg2:string,arg3:boolean):Promise<backend.ImportResult>;
 
 export function ListSecrets():Promise<Array<backend.SecretSummary>>;
 

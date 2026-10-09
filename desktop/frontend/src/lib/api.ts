@@ -12,6 +12,7 @@ export type UserRow = backend.UserRow
 export type TemporaryUser = backend.TemporaryUser
 export type Generated = backend.Generated
 export type GeneratorOptions = backend.GeneratorOptions
+export type ImportResult = backend.ImportResult
 
 /** Ошибка вызова Go-метода: code — категория (WRONG_PASSWORD, LOCKED, ...). */
 export class AppError extends Error {
@@ -66,6 +67,10 @@ export const api = {
   deleteSecret: (name: string, type: string) => call(Go.DeleteSecret(name, type)),
   chooseFile: () => call(Go.ChooseFile()),
   exportFile: (name: string) => call(Go.ExportFile(name)),
+
+  exportVault: (password: string) => call(Go.ExportVault(password)),
+  chooseExportFile: () => call(Go.ChooseExportFile()),
+  importVault: (path: string, password: string, overwrite: boolean) => call(Go.ImportVault(path, password, overwrite)),
 
   generatePassword: (opts: GeneratorOptions) => call(Go.GeneratePassword(opts)),
   generatePassphrase: (words: number) => call(Go.GeneratePassphrase(words)),

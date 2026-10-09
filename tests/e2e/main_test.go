@@ -45,7 +45,7 @@ func TestMain(m *testing.M) {
 	ctx := context.Background()
 
 	pgContainer, err := tcpostgres.Run(ctx,
-		"postgres:18-alpine",
+		postgresImage(),
 		tcpostgres.WithDatabase("gophkeeper"),
 		tcpostgres.WithUsername("test"),
 		tcpostgres.WithPassword("test"),
@@ -135,4 +135,13 @@ func startTestServer(pool *pgxpool.Pool) (stop func(), addr string, err error) {
 	}()
 
 	return server.GracefulStop, lis.Addr().String(), nil
+}
+
+// postgresImage — образ PostgreSQL для тестов. E2E_POSTGRES_IMAGE позволяет взять его
+// из зеркала: в CI анонимные загрузки с Docker Hub упираются в лимит запросов.
+func postgresImage() string {
+	if image := os.Getenv("E2E_POSTGRES_IMAGE"); image != "" {
+		return image
+	}
+	return "postgres:18-alpine"
 }

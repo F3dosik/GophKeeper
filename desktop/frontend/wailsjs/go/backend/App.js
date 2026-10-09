@@ -30,6 +30,10 @@ export function ChooseCACert() {
   return window['go']['backend']['App']['ChooseCACert']();
 }
 
+export function ChooseExportFile() {
+  return window['go']['backend']['App']['ChooseExportFile']();
+}
+
 export function ChooseFile() {
   return window['go']['backend']['App']['ChooseFile']();
 }
@@ -54,6 +58,10 @@ export function ExportFile(arg1) {
   return window['go']['backend']['App']['ExportFile'](arg1);
 }
 
+export function ExportVault(arg1) {
+  return window['go']['backend']['App']['ExportVault'](arg1);
+}
+
 export function GeneratePassphrase(arg1) {
   return window['go']['backend']['App']['GeneratePassphrase'](arg1);
 }
@@ -68,6 +76,10 @@ export function GetSecret(arg1, arg2) {
 
 export function GetState() {
   return window['go']['backend']['App']['GetState']();
+}
+
+export function ImportVault(arg1, arg2, arg3) {
+  return window['go']['backend']['App']['ImportVault'](arg1, arg2, arg3);
 }
 
 export function ListSecrets() {
