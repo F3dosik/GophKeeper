@@ -35,8 +35,11 @@ jobs:
       - name: E2E-тесты (testcontainers, PostgreSQL)
         # Образ из зеркала: анонимные загрузки с Docker Hub на общих раннерах
         # упираются в лимит запросов (toomanyrequests).
+        # Ryuk (сборщик контейнеров testcontainers) тоже скачивается с Docker Hub,
+        # а в CI он не нужен: раннер одноразовый и удаляется вместе с контейнерами.
         env:
           E2E_POSTGRES_IMAGE: mirror.gcr.io/library/postgres:18-alpine
+          TESTCONTAINERS_RYUK_DISABLED: "true"
         run: go test -tags=e2e ./tests/e2e/...
       - name: govulncheck
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...

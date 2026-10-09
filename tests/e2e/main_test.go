@@ -42,6 +42,12 @@ var serverAddr string
 // TestMain поднимает Postgres-контейнер, применяет миграции, запускает
 // gRPC сервер in-process и сохраняет его адрес в serverAddr для использования в тестах.
 func TestMain(m *testing.M) {
+	os.Exit(run(m))
+}
+
+// run выполняет тесты и возвращает код завершения. Вынесена из TestMain, потому что
+// os.Exit не выполняет defer: без этого контейнер и сервер не останавливались бы.
+func run(m *testing.M) int {
 	ctx := context.Background()
 
 	pgContainer, err := tcpostgres.Run(ctx,
@@ -54,7 +60,8 @@ func TestMain(m *testing.M) {
 		tcpostgres.WithSQLDriver("pgx"),
 	)
 	if err != nil {
-		log.Fatalf("start postgres: %v", err)
+		log.Printf("start postgres: %v", err)
+		return 1
 	}
 	defer func() {
 		shutCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -66,23 +73,26 @@ func TestMain(m *testing.M) {
 
 	connStr, err := pgContainer.ConnectionString(ctx, "sslmode=disable")
 	if err != nil {
-		log.Fatalf("connection string: %v", err)
+		log.Printf("connection string: %v", err)
+		return 1
 	}
 
 	pool, err := pgxpool.New(ctx, connStr)
 	if err != nil {
-		log.Fatalf("pgxpool.New: %v", err)
+		log.Printf("pgxpool.New: %v", err)
+		return 1
 	}
 	defer pool.Close()
 
 	stopServer, addr, err := startTestServer(pool)
 	if err != nil {
-		log.Fatalf("start server: %v", err)
+		log.Printf("start server: %v", err)
+		return 1
 	}
 	defer stopServer()
 	serverAddr = addr
 
-	os.Exit(m.Run())
+	return m.Run()
 }
 
 // startTestServer собирает gRPC сервер с реальными репозиториями и сервисами,
