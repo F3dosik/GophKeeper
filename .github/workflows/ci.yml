@@ -116,6 +116,18 @@ jobs:
         working-directory: desktop
         shell: bash
         run: wails build -clean -platform ${{ matrix.platform }} ${{ matrix.tags }}
+      - name: Проверка релизной сборки
+        # Сборка с -debug или -devtools открыла бы в релизе инспектор WebView и контекстное меню.
+        shell: bash
+        run: |
+          bin=$(find desktop/build/bin -type f \( -name gophkeeper-desktop -o -name gophkeeper-desktop.exe \) | head -1)
+          if [ "$RUNNER_OS" = macOS ]; then
+            lipo "$bin" -thin arm64 -output "$RUNNER_TEMP/app" && bin="$RUNNER_TEMP/app"
+          fi
+          tags=,$(go version -m "$bin" | awk '$1 == "build" && $2 ~ /^-tags=/ { sub(/^-tags=/, "", $2); print $2 }'),
+          echo "Теги сборки: $tags"
+          [[ $tags == *,production,* ]] || { echo "::error::нет тега production"; exit 1; }
+          [[ $tags != *,debug,* && $tags != *,devtools,* ]] || { echo "::error::релиз собран с debug или devtools"; exit 1; }
       - uses: actions/upload-artifact@v7
         with:
           name: desktop-${{ matrix.name }}
