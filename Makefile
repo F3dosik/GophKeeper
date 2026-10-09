@@ -1,4 +1,4 @@
-.PHONY: help generate docs build-client build-client-all build-server test test-e2e test-cover docker-up docker-down certs ca-encrypt clean
+.PHONY: help generate docs build-client build-client-all build-server test test-e2e test-cover docker-up docker-down certs ca-encrypt desktop-dev desktop-build desktop-build-windows clean
 
 # Версия и дата сборки — подставляются в бинарь клиента через -ldflags.
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -9,6 +9,12 @@ LDFLAGS := -X github.com/F3dosik/GophKeeper/internal/client/command.Version=$(VE
 SHELL := /bin/bash
 
 BIN_DIR := bin
+
+# Десктоп-клиент (Wails). WAILS — путь к CLI: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+# На Ubuntu 24.04+ есть только WebKitGTK 4.1, для него нужен тег webkit2_41.
+WAILS       ?= wails
+WAILS_TAGS  ?= webkit2_41
+DESKTOP_DIR := desktop
 
 COMPLETION_FILE := $(HOME)/.gophkeeper_completion
 
@@ -33,6 +39,9 @@ help:
 	@echo "  docker-down       — остановить docker-compose"
 	@echo "  certs             — сгенерировать CA и TLS-сертификат сервера (CERT_HOSTS=...)"
 	@echo "  ca-encrypt        — зашифровать паролем существующий ключ CA"
+	@echo "  desktop-dev       — десктоп-клиент в режиме разработки (горячая перезагрузка)"
+	@echo "  desktop-build     — десктоп-клиент для текущей ОС → desktop/build/bin"
+	@echo "  desktop-build-windows — десктоп-клиент для Windows (кросс-сборка)"
 	@echo "  clean             — удалить bin/"
 
 # Кодогенерация из .proto файлов
@@ -146,6 +155,15 @@ ca-encrypt:
 	openssl pkey -in $(CA_DIR)/ca.key -aes256 $(CA_PASS_OUT) -out $(CA_DIR)/ca.key.enc && \
 	mv $(CA_DIR)/ca.key.enc $(CA_DIR)/ca.key && chmod 600 $(CA_DIR)/ca.key && \
 	echo "$(CA_DIR)/ca.key зашифрован"
+
+desktop-dev:
+	cd $(DESKTOP_DIR) && $(WAILS) dev -tags $(WAILS_TAGS)
+
+desktop-build:
+	cd $(DESKTOP_DIR) && $(WAILS) build -tags $(WAILS_TAGS) -clean
+
+desktop-build-windows:
+	cd $(DESKTOP_DIR) && $(WAILS) build -platform windows/amd64
 
 docker-up:
 	docker compose up -d --build

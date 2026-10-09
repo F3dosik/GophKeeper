@@ -256,6 +256,20 @@ make build-client-all   # linux/darwin/windows → bin/gophkeeper-<os>-<arch>
 
 В бинарь инжектятся `Version` (из `git describe`) и `BuildDate`.
 
+## Десктоп-клиент (в разработке)
+
+Каталог `desktop/` — приложение на [Wails](https://wails.io) (Go + Svelte/TypeScript) для Windows, Linux и macOS. Пока в нём только проверка подключения к серверу.
+
+Зависимости для сборки на Linux: `libgtk-3-dev`, `libwebkit2gtk-4.1-dev`, Node.js с npm и Wails CLI (`go install github.com/wailsapp/wails/v2/cmd/wails@latest`).
+
+```bash
+make desktop-dev             # режим разработки с горячей перезагрузкой
+make desktop-build           # для текущей ОС → desktop/build/bin/gophkeeper-desktop
+make desktop-build-windows   # .exe для Windows, собирается с Linux
+```
+
+`wails doctor` на Ubuntu 24.04+ сообщает об отсутствии `libwebkit`: он ищет WebKitGTK 4.0, а в системе есть только 4.1. Это ожидаемо, Makefile собирает с тегом `webkit2_41`. Сборку под macOS нужно выполнять на macOS.
+
 ## Автодополнение (bash)
 
 ```bash
