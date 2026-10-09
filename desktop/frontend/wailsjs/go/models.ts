@@ -16,6 +16,44 @@ export namespace backend {
 	        this.size = source["size"];
 	    }
 	}
+	export class Generated {
+	    password: string;
+	    entropyBits: number;
+	    strength: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Generated(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.password = source["password"];
+	        this.entropyBits = source["entropyBits"];
+	        this.strength = source["strength"];
+	    }
+	}
+	export class GeneratorOptions {
+	    length: number;
+	    lower: boolean;
+	    upper: boolean;
+	    digits: boolean;
+	    symbols: boolean;
+	    noAmbiguous: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new GeneratorOptions(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.length = source["length"];
+	        this.lower = source["lower"];
+	        this.upper = source["upper"];
+	        this.digits = source["digits"];
+	        this.symbols = source["symbols"];
+	        this.noAmbiguous = source["noAmbiguous"];
+	    }
+	}
 	export class Secret {
 	    name: string;
 	    type: string;

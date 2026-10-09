@@ -2,6 +2,7 @@
   import { api, errorText } from '../lib/api'
   import Modal from './Modal.svelte'
   import PasswordInput from './PasswordInput.svelte'
+  import SuggestPassphrase from './SuggestPassphrase.svelte'
 
   let { onclose, ondone }: { onclose: () => void; ondone: () => void } = $props()
 
@@ -38,6 +39,7 @@
     <label><span>Текущий пароль</span><PasswordInput bind:value={current} autofocus /></label>
     <label><span>Новый пароль</span><PasswordInput bind:value={next} /></label>
     <label><span>Повторите новый пароль</span><PasswordInput bind:value={confirm} /></label>
+    <SuggestPassphrase onpick={(p) => { next = p; confirm = p }} />
 
     <button type="button" class="link" style="align-self: flex-start" onclick={() => (advanced = !advanced)}>
       {advanced ? '▾' : '▸'} Параметры Argon2id

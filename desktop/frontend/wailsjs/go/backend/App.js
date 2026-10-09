@@ -54,6 +54,14 @@ export function ExportFile(arg1) {
   return window['go']['backend']['App']['ExportFile'](arg1);
 }
 
+export function GeneratePassphrase(arg1) {
+  return window['go']['backend']['App']['GeneratePassphrase'](arg1);
+}
+
+export function GeneratePassword(arg1) {
+  return window['go']['backend']['App']['GeneratePassword'](arg1);
+}
+
 export function GetSecret(arg1, arg2) {
   return window['go']['backend']['App']['GetSecret'](arg1, arg2);
 }

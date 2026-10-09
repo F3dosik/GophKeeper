@@ -28,6 +28,10 @@ export function DeleteSecret(arg1:string,arg2:string):Promise<void>;
 
 export function ExportFile(arg1:string):Promise<string>;
 
+export function GeneratePassphrase(arg1:number):Promise<backend.Generated>;
+
+export function GeneratePassword(arg1:backend.GeneratorOptions):Promise<backend.Generated>;
+
 export function GetSecret(arg1:string,arg2:string):Promise<backend.Secret>;
 
 export function GetState():Promise<backend.State>;

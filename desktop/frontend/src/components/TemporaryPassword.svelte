@@ -1,6 +1,7 @@
 <script lang="ts">
   import { api, errorText } from '../lib/api'
   import PasswordInput from './PasswordInput.svelte'
+  import SuggestPassphrase from './SuggestPassphrase.svelte'
 
   // Замена временного пароля, выданного администратором, на постоянный.
   let {
@@ -48,6 +49,7 @@
       <span>Повторите</span>
       <PasswordInput bind:value={confirm} />
     </label>
+    <SuggestPassphrase onpick={(p) => { password = p; confirm = p }} />
     {#if busy}<p class="muted">Вычисление ключа…</p>{/if}
     {#if error}<p class="error">{error}</p>{/if}
     <div class="row">

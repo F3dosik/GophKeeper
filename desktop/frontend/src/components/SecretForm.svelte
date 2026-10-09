@@ -2,6 +2,7 @@
   import { untrack } from 'svelte'
   import { api, AppError, errorText, lockedCodes, type ChosenFile, type Secret } from '../lib/api'
   import { formatSize, secretTypes } from '../lib/format'
+  import Generator from './Generator.svelte'
   import PasswordInput from './PasswordInput.svelte'
 
   // Создание (initial не задан) или изменение секрета. Имя и тип определяют секрет,
@@ -47,12 +48,7 @@
     }
   }
 
-  function generatePassword() {
-    const alphabet = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%^&*-_=+'
-    const bytes = new Uint32Array(20)
-    crypto.getRandomValues(bytes)
-    password = Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('')
-  }
+  let showGenerator = $state(false)
 
   async function submit(event: SubmitEvent) {
     event.preventDefault()
@@ -103,7 +99,11 @@
       <span>Пароль</span>
       <PasswordInput bind:value={password} />
     </label>
-    <div><button type="button" class="link" onclick={generatePassword}>Сгенерировать пароль</button></div>
+    {#if showGenerator}
+      <Generator onuse={(p) => { password = p; showGenerator = false }} onclose={() => (showGenerator = false)} />
+    {:else}
+      <div><button type="button" class="link" onclick={() => (showGenerator = true)}>Сгенерировать пароль…</button></div>
+    {/if}
   {:else if type === 'text'}
     <label><span>Текст</span><textarea bind:value={text}></textarea></label>
   {:else if type === 'card'}
