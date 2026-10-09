@@ -1,15 +1,20 @@
-FROM golang:1.26.9-alpine3.23 AS builder
+# Компилятор работает на платформе сборки ($BUILDPLATFORM), а Go кросс-компилирует под
+# целевую ($TARGETOS/$TARGETARCH). Так образ для arm64 собирается на amd64 без эмуляции.
+FROM --platform=$BUILDPLATFORM golang:1.26.9-alpine3.23 AS builder
+ARG TARGETOS
+ARG TARGETARCH
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -o /server ./cmd/server/main.go
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w" -o /server ./cmd/server/main.go
 
+# В итоговом этапе нет RUN: иначе образ для arm64 на amd64 пришлось бы собирать в эмуляции.
+# Сертификаты CA уже есть в alpine (ca-certificates-bundle), nc для HEALTHCHECK — в busybox.
 FROM alpine:3.23
-RUN apk add --no-cache ca-certificates \
-    && adduser -D -u 10001 gophkeeper
 COPY --from=builder /server /server
-USER gophkeeper
+# Непривилегированный пользователь; UID задан числом, учётная запись в /etc/passwd не нужна.
+USER 10001:10001
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
     CMD nc -z localhost "${SERVER_PORT:-50051}" || exit 1
 ENTRYPOINT ["/server"]
