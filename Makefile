@@ -1,4 +1,4 @@
-.PHONY: help generate docs build-client build-client-all build-server test test-e2e test-cover docker-up docker-down backup restore certs ca-encrypt desktop-dev desktop-build desktop-build-windows clean
+.PHONY: help generate docs build-client build-client-all build-server test test-e2e test-cover docker-up docker-up-local docker-down backup restore certs ca-encrypt desktop-dev desktop-build desktop-build-windows clean
 
 # Версия и дата сборки — подставляются в бинарь клиента через -ldflags.
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -14,6 +14,16 @@ BIN_DIR := bin
 BACKUP_DIR := backups
 export BACKUP_UID ?= $(shell id -u)
 export BACKUP_GID ?= $(shell id -g)
+
+# Образ сервера, собранный CI (см. .github/workflows/ci.yml). Тег соответствует текущему
+# коммиту: на теге релиза vX.Y.Z — X.Y.Z, иначе sha-<7 символов коммита>. Так сервер
+# всегда той же версии, что миграции и docker-compose.yaml в этом каталоге.
+# Другая версия: make docker-up SERVER_TAG=1.2.0 (или latest).
+SERVER_IMAGE ?= ghcr.io/f3dosik/gophkeeper
+SERVER_TAG   ?= $(shell t=$$(git describe --tags --exact-match --match 'v[0-9]*' 2>/dev/null) && echo "$$t" | cut -c2- \
+                  || { c=$$(git rev-parse HEAD 2>/dev/null) && echo "sha-$$(echo $$c | cut -c1-7)"; } || echo latest)
+export GOPHKEEPER_IMAGE := $(SERVER_IMAGE)
+export GOPHKEEPER_TAG   := $(SERVER_TAG)
 
 # Десктоп-клиент (Wails). WAILS — путь к CLI: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 # На Ubuntu 24.04+ есть только WebKitGTK 4.1, для него нужен тег webkit2_41.
@@ -40,7 +50,8 @@ help:
 	@echo "  test              — unit-тесты"
 	@echo "  test-e2e          — e2e-тесты (требует Docker)"
 	@echo "  test-cover        — покрытие тестами"
-	@echo "  docker-up         — поднять сервер в docker-compose"
+	@echo "  docker-up         — скачать образ сервера для текущего коммита и запустить"
+	@echo "  docker-up-local   — собрать сервер из исходников и запустить (нужно ~1 ГБ RAM)"
 	@echo "  docker-down       — остановить docker-compose"
 	@echo "  backup            — резервная копия базы сейчас → backups/manual-*.dump"
 	@echo "  restore FILE=...  — восстановить базу из копии (с подтверждением)"
@@ -174,7 +185,17 @@ desktop-build-windows:
 
 docker-up:
 	@mkdir -p $(BACKUP_DIR)
-	docker compose up -d --build
+	@echo "Образ сервера: $(SERVER_IMAGE):$(SERVER_TAG)"
+	@docker compose pull gophkeeper || { \
+		echo "Образа $(SERVER_IMAGE):$(SERVER_TAG) нет в реестре. Возможные причины:"; \
+		echo "  — CI ещё собирает этот коммит: подождите несколько минут;"; \
+		echo "  — коммита нет в main (локальная ветка): соберите из исходников — make docker-up-local."; \
+		exit 1; }
+	docker compose up -d
+
+docker-up-local:
+	@mkdir -p $(BACKUP_DIR)
+	docker compose -f docker-compose.yaml -f docker-compose.build.yaml up -d --build
 
 # Разовая копия. Имя manual-* не попадает под ротацию сервиса backup.
 backup:

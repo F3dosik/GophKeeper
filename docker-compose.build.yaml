@@ -1,0 +1,9 @@
+# Сборка сервера из исходников вместо готового образа — для разработки и для коммитов,
+# которых нет в main. Используется make docker-up-local.
+# Сборке нужно 700–900 МБ свободной памяти.
+services:
+  gophkeeper:
+    image: gophkeeper-server:local
+    build:
+      context: .
+      dockerfile: Dockerfile.server

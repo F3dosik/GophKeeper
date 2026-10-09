@@ -76,7 +76,7 @@ make clean        # удалить bin/ и файлы покрытия
 go install github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc@latest
 ```
 
-Новая миграция добавляется парой файлов `migrations/00000N_имя.{up,down}.sql` и применяется при `make docker-up`. Откат на один шаг — `docker compose --profile tools run --rm migrate-down`.
+Новая миграция добавляется парой файлов `migrations/00000N_имя.{up,down}.sql` и применяется при запуске стека. Чтобы проверить изменения сервера в Docker до слияния, соберите образ из исходников: `make docker-up-local`. Откат на один шаг — `docker compose --profile tools run --rm migrate-down`.
 
 ## CI и релизы
 
@@ -84,11 +84,12 @@ go install github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc@latest
 
 - Go: `go vet`, unit-тесты с `-race`, e2e-тесты, `govulncheck`;
 - фронтенд: `svelte-check --fail-on-warnings` и сборка;
-- сборки CLI для Linux, macOS и Windows и приложения на трёх ОС — результаты лежат в артефактах запуска.
+- сборки CLI для Linux, macOS и Windows и приложения на трёх ОС — результаты лежат в артефактах запуска;
+- образ сервера для amd64 и arm64. В PR он только собирается, после push в `main` и по тегу публикуется в GHCR (теги — в [docs/deployment.md](deployment.md#образ-сервера)).
 
 `govulncheck.yml` раз в неделю проверяет `main`: уязвимости в зависимостях публикуются постоянно, и код может стать уязвимым без единого коммита.
 
-Релиз выпускается по тегу. CI собирает всё заново и публикует GitHub Release с бинарями CLI, архивами приложения и `SHA256SUMS`:
+Релиз выпускается по тегу. CI собирает всё заново, публикует образ сервера с тегами версии и `latest` и GitHub Release с бинарями CLI, архивами приложения и `SHA256SUMS`:
 
 ```bash
 git tag v1.1.0 && git push origin v1.1.0

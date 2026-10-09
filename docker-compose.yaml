@@ -47,9 +47,10 @@ services:
         condition: service_healthy
 
   gophkeeper:
-    build:
-      context: .
-      dockerfile: Dockerfile.server
+    # Готовый образ из GHCR, собранный CI. Тег выбирает make docker-up по текущему коммиту
+    # (релиз — X.Y.Z, иначе sha-<коммит>), чтобы образ совпадал с миграциями из этого каталога.
+    # Собрать из исходников: make docker-up-local (docker-compose.build.yaml).
+    image: ${GOPHKEEPER_IMAGE:-ghcr.io/f3dosik/gophkeeper}:${GOPHKEEPER_TAG:-latest}
     env_file:
       - .env
     ports:

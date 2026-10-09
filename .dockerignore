@@ -9,12 +9,18 @@
 *.pem
 *.key
 certs/
+ca/
+backups/
 
 # Build artifacts
 bin/
 dist/
 *.out
 coverage.*
+
+# Not needed by the server
+desktop/
+scripts/
 
 # Test and docs
 tests/
