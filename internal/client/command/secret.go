@@ -29,6 +29,8 @@ func (c *Commands) newSecretCmd() *cobra.Command {
 // Тип секрета определяет, какие поля будут запрошены интерактивно.
 func (c *Commands) newCreateCmd() *cobra.Command {
 	var name, secretType string
+	var generate bool
+	var gen genFlags
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Создать новый секрет",
@@ -38,12 +40,17 @@ func (c *Commands) newCreateCmd() *cobra.Command {
 				return err
 			}
 
+			generated, err := generatedPassword(generate, t, gen)
+			if err != nil {
+				return err
+			}
+
 			secretSvc, err := c.unlockSecretService(cmd.Context())
 			if err != nil {
 				return err
 			}
 
-			data, err := promptSecretData(t)
+			data, err := promptSecretData(t, generated)
 			if err != nil {
 				return err
 			}
@@ -62,11 +69,16 @@ func (c *Commands) newCreateCmd() *cobra.Command {
 				return err
 			}
 			fmt.Println("Секрет создан")
+			if generated != "" {
+				fmt.Printf("Сгенерированный пароль: %s\n", generated)
+			}
 			return nil
 		},
 	}
 	cmd.Flags().StringVar(&name, "name", "", "Имя секрета (обязательно)")
 	cmd.Flags().StringVar(&secretType, "type", "", "Тип: credentials|text|card|binary (обязательно)")
+	cmd.Flags().BoolVar(&generate, "generate", false, "сгенерировать пароль вместо ввода (для credentials)")
+	gen.register(cmd)
 	_ = cmd.MarkFlagRequired("name")
 	_ = cmd.MarkFlagRequired("type")
 	return cmd
@@ -76,6 +88,8 @@ func (c *Commands) newCreateCmd() *cobra.Command {
 // Тип секрета определяет, какие поля будут запрошены интерактивно.
 func (c *Commands) newUpdateCmd() *cobra.Command {
 	var name, secretType string
+	var generate bool
+	var gen genFlags
 	cmd := &cobra.Command{
 		Use:   "update",
 		Short: "Изменить секрет",
@@ -85,12 +99,17 @@ func (c *Commands) newUpdateCmd() *cobra.Command {
 				return err
 			}
 
+			generated, err := generatedPassword(generate, t, gen)
+			if err != nil {
+				return err
+			}
+
 			secretSvc, err := c.unlockSecretService(cmd.Context())
 			if err != nil {
 				return err
 			}
 
-			data, err := promptSecretData(t)
+			data, err := promptSecretData(t, generated)
 			if err != nil {
 				return err
 			}
@@ -109,11 +128,16 @@ func (c *Commands) newUpdateCmd() *cobra.Command {
 				return err
 			}
 			fmt.Println("Секрет обновлен")
+			if generated != "" {
+				fmt.Printf("Сгенерированный пароль: %s\n", generated)
+			}
 			return nil
 		},
 	}
 	cmd.Flags().StringVar(&name, "name", "", "Имя секрета (обязательно)")
 	cmd.Flags().StringVar(&secretType, "type", "", "Тип: credentials|text|card|binary (обязательно)")
+	cmd.Flags().BoolVar(&generate, "generate", false, "сгенерировать пароль вместо ввода (для credentials)")
+	gen.register(cmd)
 	_ = cmd.MarkFlagRequired("name")
 	_ = cmd.MarkFlagRequired("type")
 	return cmd
