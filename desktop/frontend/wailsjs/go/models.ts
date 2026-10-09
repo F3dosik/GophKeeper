@@ -1,0 +1,131 @@
+export namespace backend {
+	
+	export class ChosenFile {
+	    path: string;
+	    name: string;
+	    size: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ChosenFile(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.name = source["name"];
+	        this.size = source["size"];
+	    }
+	}
+	export class Secret {
+	    name: string;
+	    type: string;
+	    metadata: string;
+	    createdAt: string;
+	    updatedAt: string;
+	    login: string;
+	    password: string;
+	    text: string;
+	    cardNumber: string;
+	    cardHolder: string;
+	    cardExpiry: string;
+	    cardCvv: string;
+	    fileSize: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Secret(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.type = source["type"];
+	        this.metadata = source["metadata"];
+	        this.createdAt = source["createdAt"];
+	        this.updatedAt = source["updatedAt"];
+	        this.login = source["login"];
+	        this.password = source["password"];
+	        this.text = source["text"];
+	        this.cardNumber = source["cardNumber"];
+	        this.cardHolder = source["cardHolder"];
+	        this.cardExpiry = source["cardExpiry"];
+	        this.cardCvv = source["cardCvv"];
+	        this.fileSize = source["fileSize"];
+	    }
+	}
+	export class SecretInput {
+	    name: string;
+	    type: string;
+	    metadata: string;
+	    login: string;
+	    password: string;
+	    text: string;
+	    cardNumber: string;
+	    cardHolder: string;
+	    cardExpiry: string;
+	    cardCvv: string;
+	    filePath: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SecretInput(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.type = source["type"];
+	        this.metadata = source["metadata"];
+	        this.login = source["login"];
+	        this.password = source["password"];
+	        this.text = source["text"];
+	        this.cardNumber = source["cardNumber"];
+	        this.cardHolder = source["cardHolder"];
+	        this.cardExpiry = source["cardExpiry"];
+	        this.cardCvv = source["cardCvv"];
+	        this.filePath = source["filePath"];
+	    }
+	}
+	export class SecretSummary {
+	    name: string;
+	    type: string;
+	    metadata: string;
+	    createdAt: string;
+	    updatedAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SecretSummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.type = source["type"];
+	        this.metadata = source["metadata"];
+	        this.createdAt = source["createdAt"];
+	        this.updatedAt = source["updatedAt"];
+	    }
+	}
+	export class State {
+	    configured: boolean;
+	    serverAddress: string;
+	    hasCaCert: boolean;
+	    autoLockMinutes: number;
+	    login: string;
+	    unlocked: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new State(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.configured = source["configured"];
+	        this.serverAddress = source["serverAddress"];
+	        this.hasCaCert = source["hasCaCert"];
+	        this.autoLockMinutes = source["autoLockMinutes"];
+	        this.login = source["login"];
+	        this.unlocked = source["unlocked"];
+	    }
+	}
+
+}
+

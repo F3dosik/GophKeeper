@@ -1,8 +1,8 @@
 <script lang="ts">
-  import {CheckServer} from '../wailsjs/go/main/App.js'
+  import {CheckServer, ChooseCACert} from '../wailsjs/go/backend/App.js'
 
   let address = "localhost:50051"
-  let caCertPath = ""
+  let caPEM = ""
   let result = ""
   let error = ""
 
@@ -10,7 +10,7 @@
     result = ""
     error = ""
     try {
-      result = await CheckServer(address, caCertPath)
+      result = await CheckServer(address, caPEM)
     } catch (e) {
       error = String(e)
     }
@@ -20,7 +20,7 @@
 <main>
   <h1>GophKeeper</h1>
   <label>Адрес сервера <input bind:value={address} autocomplete="off"/></label>
-  <label>Путь к ca.crt <input bind:value={caCertPath} autocomplete="off"/></label>
+  <button on:click={async () => caPEM = await ChooseCACert()}>Выбрать ca.crt {caPEM ? "✓" : ""}</button>
   <button on:click={check}>Проверить подключение</button>
   {#if result}<p class="ok">{result}</p>{/if}
   {#if error}<p class="err">{error}</p>{/if}
