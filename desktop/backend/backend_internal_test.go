@@ -65,9 +65,14 @@ func TestToUIError(t *testing.T) {
 }
 
 func TestValidators(t *testing.T) {
-	assert.NoError(t, checkAddress("192.168.1.5:50051"))
-	assert.Error(t, checkAddress(""))
-	assert.Error(t, checkAddress("localhost"))
+	addr, err := normalizeAddress("192.168.1.5")
+	require.NoError(t, err)
+	assert.Equal(t, "192.168.1.5:50051", addr, "port is optional")
+	addr, err = normalizeAddress("192.168.1.5:6000")
+	require.NoError(t, err)
+	assert.Equal(t, "192.168.1.5:6000", addr)
+	_, err = normalizeAddress("")
+	assert.Error(t, err)
 
 	assert.Error(t, checkCACert([]byte("not a certificate")))
 

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/F3dosik/GophKeeper/internal/client/grpcclient"
 	"github.com/caarlos0/env/v11"
 )
 
@@ -36,6 +37,12 @@ func Load() (*Config, error) {
 	if config.ServerAddress == "" {
 		config.ServerAddress = defaultServerAddress
 	}
+	// Порт необязателен: «192.168.1.5» означает «192.168.1.5:50051».
+	address, err := grpcclient.NormalizeAddress(config.ServerAddress)
+	if err != nil {
+		return nil, fmt.Errorf("Load: GOPHKEEPER_SERVER %q: %w", config.ServerAddress, err)
+	}
+	config.ServerAddress = address
 
 	if config.SessionPath == "" {
 		config.SessionPath = defaultSessionPath

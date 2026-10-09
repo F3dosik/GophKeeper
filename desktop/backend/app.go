@@ -161,7 +161,8 @@ func (a *App) ChooseCACert() (string, error) {
 // подписан caPEM (пустой — системные корневые сертификаты). useSavedCA — проверить
 // с сохранённым ранее сертификатом: интерфейс не хранит его содержимое.
 func (a *App) CheckServer(address, caPEM string, useSavedCA bool) (string, error) {
-	if err := checkAddress(address); err != nil {
+	address, err := normalizeAddress(address)
+	if err != nil {
 		return "", err
 	}
 	ca, err := a.resolveCACert(caPEM, useSavedCA)
@@ -190,7 +191,8 @@ func (a *App) CheckServer(address, caPEM string, useSavedCA bool) (string, error
 // блокируется; логин сохраняется, если сервер не менялся. useSavedCA — оставить
 // сохранённый сертификат; иначе сохраняется caPEM (пустой — системные сертификаты).
 func (a *App) SaveSettings(address, caPEM string, useSavedCA bool, autoLockMinutes int) error {
-	if err := checkAddress(address); err != nil {
+	address, err := normalizeAddress(address)
+	if err != nil {
 		return err
 	}
 	ca, err := a.resolveCACert(caPEM, useSavedCA)
@@ -203,7 +205,7 @@ func (a *App) SaveSettings(address, caPEM string, useSavedCA bool, autoLockMinut
 
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	settings := Settings{ServerAddress: strings.TrimSpace(address), AutoLockMinutes: autoLockMinutes}
+	settings := Settings{ServerAddress: address, AutoLockMinutes: autoLockMinutes}
 	if err := saveSettings(a.opts.Dir, settings, ca); err != nil {
 		return toUIError(err)
 	}
@@ -390,13 +392,14 @@ func (a *App) resolveCACert(caPEM string, useSavedCA bool) ([]byte, error) {
 	return []byte(caPEM), nil
 }
 
-// checkAddress проверяет формат адреса сервера.
-func checkAddress(address string) error {
-	address = strings.TrimSpace(address)
-	if address == "" || !strings.Contains(address, ":") {
-		return validationError("Адрес сервера — в формате host:port, например 192.168.1.5:50051")
+// normalizeAddress приводит адрес сервера к host:port; без порта — порт по умолчанию.
+func normalizeAddress(address string) (string, error) {
+	normalized, err := grpcclient.NormalizeAddress(address)
+	if err != nil {
+		return "", validationError("Адрес сервера — имя или IP, порт необязателен: 192.168.1.5 или 192.168.1.5:" +
+			grpcclient.DefaultPort)
 	}
-	return nil
+	return normalized, nil
 }
 
 // checkCACert проверяет, что в данных есть хотя бы один PEM-сертификат.

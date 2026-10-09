@@ -105,7 +105,11 @@ func TestE2E_Desktop_FullFlow(t *testing.T) {
 	_, err := app.SignIn("x", "y")
 	assert.Equal(t, backend.CodeNotConfigured, errorCode(t, err))
 
-	assert.Equal(t, backend.CodeValidation, errorCode(t, app.SaveSettings("no-port", "", false, 5)))
+	assert.Equal(t, backend.CodeValidation, errorCode(t, app.SaveSettings("http://bad", "", false, 5)))
+
+	// Порт необязателен: адрес без порта сохраняется с портом 50051.
+	require.NoError(t, app.SaveSettings("192.0.2.10", "", false, 5))
+	assert.Equal(t, "192.0.2.10:50051", app.GetState().ServerAddress)
 	msg, err := app.CheckServer(serverAddr, "", false)
 	require.NoError(t, err)
 	assert.Contains(t, msg, "Сервер доступен")

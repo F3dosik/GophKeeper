@@ -71,7 +71,7 @@
 
     <label>
       <span>Адрес сервера</span>
-      <input bind:value={address} placeholder="192.168.1.5:50051" autocomplete="off" spellcheck="false" />
+      <input bind:value={address} placeholder="192.168.1.5 (порт по умолчанию 50051)" autocomplete="off" spellcheck="false" />
     </label>
 
     <div class="stack" style="gap: 6px">
