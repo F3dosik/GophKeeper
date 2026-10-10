@@ -47,6 +47,10 @@ var (
 	// ко всему, кроме смены пароля и выхода.
 	ErrPasswordChangeRequired = errors.New("password change required")
 
+	// ErrKDFDowngrade — сервер прислал более слабые параметры Argon2id, чем клиент видел
+	// раньше (см. KDFDowngradeError).
+	ErrKDFDowngrade = errors.New("kdf params downgrade")
+
 	// ErrPermissionDenied возвращается клиенту, когда сервер отказал в действии
 	// (codes.PermissionDenied); подробности — в тексте ошибки.
 	ErrPermissionDenied = errors.New("permission denied")

@@ -76,6 +76,7 @@ func TestValidate_Errors(t *testing.T) {
 	}{
 		{"missing DATABASE_URL", app.Config{ServerPort: ":50051", JWTSecret: testJWTSecret, LogLevel: "development", TokenTTL: time.Hour}, "DATABASE_URL"},
 		{"missing JWT_SECRET", app.Config{ServerPort: ":50051", DatabaseURL: "postgres://", LogLevel: "development", TokenTTL: time.Hour}, "JWT_SECRET"},
+		{"JWT_SECRET is a comment from .env_example", app.Config{ServerPort: ":50051", DatabaseURL: "postgres://", JWTSecret: "# секрет для подписи JWT, минимум 32 символа", LogLevel: "development", TokenTTL: time.Hour}, "looks like a comment"},
 		{"invalid log level", app.Config{ServerPort: ":50051", DatabaseURL: "postgres://", JWTSecret: testJWTSecret, LogLevel: "debug", TokenTTL: time.Hour}, "invalid log mode"},
 		{"non-positive TOKEN_TTL", app.Config{ServerPort: ":50051", DatabaseURL: "postgres://", JWTSecret: "01234567890123456789012345678901", LogLevel: "development", TokenTTL: 0}, "TOKEN_TTL"},
 		{"TLS cert without key", app.Config{ServerPort: ":50051", DatabaseURL: "postgres://", JWTSecret: "01234567890123456789012345678901", LogLevel: "development", TokenTTL: time.Hour, TLSCertFile: "cert.pem"}, "TLS_CERT_FILE and TLS_KEY_FILE"},

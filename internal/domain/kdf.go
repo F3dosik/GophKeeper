@@ -49,3 +49,32 @@ func (p KDFParams) Validate() error {
 	}
 	return nil
 }
+
+// WeakerThan сообщает, дешевле ли перебор пароля с параметрами p, чем с other:
+// меньше проходов или меньше памяти. Число потоков на стоимость перебора почти не влияет.
+func (p KDFParams) WeakerThan(other KDFParams) bool {
+	return p.Time < other.Time || p.MemoryKiB < other.MemoryKiB
+}
+
+// String — параметры в виде «t=3, 64 МиБ».
+func (p KDFParams) String() string {
+	return fmt.Sprintf("t=%d, %d МиБ", p.Time, p.MemoryKiB/1024)
+}
+
+// KDFDowngradeError — сервер прислал параметры Argon2id слабее тех, что клиент уже видел
+// у этой учётки. Ключ аутентификации с такими параметрами дешевле перебирать, поэтому
+// подменённый сервер мог бы так добыть его для офлайн-перебора пароля. Клиент не выводит
+// ключ, пока пользователь не подтвердит, что сам сменил параметры.
+type KDFDowngradeError struct {
+	// Known — параметры, запомненные на этом устройстве.
+	Known KDFParams
+	// Received — параметры, присланные сервером.
+	Received KDFParams
+}
+
+func (e *KDFDowngradeError) Error() string {
+	return fmt.Sprintf("server sent weaker kdf params than before: %s, known %s", e.Received, e.Known)
+}
+
+// Unwrap позволяет проверять ошибку через errors.Is(err, ErrKDFDowngrade).
+func (e *KDFDowngradeError) Unwrap() error { return ErrKDFDowngrade }

@@ -135,6 +135,13 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("JWT_SECRET is required")
 	}
 
+	// Старый .env_example держал комментарий в строке «JWT_SECRET=   # ...»; при пустом
+	// значении Docker Compose подставляет сам комментарий — общеизвестную строку длиннее
+	// 32 символов. С таким секретом любой подделал бы токен.
+	if strings.HasPrefix(c.JWTSecret, "#") {
+		return fmt.Errorf("JWT_SECRET looks like a comment from .env_example: set a random value (openssl rand -hex 32)")
+	}
+
 	if len(c.JWTSecret) < 32 {
 		return fmt.Errorf("JWT_SECRET must be at least 32 characters")
 	}

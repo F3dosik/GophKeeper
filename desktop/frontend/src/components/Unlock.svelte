@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { api, errorText } from '../lib/api'
+  import { api, AppError, errorText } from '../lib/api'
+  import KdfWarning from './KdfWarning.svelte'
   import PasswordInput from './PasswordInput.svelte'
 
   // Разблокировка после автоблокировки, перезапуска или отзыва сессии.
@@ -19,17 +20,22 @@
 
   let password = $state('')
   let error = $state('')
+  let kdfWarning = $state('')
+  let notice = $state('')
   let busy = $state(false)
 
   async function submit(event: SubmitEvent) {
     event.preventDefault()
     error = ''
+    kdfWarning = ''
+    notice = ''
     busy = true
     try {
       await api.unlock(password)
       onunlocked()
     } catch (e) {
-      error = errorText(e)
+      if (e instanceof AppError && e.code === 'KDF_DOWNGRADE') kdfWarning = e.message
+      else error = errorText(e)
     } finally {
       busy = false
       password = ''
@@ -50,6 +56,14 @@
     </label>
     {#if busy}<p class="muted">Вычисление ключа…</p>{/if}
     {#if error}<p class="error">{error}</p>{/if}
+    {#if notice}<p class="muted" style="margin: 0">{notice}</p>{/if}
+    {#if kdfWarning}
+      <KdfWarning
+        {login}
+        message={kdfWarning}
+        onaccepted={() => { kdfWarning = ''; notice = 'Новые параметры приняты — введите мастер-пароль ещё раз.' }}
+      />
+    {/if}
     <button type="submit" class="primary" disabled={busy || !password}>Разблокировать</button>
     <div class="row">
       <button type="button" class="link" onclick={onswitch}>Войти в другую учётку</button>

@@ -81,7 +81,12 @@ func (c *Commands) unlockSecretService(ctx context.Context) (service.SecretsServ
 		return nil, err
 	}
 
-	return c.newSecretService(ctx, sess.Login, password)
+	var svc service.SecretsService
+	err = c.withKDFCheck(sess.Login, func() error {
+		svc, err = c.newSecretService(ctx, sess.Login, password)
+		return err
+	})
+	return svc, err
 }
 
 // newVersionCmd создаёт подкоманду, выводящую версию и дату сборки клиента.
