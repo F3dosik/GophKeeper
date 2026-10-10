@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { api, errorText } from '../lib/api'
+  import { api, AppError, errorText } from '../lib/api'
+  import KdfWarning from './KdfWarning.svelte'
   import PasswordInput from './PasswordInput.svelte'
   import SuggestPassphrase from './SuggestPassphrase.svelte'
 
@@ -20,11 +21,15 @@
   let password = $state('')
   let confirm = $state('')
   let error = $state('')
+  let kdfWarning = $state('')
+  let notice = $state('')
   let busy = $state(false)
 
   async function submit(event: SubmitEvent) {
     event.preventDefault()
     error = ''
+    kdfWarning = ''
+    notice = ''
     if (mode === 'register' && password !== confirm) {
       error = 'Пароли не совпадают'
       return
@@ -37,7 +42,8 @@
       const changeRequired = await api.signIn(login, password)
       onsignedin(login.trim(), password, changeRequired)
     } catch (e) {
-      error = errorText(e)
+      if (e instanceof AppError && e.code === 'KDF_DOWNGRADE') kdfWarning = e.message
+      else error = errorText(e)
     } finally {
       busy = false
       password = ''
@@ -75,6 +81,14 @@
 
     {#if busy}<p class="muted">Вычисление ключа…</p>{/if}
     {#if error}<p class="error">{error}</p>{/if}
+    {#if notice}<p class="muted" style="margin: 0">{notice}</p>{/if}
+    {#if kdfWarning}
+      <KdfWarning
+        login={login.trim()}
+        message={kdfWarning}
+        onaccepted={() => { kdfWarning = ''; notice = 'Новые параметры приняты — введите мастер-пароль ещё раз.' }}
+      />
+    {/if}
 
     <button type="submit" class="primary" disabled={busy || !login || !password}>
       {mode === 'signin' ? 'Войти' : 'Зарегистрироваться'}

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/F3dosik/GophKeeper/internal/client/grpcclient"
+	"github.com/F3dosik/GophKeeper/internal/client/kdfpin"
 	"github.com/F3dosik/GophKeeper/internal/client/session"
 	"github.com/F3dosik/GophKeeper/internal/domain"
 	"github.com/F3dosik/GophKeeper/pkg/crypto"
@@ -62,6 +63,11 @@ type AuthService interface {
 	// и без Argon2id, и сохраняет его в сессию. Нужен клиентам, которые держат хранилище
 	// разблокированным дольше срока жизни токена.
 	RefreshToken(ctx context.Context, login string, masterKey []byte) error
+
+	// ForgetKDFParams забывает параметры Argon2id учётки, запомненные на этом устройстве.
+	// Нужен, когда вход отклонён с domain.KDFDowngradeError, а пользователь подтвердил,
+	// что сам сменил пароль с более слабыми параметрами на другом устройстве.
+	ForgetKDFParams(login string) error
 }
 
 // Reencryptor перешифровывает все секреты пользователя ключами от newMasterKey.
@@ -75,12 +81,33 @@ type authService struct {
 	sessionPath string
 	// tokens — токен, с которым соединение выполняет запросы; обновляется после входа.
 	tokens *grpcclient.TokenStore
+	// kdfPins — параметры Argon2id, запомненные на устройстве (см. kdfpin), и адрес
+	// сервера, к которому они относятся. nil — параметры не проверяются.
+	kdfPins *kdfpin.Store
+	server  string
+}
+
+// AuthOption настраивает authService.
+type AuthOption func(*authService)
+
+// WithKDFPins включает защиту от подмены параметров Argon2id: параметры учёток на сервере
+// server запоминаются в pins, а более слабые параметры от сервера отклоняются.
+func WithKDFPins(pins *kdfpin.Store, server string) AuthOption {
+	return func(s *authService) {
+		s.kdfPins, s.server = pins, server
+	}
 }
 
 // NewAuthService создаёт новый authService с заданным gRPC клиентом, путём к файлу сессии
 // и хранилищем токена соединения (может быть nil, если обновлять токен в соединении не нужно).
-func NewAuthService(client grpcclient.AuthClient, sessionPath string, tokens *grpcclient.TokenStore) AuthService {
-	return &authService{client: client, sessionPath: sessionPath, tokens: tokens}
+func NewAuthService(
+	client grpcclient.AuthClient, sessionPath string, tokens *grpcclient.TokenStore, opts ...AuthOption,
+) AuthService {
+	s := &authService{client: client, sessionPath: sessionPath, tokens: tokens}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
 }
 
 // CreateUser регистрирует нового пользователя.
@@ -88,6 +115,9 @@ func NewAuthService(client grpcclient.AuthClient, sessionPath string, tokens *gr
 // производный от него ключ аутентификации (сам masterKey клиент не покидает).
 func (s *authService) CreateUser(ctx context.Context, login, password string, kdf domain.KDFParams) error {
 	if _, err := s.register(ctx, login, password, kdf, false); err != nil {
+		return fmt.Errorf("authService.CreateUser: %w", err)
+	}
+	if err := s.kdfPins.Remember(s.server, login, kdf); err != nil {
 		return fmt.Errorf("authService.CreateUser: %w", err)
 	}
 	return nil
@@ -156,12 +186,15 @@ func generateTemporaryPassword() (string, error) {
 // Запрашивает соль по логину, деривирует ключ аутентификации, получает JWT токен
 // и сохраняет сессию (логин + токен) в файл для последующих вызовов.
 func (s *authService) Login(ctx context.Context, login, password string) (bool, error) {
-	_, authKey, err := s.userKeys(ctx, login, password)
+	_, authKey, kdf, err := s.userKeys(ctx, login, password)
 	if err != nil {
 		return false, fmt.Errorf("authService.Login: %w", err)
 	}
 	token, changeRequired, err := s.client.Login(ctx, domain.Credentials{Login: login, AuthKey: authKey})
 	if err != nil {
+		return false, fmt.Errorf("authService.Login: %w", err)
+	}
+	if err := s.kdfPins.Remember(s.server, login, kdf); err != nil {
 		return false, fmt.Errorf("authService.Login: %w", err)
 	}
 
@@ -184,7 +217,7 @@ func (s *authService) Login(ctx context.Context, login, password string) (bool, 
 // сохраняется в сессию и используется соединением, поэтому короткий срок жизни токена
 // не требует частого повторного входа.
 func (s *authService) Unlock(ctx context.Context, login, password string) ([]byte, error) {
-	masterKey, authKey, err := s.userKeys(ctx, login, password)
+	masterKey, authKey, kdf, err := s.userKeys(ctx, login, password)
 	if err != nil {
 		return nil, fmt.Errorf("authService.Unlock: %w", err)
 	}
@@ -194,6 +227,9 @@ func (s *authService) Unlock(ctx context.Context, login, password string) ([]byt
 	}
 	if changeRequired {
 		return nil, fmt.Errorf("authService.Unlock: %w", domain.ErrPasswordChangeRequired)
+	}
+	if err := s.kdfPins.Remember(s.server, login, kdf); err != nil {
+		return nil, fmt.Errorf("authService.Unlock: %w", err)
 	}
 	if err := s.saveSession(login, token); err != nil {
 		return nil, fmt.Errorf("authService.Unlock: %w", err)
@@ -205,16 +241,28 @@ func (s *authService) Unlock(ctx context.Context, login, password string) ([]byt
 // userKeys запрашивает соль и параметры Argon2id пользователя и выводит из пароля
 // мастер-ключ и ключ аутентификации. Параметры от сервера проверяются: подменённый
 // сервер мог бы прислать слабые параметры, чтобы удешевить перебор пароля по authKey,
-// или огромные, чтобы клиент завис.
-func (s *authService) userKeys(ctx context.Context, login, password string) (masterKey, authKey []byte, err error) {
+// или огромные, чтобы клиент завис. Кроме общих границ, параметры не должны быть слабее
+// запомненных на этом устройстве (kdfpin). Возвращает и сами параметры, чтобы после
+// успешного входа их запомнить.
+func (s *authService) userKeys(
+	ctx context.Context, login, password string,
+) (masterKey, authKey []byte, kdf domain.KDFParams, err error) {
 	salt, kdf, err := s.client.GetSalt(ctx, login)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, kdf, err
 	}
 	if err := kdf.Validate(); err != nil {
-		return nil, nil, fmt.Errorf("server sent unacceptable kdf params: %w", err)
+		return nil, nil, kdf, fmt.Errorf("server sent unacceptable kdf params: %w", err)
 	}
-	return deriveKeys(password, salt, kdf)
+	known, ok, err := s.kdfPins.Get(s.server, login)
+	if err != nil {
+		return nil, nil, kdf, err
+	}
+	if ok && kdf.WeakerThan(known) {
+		return nil, nil, kdf, &domain.KDFDowngradeError{Known: known, Received: kdf}
+	}
+	masterKey, authKey, err = deriveKeys(password, salt, kdf)
+	return masterKey, authKey, kdf, err
 }
 
 // deriveKeys выводит мастер-ключ Argon2id(password, salt) и ключ аутентификации
@@ -261,7 +309,7 @@ func (s *authService) ChangePassword(
 	if err := newKDF.Validate(); err != nil {
 		return fmt.Errorf("authService.ChangePassword: %w", err)
 	}
-	_, oldAuthKey, err := s.userKeys(ctx, login, oldPassword)
+	_, oldAuthKey, _, err := s.userKeys(ctx, login, oldPassword)
 	if err != nil {
 		return fmt.Errorf("authService.ChangePassword: %w", err)
 	}
@@ -292,6 +340,11 @@ func (s *authService) ChangePassword(
 		return fmt.Errorf("authService.ChangePassword: %w", err)
 	}
 
+	// Новые параметры выбраны на этом устройстве, поэтому запоминаются как есть, даже
+	// если они слабее прежних.
+	if err := s.kdfPins.Remember(s.server, login, newKDF); err != nil {
+		return fmt.Errorf("authService.ChangePassword: %w", err)
+	}
 	if err := s.saveSession(login, token); err != nil {
 		return fmt.Errorf("authService.ChangePassword: %w", err)
 	}
@@ -300,12 +353,16 @@ func (s *authService) ChangePassword(
 
 // DeleteAccount удаляет учётку пользователя и локальную сессию.
 func (s *authService) DeleteAccount(ctx context.Context, login, password string) error {
-	_, authKey, err := s.userKeys(ctx, login, password)
+	_, authKey, _, err := s.userKeys(ctx, login, password)
 	if err != nil {
 		return fmt.Errorf("authService.DeleteAccount: %w", err)
 	}
 	if err := s.client.DeleteAccount(ctx, authKey); err != nil {
 		return fmt.Errorf("authService.DeleteAccount: %w", err)
+	}
+	// Логин освободился: новая учётка с тем же именем может иметь любые параметры.
+	if err := s.kdfPins.Forget(s.server, login); err != nil {
+		return fmt.Errorf("authService.DeleteAccount: учётка удалена: %w", err)
 	}
 
 	if err := os.Remove(s.sessionPath); err != nil && !os.IsNotExist(err) {
@@ -330,6 +387,14 @@ func (s *authService) RefreshToken(ctx context.Context, login string, masterKey 
 	}
 	if err := s.saveSession(login, token); err != nil {
 		return fmt.Errorf("authService.RefreshToken: %w", err)
+	}
+	return nil
+}
+
+// ForgetKDFParams забывает запомненные параметры Argon2id учётки.
+func (s *authService) ForgetKDFParams(login string) error {
+	if err := s.kdfPins.Forget(s.server, login); err != nil {
+		return fmt.Errorf("authService.ForgetKDFParams: %w", err)
 	}
 	return nil
 }

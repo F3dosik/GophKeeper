@@ -11,6 +11,7 @@ import (
 	"github.com/F3dosik/GophKeeper/internal/client/command"
 	"github.com/F3dosik/GophKeeper/internal/client/config"
 	"github.com/F3dosik/GophKeeper/internal/client/grpcclient"
+	"github.com/F3dosik/GophKeeper/internal/client/kdfpin"
 	"github.com/F3dosik/GophKeeper/internal/client/service"
 	"github.com/F3dosik/GophKeeper/internal/client/session"
 	pb "github.com/F3dosik/GophKeeper/proto/gen"
@@ -45,7 +46,9 @@ func main() {
 	authClient := grpcclient.NewAuthClient(pb.NewAuthClient(conn))
 	secretsClient := grpcclient.NewSecretsClient(pb.NewSecretsClient(conn))
 	adminClient := grpcclient.NewAdminClient(pb.NewAdminClient(conn))
-	authSvc := service.NewAuthService(authClient, cfg.SessionPath, tokens)
+	// Параметры Argon2id учёток запоминаются рядом с файлом сессии (см. kdfpin).
+	authSvc := service.NewAuthService(authClient, cfg.SessionPath, tokens,
+		service.WithKDFPins(kdfpin.NextTo(cfg.SessionPath), cfg.ServerAddress))
 
 	if command.New(authSvc, secretsClient, adminClient, cfg).Execute() != nil {
 		os.Exit(1)

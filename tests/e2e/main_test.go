@@ -39,6 +39,10 @@ var migrationPaths = []string{
 // serverAddr — адрес in-process gRPC сервера, заполняется в TestMain.
 var serverAddr string
 
+// db — пул соединений с базой тестового сервера, заполняется в TestMain. Нужен тестам,
+// которые имитируют взломанный сервер, меняя данные в обход API.
+var db *pgxpool.Pool
+
 // TestMain поднимает Postgres-контейнер, применяет миграции, запускает
 // gRPC сервер in-process и сохраняет его адрес в serverAddr для использования в тестах.
 func TestMain(m *testing.M) {
@@ -83,6 +87,7 @@ func run(m *testing.M) int {
 		return 1
 	}
 	defer pool.Close()
+	db = pool
 
 	stopServer, addr, err := startTestServer(pool)
 	if err != nil {

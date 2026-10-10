@@ -267,6 +267,17 @@ func (a *App) Unlock(password string) error {
 	return toUIError(v.Unlock(a.context(), password))
 }
 
+// AcceptKDFChange забывает запомненные на устройстве параметры Argon2id учётки login.
+// Интерфейс вызывает его после ошибки KDF_DOWNGRADE, когда пользователь подтвердил, что
+// сам сменил пароль с более слабыми параметрами; затем вход нужно повторить.
+func (a *App) AcceptKDFChange(login string) error {
+	v, err := a.currentVault()
+	if err != nil {
+		return err
+	}
+	return toUIError(v.ForgetKDFParams(strings.TrimSpace(login)))
+}
+
 // Lock блокирует хранилище.
 func (a *App) Lock() {
 	if v, err := a.currentVault(); err == nil {

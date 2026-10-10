@@ -24,6 +24,7 @@ make docker-down          # остановить (данные в volume сох�
 | `JWT_SECRET` | Не короче 32 символов, например `openssl rand -hex 32`. Из него выводятся ключ подписи токенов и фиктивные соли | — |
 | `TOKEN_TTL` | Время жизни токена | `1h` |
 | `SERVER_PORT` | Публичный порт gRPC | `50051` |
+| `SERVER_BIND` | Адрес хоста, на котором публикуется порт сервера; адрес VPN — сервер доступен только через VPN | все интерфейсы |
 | `LOG_LEVEL` | `development` или `production` | `development` |
 | `TLS_CERT_FILE`, `TLS_KEY_FILE` | Сертификат и ключ сервера внутри контейнера | `/certs/server.crt`, `/certs/server.key` в шаблоне |
 | `AUTH_RATE_LIMIT` | Запросов к `GetSalt`/`CreateUser`/`Login` в минуту с одного IP | `30` |
@@ -175,3 +176,60 @@ make docker-up                             # скачает образ 1.2.0 и 
 Или следовать за `main`: `git pull && make docker-up`.
 
 Данные сохраняются. Клиенты обновите до той же версии: готовые сборки — в [Releases](https://github.com/F3dosik/GophKeeper/releases).
+
+## Сервер на VPS
+
+Секреты шифруются на устройствах, поэтому даже хостер с полным доступом к VPS видит только шифротекст, а клиенты не загружаются с сервера и подменить их нельзя. Конфиденциальность держится на силе мастер-паролей: при парольной фразе из 6 слов (`gophkeeper generate --words 6`) перебор по украденной базе нереален. А вот за сохранность данных отвечает хостер — копии нужны вне VPS. Подробнее — в [docs/security.md](security.md).
+
+Ресурсы: в работе стек занимает около 100 МБ памяти, при интенсивной работе с крупными файлами — до 350 МБ; хватает VPS с 1 ГБ.
+
+### Обязательно
+
+**1. Ключ CA — только на своём компьютере.** С ним можно выпустить сертификат, которому поверят все клиенты. Выпускайте сертификаты локально и копируйте на VPS только три файла:
+
+```bash
+# на своём компьютере, в клоне репозитория
+make certs CERT_HOSTS=localhost,127.0.0.1,203.0.113.10,keeper.example.com
+scp certs/ca.crt certs/server.crt certs/server.key vps:GophKeeper/certs/
+```
+
+`make certs` на VPS не запускайте. Если в `certs/` лежит `ca.key` от старой версии проекта, перенесите его: `mkdir -p ca && mv certs/ca.key ca/ && make ca-encrypt`.
+
+**2. Закрытая регистрация.** В `.env`: `REGISTRATION_ENABLED=false`, `ADMIN_PORT=50052`. Административный порт доступен только с самого VPS — пользуйтесь им через SSH-туннель со своего компьютера:
+
+```bash
+ssh -N -L 50052:localhost:50052 vps &
+GOPHKEEPER_SERVER=localhost:50052 GOPHKEEPER_TLS_CERT=certs/ca.crt gophkeeper admin list-users
+```
+
+**3. `.env` только для владельца:** `chmod 600 .env`. С `JWT_SECRET` можно подделать токены: секреты он не раскроет, но позволит удалять и перезаписывать их.
+
+**4. SSH только по ключу.** В `/etc/ssh/sshd_config`: `PasswordAuthentication no`, `PermitRootLogin no`, затем `sudo systemctl restart ssh`. Перед этим проверьте, что вход по ключу работает.
+
+**5. Обновления безопасности ОС:**
+
+```bash
+sudo apt install unattended-upgrades && sudo dpkg-reconfigure -plow unattended-upgrades
+```
+
+**6. Копии вне VPS.** Забирайте резервные копии к себе, например по cron:
+
+```bash
+rsync -a vps:GophKeeper/backups/ ~/gophkeeper-backups/
+```
+
+и держите экспорт хранилища (`gophkeeper export`) у каждого пользователя.
+
+### Желательно: не открывать сервер в интернет
+
+PostgreSQL и административный порт и так опубликованы только на `127.0.0.1`. Публичен лишь порт `50051`, и его можно закрыть от сканеров:
+
+- **VPN (лучший вариант).** Поставьте WireGuard или Tailscale на VPS и устройства и опубликуйте порт только на адресе VPN: `SERVER_BIND=100.64.0.5` в `.env` (адрес VPS в VPN). Адрес VPN включите в `CERT_HOSTS`. Интерфейс VPN должен подниматься раньше Docker, иначе контейнер не запустится.
+- **Фаервол хостера**, если VPN неудобен: разрешите `50051` только со своих IP.
+- **iptables.** ufw для портов контейнеров не работает — Docker обходит его правила. Фильтровать нужно в цепочке `DOCKER-USER`:
+
+  ```bash
+  sudo iptables -I DOCKER-USER -p tcp -m conntrack --ctorigdstport 50051 --ctdir ORIGINAL ! -s 198.51.100.7 -j DROP
+  ```
+
+  Правило не переживает перезагрузку: сохраните его через `iptables-persistent`.

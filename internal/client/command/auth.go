@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 
+	"github.com/F3dosik/GophKeeper/internal/client/service"
 	"github.com/F3dosik/GophKeeper/internal/client/session"
 	"github.com/F3dosik/GophKeeper/internal/domain"
 
@@ -95,7 +96,11 @@ func (c *Commands) newLoginCmd() *cobra.Command {
 				return err
 			}
 
-			changeRequired, err := c.authService.Login(cmd.Context(), login, password)
+			var changeRequired bool
+			err = c.withKDFCheck(login, func() error {
+				changeRequired, err = c.authService.Login(cmd.Context(), login, password)
+				return err
+			})
 			if err != nil {
 				return err
 			}
@@ -186,7 +191,11 @@ func (c *Commands) newPasswdCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			secretSvc, err := c.newSecretService(cmd.Context(), sess.Login, oldPassword)
+			var secretSvc service.SecretsService
+			err = c.withKDFCheck(sess.Login, func() error {
+				secretSvc, err = c.newSecretService(cmd.Context(), sess.Login, oldPassword)
+				return err
+			})
 			if err != nil {
 				return err
 			}
@@ -276,7 +285,9 @@ func (c *Commands) newDeleteAccountCmd() *cobra.Command {
 				return err
 			}
 
-			err = c.authService.DeleteAccount(cmd.Context(), sess.Login, password)
+			err = c.withKDFCheck(sess.Login, func() error {
+				return c.authService.DeleteAccount(cmd.Context(), sess.Login, password)
+			})
 			if errors.Is(err, domain.ErrInvalidCredentials) {
 				return ErrWrongMasterPassword
 			}

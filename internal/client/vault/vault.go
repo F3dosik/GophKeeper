@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/F3dosik/GophKeeper/internal/client/grpcclient"
+	"github.com/F3dosik/GophKeeper/internal/client/kdfpin"
 	"github.com/F3dosik/GophKeeper/internal/client/service"
 	"github.com/F3dosik/GophKeeper/internal/client/session"
 	"github.com/F3dosik/GophKeeper/internal/domain"
@@ -129,7 +130,8 @@ func Open(cfg Config) (*Vault, error) {
 		cfg:    cfg,
 		conn:   conn,
 		tokens: tokens,
-		auth:   service.NewAuthService(grpcclient.NewAuthClient(pb.NewAuthClient(conn)), cfg.SessionPath, tokens),
+		auth: service.NewAuthService(grpcclient.NewAuthClient(pb.NewAuthClient(conn)), cfg.SessionPath, tokens,
+			service.WithKDFPins(kdfpin.NextTo(cfg.SessionPath), cfg.ServerAddress)),
 		client: grpcclient.NewSecretsClient(pb.NewSecretsClient(conn)),
 		login:  login,
 	}, nil
@@ -190,6 +192,13 @@ func (v *Vault) SignIn(ctx context.Context, login, password string) (passwordCha
 	err = v.unlockLocked(login, masterKey)
 	v.mu.Unlock()
 	return false, err
+}
+
+// ForgetKDFParams забывает параметры Argon2id учётки login, запомненные на этом
+// устройстве. Вызывается, когда вход отклонён с CodeKDFDowngrade, а пользователь
+// подтвердил, что сам сменил пароль с более слабыми параметрами на другом устройстве.
+func (v *Vault) ForgetKDFParams(login string) error {
+	return v.auth.ForgetKDFParams(login)
 }
 
 // CompletePasswordChange задаёт постоянный пароль вместо временного (после SignIn,

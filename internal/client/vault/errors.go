@@ -34,6 +34,7 @@ const (
 	CodeSessionExpired         Code = "SESSION_EXPIRED"
 	CodePasswordChangeRequired Code = "PASSWORD_CHANGE_REQUIRED"
 	CodeIntegrity              Code = "INTEGRITY"
+	CodeKDFDowngrade           Code = "KDF_DOWNGRADE"
 	CodeLimitExceeded          Code = "LIMIT_EXCEEDED"
 	CodeSecretsChanged         Code = "SECRETS_CHANGED"
 	CodePermissionDenied       Code = "PERMISSION_DENIED"
@@ -57,6 +58,7 @@ var codes = []struct {
 	{ErrSessionExpired, CodeSessionExpired},
 	{domain.ErrPasswordChangeRequired, CodePasswordChangeRequired},
 	{service.ErrIntegrity, CodeIntegrity},
+	{domain.ErrKDFDowngrade, CodeKDFDowngrade},
 	{domain.ErrResourceExhausted, CodeLimitExceeded},
 	{domain.ErrSecretsChanged, CodeSecretsChanged},
 	{domain.ErrPermissionDenied, CodePermissionDenied},

@@ -3,6 +3,7 @@ package backend
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/F3dosik/GophKeeper/internal/client/vault"
 	"github.com/F3dosik/GophKeeper/internal/domain"
@@ -63,7 +64,13 @@ func toUIError(err error) error {
 
 	code := vault.ErrorCode(err)
 	message, ok := messages[code]
+	var downgrade *domain.KDFDowngradeError
 	switch {
+	case errors.As(err, &downgrade):
+		message = fmt.Sprintf("Сервер прислал более слабые параметры Argon2id, чем раньше (%s вместо %s). "+
+			"Так подменённый сервер мог бы облегчить подбор мастер-пароля; пароль не отправлен. "+
+			"Принимайте новые параметры, только если сами сменили пароль с ними на другом устройстве.",
+			downgrade.Received, downgrade.Known)
 	case errors.Is(err, domain.ErrInvalidCardNumber):
 		code, message = CodeValidation, "Неверный номер карты"
 	case errors.Is(err, domain.ErrInvalidCardExpiry):
