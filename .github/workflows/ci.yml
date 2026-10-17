@@ -80,6 +80,69 @@ jobs:
           path: bin/
           if-no-files-found: error
 
+  android:
+    name: Android — сборка, lint, unit-тесты
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      # Gradle-демон требует JDK 25 (android/gradle/gradle-daemon-jvm.properties).
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Go-ядро (gomobile)
+        # Android SDK и NDK предустановлены на раннере (ANDROID_HOME, ANDROID_NDK_HOME).
+        run: make android-aar
+      - name: Сборка, lint и unit-тесты
+        working-directory: android
+        run: ./gradlew assembleDebug lintDebug testDebugUnitTest
+      - uses: actions/upload-artifact@v7
+        with:
+          name: android-aar
+          path: android/app/libs/shron.aar
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          name: android-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+  android-emulator:
+    name: Android — тесты на эмуляторе
+    needs: [android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/download-artifact@v8
+        with:
+          name: android-aar
+          path: android/app/libs
+      - name: Доступ к KVM
+        # Без аппаратного ускорения эмулятор x86_64 не запускается.
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Инструментальные тесты
+        # Настоящее Go-ядро без сервера; каждый тест — в новом процессе (Test Orchestrator).
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          working-directory: android
+          script: ./gradlew connectedDebugAndroidTest
+
   desktop:
     name: Десктоп — ${{ matrix.name }}
     strategy:
