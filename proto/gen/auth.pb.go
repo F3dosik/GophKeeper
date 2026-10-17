@@ -1791,7 +1791,7 @@ const file_proto_auth_proto_rawDesc = "" +
 	"\x05Login\x12\x12.auth.LoginRequest\x1a\x13.auth.LoginResponse\x123\n" +
 	"\x06Logout\x12\x13.auth.LogoutRequest\x1a\x14.auth.LogoutResponse\x12M\n" +
 	"\x0eChangePassword\x12\x1b.auth.ChangePasswordRequest\x1a\x1c.auth.ChangePasswordResponse(\x01\x12H\n" +
-	"\rDeleteAccount\x12\x1a.auth.DeleteAccountRequest\x1a\x1b.auth.DeleteAccountResponseB)Z'github.com/F3dosik/GophKeeper/proto/genb\beditionsp\xe8\a"
+	"\rDeleteAccount\x12\x1a.auth.DeleteAccountRequest\x1a\x1b.auth.DeleteAccountResponseB$Z\"github.com/F3dosik/Shron/proto/genb\beditionsp\xe8\a"
 
 var file_proto_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_proto_auth_proto_goTypes = []any{

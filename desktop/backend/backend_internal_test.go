@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/F3dosik/GophKeeper/internal/client/vault"
-	"github.com/F3dosik/GophKeeper/internal/domain"
+	"github.com/F3dosik/Shron/internal/client/vault"
+	"github.com/F3dosik/Shron/internal/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

@@ -3,7 +3,7 @@ package backend
 import (
 	"math"
 
-	"github.com/F3dosik/GophKeeper/internal/client/passgen"
+	"github.com/F3dosik/Shron/internal/client/passgen"
 )
 
 // GeneratorOptions — параметры пароля из символов.

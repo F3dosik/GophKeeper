@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/F3dosik/GophKeeper/internal/domain"
+	"github.com/F3dosik/Shron/internal/domain"
 	"golang.org/x/term"
 )
 

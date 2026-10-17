@@ -2,17 +2,17 @@ package command_test
 
 import (
 	"bytes"
-	"github.com/F3dosik/GophKeeper/internal/domain"
+	"github.com/F3dosik/Shron/internal/domain"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/F3dosik/GophKeeper/internal/client/command"
-	"github.com/F3dosik/GophKeeper/internal/client/config"
-	"github.com/F3dosik/GophKeeper/internal/client/mocks"
-	"github.com/F3dosik/GophKeeper/internal/client/service"
+	"github.com/F3dosik/Shron/internal/client/command"
+	"github.com/F3dosik/Shron/internal/client/config"
+	"github.com/F3dosik/Shron/internal/client/mocks"
+	"github.com/F3dosik/Shron/internal/client/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -29,7 +29,7 @@ func TestExecute_Version(t *testing.T) {
 	t.Cleanup(func() { command.Version = orig })
 
 	out := captureStdout(t, func() {
-		os.Args = []string{"gophkeeper", "version"}
+		os.Args = []string{"shron", "version"}
 		err := command.New(nil, nil, nil, &config.Config{}).Execute()
 		require.NoError(t, err)
 	})
@@ -42,7 +42,7 @@ func TestExecute_UnknownCommand(t *testing.T) {
 	cmds := command.New(nil, nil, nil, &config.Config{})
 	// Silence Cobra's own stderr output, redirect it to buf.
 	buf := &bytes.Buffer{}
-	os.Args = []string{"gophkeeper", "nonexistent"}
+	os.Args = []string{"shron", "nonexistent"}
 	// We can't easily inject stderr; Execute returns the error.
 	err := cmds.Execute()
 	assert.Error(t, err)
@@ -66,7 +66,7 @@ func TestLogout_RevokesTokenAndRemovesSessionFile(t *testing.T) {
 
 	cmds := logoutCommands(t, sessionPath, false)
 	out := captureStdout(t, func() {
-		os.Args = []string{"gophkeeper", "auth", "logout"}
+		os.Args = []string{"shron", "auth", "logout"}
 		err := cmds.Execute()
 		require.NoError(t, err)
 	})
@@ -82,7 +82,7 @@ func TestLogout_AllSessions(t *testing.T) {
 
 	cmds := logoutCommands(t, sessionPath, true)
 	out := captureStdout(t, func() {
-		os.Args = []string{"gophkeeper", "auth", "logout", "--all"}
+		os.Args = []string{"shron", "auth", "logout", "--all"}
 		err := cmds.Execute()
 		require.NoError(t, err)
 	})
@@ -94,7 +94,7 @@ func TestLogout_MissingSessionFile_NoError(t *testing.T) {
 	cmds := command.New(nil, nil, nil, &config.Config{
 		SessionPath: filepath.Join(t.TempDir(), "missing"),
 	})
-	os.Args = []string{"gophkeeper", "auth", "logout"}
+	os.Args = []string{"shron", "auth", "logout"}
 	err := cmds.Execute()
 	assert.NoError(t, err)
 }
@@ -116,7 +116,7 @@ func withStdin(t *testing.T, input string, fn func()) {
 
 func TestAdminDeleteUser(t *testing.T) {
 	run := func(admin *mocks.AdminClient, args ...string) error {
-		os.Args = append([]string{"gophkeeper", "admin", "delete-user"}, args...)
+		os.Args = append([]string{"shron", "admin", "delete-user"}, args...)
 		return command.New(nil, nil, admin, &config.Config{}).Execute()
 	}
 
@@ -160,7 +160,7 @@ func TestAdminListUsers(t *testing.T) {
 	}, nil)
 
 	out := captureStdout(t, func() {
-		os.Args = []string{"gophkeeper", "admin", "list-users"}
+		os.Args = []string{"shron", "admin", "list-users"}
 		require.NoError(t, command.New(nil, nil, admin, &config.Config{}).Execute())
 	})
 	assert.Contains(t, out, "alice")
@@ -172,7 +172,7 @@ func TestGenerate(t *testing.T) {
 	run := func(args ...string) string {
 		var out string
 		out = captureStdout(t, func() {
-			os.Args = append([]string{"gophkeeper", "generate"}, args...)
+			os.Args = append([]string{"shron", "generate"}, args...)
 			require.NoError(t, command.New(nil, nil, nil, &config.Config{}).Execute())
 		})
 		return strings.TrimSpace(out)
@@ -185,7 +185,7 @@ func TestGenerate(t *testing.T) {
 }
 
 func TestSecretCreate_GenerateOnlyForCredentials(t *testing.T) {
-	os.Args = []string{"gophkeeper", "secret", "create", "--name", "n", "--type", "text", "--generate"}
+	os.Args = []string{"shron", "secret", "create", "--name", "n", "--type", "text", "--generate"}
 	err := command.New(nil, nil, nil, &config.Config{}).Execute()
 	assert.ErrorContains(t, err, "credentials")
 }

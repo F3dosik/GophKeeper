@@ -1,5 +1,5 @@
 #!/bin/sh
-# Периодическое резервное копирование базы GophKeeper (сервис backup в docker-compose).
+# Периодическое резервное копирование базы Shron (сервис backup в docker-compose).
 #
 # Каждые BACKUP_INTERVAL (формат sleep: 30m, 6h, 1d; по умолчанию 24h) делает pg_dump
 # в формате custom (-Fc, сжатый, восстанавливается pg_restore) в /backups и оставляет
@@ -24,20 +24,21 @@ export PGPASSWORD="$POSTGRES_PASSWORD"
 
 backup() {
   ts=$(date -u +%Y%m%dT%H%M%SZ)
-  tmp="$dir/.gophkeeper-$ts.dump.tmp"
+  tmp="$dir/.shron-$ts.dump.tmp"
   # Сначала во временный файл: оборванная копия не должна выглядеть готовой
   # и вытеснять старые при ротации.
   if pg_dump -h db -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc -f "$tmp"; then
-    mv "$tmp" "$dir/gophkeeper-$ts.dump"
-    echo "backup: gophkeeper-$ts.dump ($(wc -c < "$dir/gophkeeper-$ts.dump") bytes)"
+    mv "$tmp" "$dir/shron-$ts.dump"
+    echo "backup: shron-$ts.dump ($(wc -c < "$dir/shron-$ts.dump") bytes)"
   else
     rm -f "$tmp"
     echo "backup: pg_dump failed" >&2
     return 1
   fi
 
-  # Ротация: оставить keep самых новых (имена сортируются по времени).
-  ls -1 "$dir"/gophkeeper-*.dump 2>/dev/null | sort -r | tail -n +"$((keep + 1))" | while read -r old; do
+  # Ротация: оставить keep самых новых (имена сортируются по времени). gophkeeper-* —
+  # копии до переименования проекта; при сортировке они идут после shron-* и удаляются первыми.
+  ls -1 "$dir"/shron-*.dump "$dir"/gophkeeper-*.dump 2>/dev/null | sort -r | tail -n +"$((keep + 1))" | while read -r old; do
     rm -f "$old" && echo "backup: removed $(basename "$old")"
   done
 }

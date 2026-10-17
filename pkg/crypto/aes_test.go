@@ -4,7 +4,7 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"github.com/F3dosik/GophKeeper/pkg/crypto"
+	"github.com/F3dosik/Shron/pkg/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

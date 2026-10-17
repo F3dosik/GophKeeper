@@ -6,16 +6,33 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/F3dosik/GophKeeper/internal/client/config"
+	"github.com/F3dosik/Shron/internal/client/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+// isolate подменяет домашний каталог временным и убирает переменные клиента:
+// Load переносит ~/.gophkeeper, и тест не должен трогать настоящий каталог.
+func isolate(t *testing.T) string {
+	t.Helper()
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	for _, name := range []string{"SERVER", "SESSION", "TLS_CERT", "INSECURE"} {
+		for _, prefix := range []string{"SHRON_", "GOPHKEEPER_"} {
+			t.Setenv(prefix+name, "")
+			require.NoError(t, os.Unsetenv(prefix+name))
+		}
+	}
+	return home
+}
+
 func TestLoad_Defaults(t *testing.T) {
-	t.Setenv("GOPHKEEPER_SERVER", "")
-	t.Setenv("GOPHKEEPER_SESSION", "")
-	t.Setenv("GOPHKEEPER_TLS_CERT", "")
-	t.Setenv("GOPHKEEPER_INSECURE", "")
+	isolate(t)
+	t.Setenv("SHRON_SERVER", "")
+	t.Setenv("SHRON_SESSION", "")
+	t.Setenv("SHRON_TLS_CERT", "")
+	t.Setenv("SHRON_INSECURE", "")
 
 	cfg, err := config.Load()
 
@@ -28,9 +45,10 @@ func TestLoad_Defaults(t *testing.T) {
 }
 
 func TestLoad_FromEnv(t *testing.T) {
-	t.Setenv("GOPHKEEPER_SERVER", "example.com:443")
-	t.Setenv("GOPHKEEPER_SESSION", "/tmp/custom-session")
-	t.Setenv("GOPHKEEPER_TLS_CERT", "/etc/certs/ca.pem")
+	isolate(t)
+	t.Setenv("SHRON_SERVER", "example.com:443")
+	t.Setenv("SHRON_SESSION", "/tmp/custom-session")
+	t.Setenv("SHRON_TLS_CERT", "/etc/certs/ca.pem")
 
 	cfg, err := config.Load()
 
@@ -41,7 +59,8 @@ func TestLoad_FromEnv(t *testing.T) {
 }
 
 func TestLoad_ExpandsHomeInSessionPath(t *testing.T) {
-	t.Setenv("GOPHKEEPER_SESSION", "~/mysession")
+	isolate(t)
+	t.Setenv("SHRON_SESSION", "~/mysession")
 
 	cfg, err := config.Load()
 
@@ -52,7 +71,8 @@ func TestLoad_ExpandsHomeInSessionPath(t *testing.T) {
 }
 
 func TestLoad_DefaultSessionPathIsExpanded(t *testing.T) {
-	t.Setenv("GOPHKEEPER_SESSION", "")
+	isolate(t)
+	t.Setenv("SHRON_SESSION", "")
 
 	cfg, err := config.Load()
 
@@ -64,7 +84,8 @@ func TestLoad_DefaultSessionPathIsExpanded(t *testing.T) {
 }
 
 func TestLoad_PathWithoutTildeUnchanged(t *testing.T) {
-	t.Setenv("GOPHKEEPER_SESSION", "/absolute/path")
+	isolate(t)
+	t.Setenv("SHRON_SESSION", "/absolute/path")
 
 	cfg, err := config.Load()
 
@@ -73,7 +94,8 @@ func TestLoad_PathWithoutTildeUnchanged(t *testing.T) {
 }
 
 func TestLoad_Insecure(t *testing.T) {
-	t.Setenv("GOPHKEEPER_INSECURE", "true")
+	isolate(t)
+	t.Setenv("SHRON_INSECURE", "true")
 
 	cfg, err := config.Load()
 
@@ -82,12 +104,61 @@ func TestLoad_Insecure(t *testing.T) {
 }
 
 func TestLoad_ServerPortIsOptional(t *testing.T) {
-	t.Setenv("GOPHKEEPER_SERVER", "192.168.1.5")
+	isolate(t)
+	t.Setenv("SHRON_SERVER", "192.168.1.5")
 	cfg, err := config.Load()
 	require.NoError(t, err)
 	assert.Equal(t, "192.168.1.5:50051", cfg.ServerAddress)
 
-	t.Setenv("GOPHKEEPER_SERVER", "http://bad")
+	t.Setenv("SHRON_SERVER", "http://bad")
 	_, err = config.Load()
 	assert.Error(t, err)
+}
+
+func TestLoad_LegacyEnv(t *testing.T) {
+	isolate(t)
+	t.Setenv("GOPHKEEPER_SERVER", "old.example.com")
+	t.Setenv("GOPHKEEPER_INSECURE", "true")
+
+	cfg, err := config.Load()
+	require.NoError(t, err)
+	assert.Equal(t, "old.example.com:50051", cfg.ServerAddress, "names before the rename still work")
+	assert.True(t, cfg.Insecure)
+
+	t.Setenv("SHRON_SERVER", "new.example.com")
+	cfg, err = config.Load()
+	require.NoError(t, err)
+	assert.Equal(t, "new.example.com:50051", cfg.ServerAddress, "the new name wins")
+	assert.Empty(t, os.Getenv("SHRON_INSECURE"), "Load does not modify the process environment")
+
+	assert.Equal(t, "new.example.com", config.Getenv("SERVER"))
+	assert.Equal(t, "true", config.Getenv("INSECURE"))
+}
+
+func TestLoad_MigratesLegacyDataDir(t *testing.T) {
+	home := isolate(t)
+	legacy := filepath.Join(home, ".gophkeeper")
+	require.NoError(t, os.MkdirAll(legacy, 0o700))
+	require.NoError(t, os.WriteFile(filepath.Join(legacy, "session"), []byte("old"), 0o600))
+
+	cfg, err := config.Load()
+	require.NoError(t, err)
+	assert.Equal(t, filepath.Join(home, ".shron", "session"), cfg.SessionPath)
+	data, err := os.ReadFile(cfg.SessionPath)
+	require.NoError(t, err)
+	assert.Equal(t, "old", string(data), "the old session is moved")
+	assert.NoDirExists(t, legacy)
+}
+
+func TestMigrateDir(t *testing.T) {
+	dir := t.TempDir()
+	oldDir, newDir := filepath.Join(dir, "old"), filepath.Join(dir, "nested", "new")
+
+	require.NoError(t, config.MigrateDir(oldDir, newDir), "nothing to migrate")
+	assert.NoDirExists(t, newDir)
+
+	require.NoError(t, os.MkdirAll(oldDir, 0o700))
+	require.NoError(t, os.MkdirAll(newDir, 0o700))
+	require.NoError(t, config.MigrateDir(oldDir, newDir))
+	assert.DirExists(t, oldDir, "an existing new directory is never overwritten")
 }

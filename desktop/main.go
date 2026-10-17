@@ -1,12 +1,12 @@
-// Command desktop — десктоп-клиент GophKeeper на Wails.
+// Command desktop — десктоп-клиент Shron на Wails.
 package main
 
 import (
 	"context"
 	"log"
-	"os"
 
-	"github.com/F3dosik/GophKeeper/desktop/backend"
+	"github.com/F3dosik/Shron/desktop/backend"
+	"github.com/F3dosik/Shron/internal/client/config"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/logger"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -15,8 +15,9 @@ import (
 )
 
 func main() {
-	// GOPHKEEPER_DESKTOP_DIR задаёт другой каталог данных: вторая учётка, разработка, тесты.
-	dir := os.Getenv("GOPHKEEPER_DESKTOP_DIR")
+	// SHRON_DESKTOP_DIR задаёт другой каталог данных: вторая учётка, разработка, тесты.
+	// Прежнее имя GOPHKEEPER_DESKTOP_DIR тоже принимается.
+	dir := config.Getenv("DESKTOP_DIR")
 	if dir == "" {
 		var err error
 		if dir, err = backend.DefaultDir(); err != nil {
@@ -28,14 +29,14 @@ func main() {
 	app := backend.NewApp(backend.Options{Dir: dir, UI: ui})
 
 	err := wails.Run(&options.App{
-		Title:     "GophKeeper",
+		Title:     "Shron",
 		Width:     1000,
 		Height:    700,
 		MinWidth:  720,
 		MinHeight: 480,
-		// GOPHKEEPER_DESKTOP_HIDDEN=1 запускает без окна: для автотестов интерфейса
+		// SHRON_DESKTOP_HIDDEN=1 запускает без окна: для автотестов интерфейса
 		// через браузер в режиме wails dev.
-		StartHidden: os.Getenv("GOPHKEEPER_DESKTOP_HIDDEN") == "1",
+		StartHidden: config.Getenv("DESKTOP_HIDDEN") == "1",
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},

@@ -6,9 +6,9 @@ import (
 	"math"
 	"os"
 
-	"github.com/F3dosik/GophKeeper/internal/client/service"
-	"github.com/F3dosik/GophKeeper/internal/client/session"
-	"github.com/F3dosik/GophKeeper/internal/domain"
+	"github.com/F3dosik/Shron/internal/client/service"
+	"github.com/F3dosik/Shron/internal/client/session"
+	"github.com/F3dosik/Shron/internal/domain"
 
 	"github.com/spf13/cobra"
 )
@@ -43,7 +43,7 @@ func (c *Commands) newRegisterCmd() *cobra.Command {
 			"и должен быть сменён при первом входе. Так администратор заводит учётку для другого\n" +
 			"человека; работает только через административный порт сервера (ADMIN_PORT).\n\n" +
 			"Стойкий и запоминаемый мастер-пароль можно получить командой\n" +
-			"`gophkeeper generate --words 6` — парольная фраза из шести случайных слов.",
+			"`shron generate --words 6` — парольная фраза из шести случайных слов.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			login := args[0]
@@ -145,7 +145,7 @@ func (c *Commands) newLogoutCmd() *cobra.Command {
 			err := c.authService.Logout(cmd.Context(), all)
 			if all && errors.Is(err, domain.ErrInvalidCredentials) {
 				return fmt.Errorf("токен этого устройства недействителен (истёк или отозван): " +
-					"выполните 'gophkeeper auth login' и повторите 'logout --all'")
+					"выполните 'shron auth login' и повторите 'logout --all'")
 			}
 			if err != nil {
 				return err
@@ -184,7 +184,7 @@ func (c *Commands) newPasswdCmd() *cobra.Command {
 
 			sess, err := session.Load(c.cfg.SessionPath)
 			if err != nil {
-				return fmt.Errorf("не выполнен вход, запустите 'gophkeeper auth login': %w", err)
+				return fmt.Errorf("не выполнен вход, запустите 'shron auth login': %w", err)
 			}
 
 			oldPassword, err := promptPassword(promptCurrentPassword)
@@ -214,13 +214,13 @@ func (c *Commands) newPasswdCmd() *cobra.Command {
 			err = c.authService.ChangePassword(cmd.Context(), sess.Login, oldPassword, newPassword, params, reencrypt)
 			if errors.Is(err, domain.ErrSecretsChanged) {
 				return fmt.Errorf("секреты изменились во время смены пароля (например, с другого устройства), " +
-					"пароль не изменён; повторите 'gophkeeper auth passwd'")
+					"пароль не изменён; повторите 'shron auth passwd'")
 			}
 			if err != nil {
 				return err
 			}
 
-			fmt.Println("Пароль изменён. На остальных устройствах выполните 'gophkeeper auth login'.")
+			fmt.Println("Пароль изменён. На остальных устройствах выполните 'shron auth login'.")
 			return nil
 		},
 	}
@@ -270,7 +270,7 @@ func (c *Commands) newDeleteAccountCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			sess, err := session.Load(c.cfg.SessionPath)
 			if err != nil {
-				return fmt.Errorf("не выполнен вход, запустите 'gophkeeper auth login': %w", err)
+				return fmt.Errorf("не выполнен вход, запустите 'shron auth login': %w", err)
 			}
 
 			if !skipConfirm {

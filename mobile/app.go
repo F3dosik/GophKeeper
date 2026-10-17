@@ -1,4 +1,4 @@
-// Package mobile — клиент GophKeeper для мобильных приложений, собирается в Android-библиотеку
+// Package mobile — клиент Shron для мобильных приложений, собирается в Android-библиотеку
 // через gomobile bind (make android-aar). Работа с сервером и ключами — в internal/client/vault;
 // здесь настройки и преобразование данных в типы, которые понимает gomobile.
 //
@@ -24,10 +24,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/F3dosik/GophKeeper/internal/client/grpcclient"
-	"github.com/F3dosik/GophKeeper/internal/client/vault"
-	"github.com/F3dosik/GophKeeper/internal/domain"
-	pb "github.com/F3dosik/GophKeeper/proto/gen"
+	"github.com/F3dosik/Shron/internal/client/grpcclient"
+	"github.com/F3dosik/Shron/internal/client/vault"
+	"github.com/F3dosik/Shron/internal/domain"
+	pb "github.com/F3dosik/Shron/proto/gen"
 )
 
 // checkServerTimeout — таймаут проверки соединения с сервером.
@@ -61,7 +61,7 @@ type State struct {
 	Unlocked bool
 }
 
-// App — клиент GophKeeper.
+// App — клиент Shron.
 type App struct {
 	dir      string
 	insecure bool

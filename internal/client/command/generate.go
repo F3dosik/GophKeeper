@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/F3dosik/GophKeeper/internal/client/passgen"
-	"github.com/F3dosik/GophKeeper/internal/domain"
+	"github.com/F3dosik/Shron/internal/client/passgen"
+	"github.com/F3dosik/Shron/internal/domain"
 	"github.com/spf13/cobra"
 )
 
@@ -44,7 +44,7 @@ func (f *genFlags) options() passgen.Options {
 
 // newGenerateCmd создаёт команду генерации пароля или парольной фразы.
 // В stdout выводится только сам пароль, чтобы его можно было передать дальше
-// (например, `gophkeeper generate | xclip`); оценка стойкости — в stderr.
+// (например, `shron generate | xclip`); оценка стойкости — в stderr.
 func (c *Commands) newGenerateCmd() *cobra.Command {
 	var (
 		gen       genFlags
@@ -58,9 +58,9 @@ func (c *Commands) newGenerateCmd() *cobra.Command {
 			"слов словаря EFF (7776 слов, около 12,9 бита на слово). Фразу легче запомнить и ввести —\n" +
 			"она хорошо подходит для мастер-пароля: 6 слов дают около 77 бит.\n\n" +
 			"Примеры:\n" +
-			"  gophkeeper generate                     # 20 символов\n" +
-			"  gophkeeper generate --length 32 --no-symbols\n" +
-			"  gophkeeper generate --words 6           # парольная фраза",
+			"  shron generate                     # 20 символов\n" +
+			"  shron generate --length 32 --no-symbols\n" +
+			"  shron generate --words 6           # парольная фраза",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var (

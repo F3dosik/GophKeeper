@@ -1,10 +1,10 @@
-.PHONY: help generate docs build-client build-client-all build-server test test-e2e test-cover docker-up docker-up-local docker-down backup restore certs ca-encrypt desktop-dev desktop-build desktop-build-windows android-aar clean
+.PHONY: help generate docs build-client build-client-all build-server test test-e2e test-cover docker-up docker-up-local check-data-volume docker-down backup restore certs ca-encrypt desktop-dev desktop-build desktop-build-windows android-aar clean
 
 # Версия и дата сборки — подставляются в бинарь клиента через -ldflags.
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 BUILD_DATE := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
-LDFLAGS := -X github.com/F3dosik/GophKeeper/internal/client/command.Version=$(VERSION) \
-           -X github.com/F3dosik/GophKeeper/internal/client/command.BuildDate=$(BUILD_DATE)
+LDFLAGS := -X github.com/F3dosik/Shron/internal/client/command.Version=$(VERSION) \
+           -X github.com/F3dosik/Shron/internal/client/command.BuildDate=$(BUILD_DATE)
 
 SHELL := /bin/bash
 
@@ -19,11 +19,11 @@ export BACKUP_GID ?= $(shell id -g)
 # коммиту: на теге релиза vX.Y.Z — X.Y.Z, иначе sha-<7 символов коммита>. Так сервер
 # всегда той же версии, что миграции и docker-compose.yaml в этом каталоге.
 # Другая версия: make docker-up SERVER_TAG=1.2.0 (или latest).
-SERVER_IMAGE ?= ghcr.io/f3dosik/gophkeeper
+SERVER_IMAGE ?= ghcr.io/f3dosik/shron
 SERVER_TAG   ?= $(shell t=$$(git describe --tags --exact-match --match 'v[0-9]*' 2>/dev/null) && echo "$$t" | cut -c2- \
                   || { c=$$(git rev-parse HEAD 2>/dev/null) && echo "sha-$$(echo $$c | cut -c1-7)"; } || echo latest)
-export GOPHKEEPER_IMAGE := $(SERVER_IMAGE)
-export GOPHKEEPER_TAG   := $(SERVER_TAG)
+export SHRON_IMAGE := $(SERVER_IMAGE)
+export SHRON_TAG   := $(SERVER_TAG)
 
 # Десктоп-клиент (Wails). WAILS — путь к CLI: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 # На Ubuntu 24.04+ есть только WebKitGTK 4.1, для него нужен тег webkit2_41.
@@ -38,7 +38,7 @@ TOOLS_DIR   := $(BIN_DIR)/tools
 ANDROID_API ?= 24
 ANDROID_AAR ?= android/app/libs/shron.aar
 
-COMPLETION_FILE := $(HOME)/.gophkeeper_completion
+COMPLETION_FILE := $(HOME)/.shron_completion
 
 # TLS: каталог с сертификатами и список имён/IP, по которым клиенты обращаются к серверу.
 # Пример: make certs CERT_HOSTS=localhost,127.0.0.1,203.0.113.10,keeper.example.com
@@ -75,10 +75,10 @@ generate:
 	mkdir -p proto/gen
 	protoc \
 		--go_out=proto/gen \
-		--go_opt=module=github.com/F3dosik/GophKeeper/proto/gen \
+		--go_opt=module=github.com/F3dosik/Shron/proto/gen \
 		--go_opt=default_api_level=API_OPAQUE \
 		--go-grpc_out=proto/gen \
-		--go-grpc_opt=module=github.com/F3dosik/GophKeeper/proto/gen \
+		--go-grpc_opt=module=github.com/F3dosik/Shron/proto/gen \
 		proto/*.proto
 
 # Документация API из .proto (требует protoc-gen-doc в PATH).
@@ -97,25 +97,25 @@ docs:
 
 build-client:
 	mkdir -p $(BIN_DIR)
-	go build -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/gophkeeper ./cmd/client
+	go build -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/shron ./cmd/client
 
 build-client-all:
 	mkdir -p $(BIN_DIR)
-	GOOS=linux   GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/gophkeeper-linux-amd64       ./cmd/client
-	GOOS=darwin  GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/gophkeeper-darwin-amd64      ./cmd/client
-	GOOS=darwin  GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/gophkeeper-darwin-arm64      ./cmd/client
-	GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/gophkeeper-windows-amd64.exe ./cmd/client
+	GOOS=linux   GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/shron-linux-amd64       ./cmd/client
+	GOOS=darwin  GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/shron-darwin-amd64      ./cmd/client
+	GOOS=darwin  GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/shron-darwin-arm64      ./cmd/client
+	GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/shron-windows-amd64.exe ./cmd/client
 
 install-completion:
-	@$(BIN_DIR)/gophkeeper completion bash > $(COMPLETION_FILE)
-	@echo "complete -F __start_gophkeeper $(BIN_DIR)/gophkeeper" >> $(COMPLETION_FILE)
+	@$(BIN_DIR)/shron completion bash > $(COMPLETION_FILE)
+	@echo "complete -F __start_shron $(BIN_DIR)/shron" >> $(COMPLETION_FILE)
 	@grep -qxF "source $(COMPLETION_FILE)" $(HOME)/.bashrc || \
 		echo "source $(COMPLETION_FILE)" >> $(HOME)/.bashrc
 	@echo "Автодополнение установлено. Выполни: source ~/.bashrc"
 
 build-server:
 	mkdir -p $(BIN_DIR)
-	go build -o $(BIN_DIR)/gophkeeper-server ./cmd/server
+	go build -o $(BIN_DIR)/shron-server ./cmd/server
 
 test:
 	go test ./...
@@ -130,7 +130,7 @@ test-cover:
 	go tool cover -func=coverage.final.out | tail -1
 
 # Генерирует собственный CA и подписанный им сертификат сервера.
-# certs/ca.crt раздаётся клиентам (GOPHKEEPER_TLS_CERT), certs/server.* монтируются в контейнер.
+# certs/ca.crt раздаётся клиентам (SHRON_TLS_CERT), certs/server.* монтируются в контейнер.
 # Ключ CA лежит отдельно в ca/ (не монтируется в контейнер) и зашифрован паролем:
 # с ним можно выпустить сертификат, которому поверят все клиенты, поэтому после выпуска
 # его лучше убрать с сервера (см. README) и возвращать только для перевыпуска.
@@ -151,13 +151,13 @@ certs:
 		echo "Создаётся CA. Задайте пароль ключа CA, он понадобится при перевыпуске сертификата."; \
 		openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 $(CA_PASS_OUT) \
 			-keyout $(CA_DIR)/ca.key -out $(CERTS_DIR)/ca.crt -days $(CERT_DAYS) \
-			-subj "/CN=GophKeeper CA" 2>/dev/null; }
+			-subj "/CN=Shron CA" 2>/dev/null; }
 	@SAN=$$(echo "$(CERT_HOSTS)" | tr ',' '\n' | while read h; do \
 		if echo "$$h" | grep -Eq '^[0-9.]+$$|:'; then echo "IP:$$h"; else echo "DNS:$$h"; fi; \
 	done | paste -sd, -); \
 	openssl req -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes \
 		-keyout $(CERTS_DIR)/server.key.new -out $(CERTS_DIR)/server.csr \
-		-subj "/CN=gophkeeper-server" 2>/dev/null && \
+		-subj "/CN=shron-server" 2>/dev/null && \
 	echo "Подпись сертификата сервера ключом CA:" && \
 	openssl x509 -req -in $(CERTS_DIR)/server.csr -CA $(CERTS_DIR)/ca.crt -CAkey $(CA_DIR)/ca.key $(CA_PASS_IN) \
 		-CAcreateserial -CAserial $(CA_DIR)/ca.srl -out $(CERTS_DIR)/server.crt.new -days $(CERT_DAYS) \
@@ -172,7 +172,7 @@ certs:
 	mv $(CERTS_DIR)/server.crt.new $(CERTS_DIR)/server.crt && \
 	chmod 600 $(CA_DIR)/ca.key && chmod 644 $(CERTS_DIR)/server.key && \
 	echo "Сертификат сервера выпущен для: $$SAN" && \
-	echo "Клиентам передать $(CERTS_DIR)/ca.crt и задать GOPHKEEPER_TLS_CERT=<путь к ca.crt>" && \
+	echo "Клиентам передать $(CERTS_DIR)/ca.crt и задать SHRON_TLS_CERT=<путь к ca.crt>" && \
 	echo "Ключ CA ($(CA_DIR)/ca.key) после выпуска лучше убрать с сервера."
 
 # Шифрует паролем ранее созданный незашифрованный ключ CA.
@@ -199,19 +199,35 @@ android-aar:
 		-androidapi $(ANDROID_API) -javapkg=io.github.f3dosik.shron -trimpath -ldflags "-s -w" \
 		-o $(ANDROID_AAR) ./mobile
 
-docker-up:
+# Том базы называется <проект>_pgdata, а имя проекта Compose по умолчанию — имя каталога.
+# Каталог, переименованный из GophKeeper или клонированный заново как Shron, дал бы новую
+# пустую базу рядом с прежней, поэтому запуск останавливается и подсказывает, что делать.
+check-data-volume:
+	@project=$$(docker compose config 2>/dev/null | sed -n 's/^name: //p'); \
+	if [ -n "$$project" ] && [ "$$project" != gophkeeper ] \
+		&& docker volume inspect gophkeeper_pgdata >/dev/null 2>&1 \
+		&& ! docker volume inspect "$${project}_pgdata" >/dev/null 2>&1; then \
+		echo "Найдена база прежней версии (том gophkeeper_pgdata), а проект Compose называется $$project:"; \
+		echo "запуск создал бы новую пустую базу. Добавьте в .env строку COMPOSE_PROJECT_NAME=gophkeeper"; \
+		echo "и повторите. Если прежняя база не нужна: docker volume rm gophkeeper_pgdata"; \
+		exit 1; \
+	fi
+
+# --remove-orphans удаляет контейнеры сервисов, которых больше нет в compose (например,
+# gophkeeper до переименования в shron): иначе прежний контейнер занимал бы порт сервера.
+docker-up: check-data-volume
 	@mkdir -p $(BACKUP_DIR)
 	@echo "Образ сервера: $(SERVER_IMAGE):$(SERVER_TAG)"
-	@docker compose pull gophkeeper || { \
+	@docker compose pull shron || { \
 		echo "Образа $(SERVER_IMAGE):$(SERVER_TAG) нет в реестре. Возможные причины:"; \
 		echo "  — CI ещё собирает этот коммит: подождите несколько минут;"; \
 		echo "  — коммита нет в main (локальная ветка): соберите из исходников — make docker-up-local."; \
 		exit 1; }
-	docker compose up -d
+	docker compose up -d --remove-orphans
 
-docker-up-local:
+docker-up-local: check-data-volume
 	@mkdir -p $(BACKUP_DIR)
-	docker compose -f docker-compose.yaml -f docker-compose.build.yaml up -d --build
+	docker compose -f docker-compose.yaml -f docker-compose.build.yaml up -d --build --remove-orphans
 
 # Разовая копия. Имя manual-* не попадает под ротацию сервиса backup.
 backup:
@@ -228,15 +244,15 @@ backup:
 # остаётся прежней. После восстановления все токены отзываются: в копии старые версии
 # токенов и список отозванных, без этого отозванные после копии токены снова заработали бы.
 restore:
-	@test -n "$(FILE)" || { echo "Укажите копию: make restore FILE=$(BACKUP_DIR)/gophkeeper-<время>.dump"; exit 1; }
+	@test -n "$(FILE)" || { echo "Укажите копию: make restore FILE=$(BACKUP_DIR)/shron-<время>.dump"; exit 1; }
 	@test -f "$(FILE)" || { echo "Файл $(FILE) не найден"; exit 1; }
 	@echo "Данные сервера будут заменены копией $(FILE). Всё, что создано после неё, пропадёт."
 	@read -p "Для продолжения введите yes: " answer && [ "$$answer" = yes ] || { echo "Отменено"; exit 1; }
-	@docker compose stop gophkeeper; status=0; \
+	@docker compose stop shron; status=0; \
 	docker compose exec -T db sh -c 'pg_restore -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" --clean --if-exists --no-owner --single-transaction' < "$(FILE)" \
 	&& docker compose exec -T db sh -c 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -q -v ON_ERROR_STOP=1 -c "UPDATE users SET token_version = token_version + 1; DELETE FROM revoked_tokens;"' \
 	|| status=$$?; \
-	docker compose start gophkeeper; \
+	docker compose start shron; \
 	if [ $$status -eq 0 ]; then echo "Восстановлено. Все сессии завершены: пользователям нужно снова войти."; \
 	else echo "Восстановление не удалось, база не изменилась"; fi; \
 	exit $$status

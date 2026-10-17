@@ -6,7 +6,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/F3dosik/GophKeeper/internal/domain"
+	"github.com/F3dosik/Shron/internal/domain"
 )
 
 // Ограничения на входные данные. Клиент формирует ключи и blind index фиксированной

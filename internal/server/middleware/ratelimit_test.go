@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	pb "github.com/F3dosik/GophKeeper/proto/gen"
+	pb "github.com/F3dosik/Shron/proto/gen"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"

@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/F3dosik/GophKeeper/internal/domain"
-	"github.com/F3dosik/GophKeeper/internal/server/mocks"
+	"github.com/F3dosik/Shron/internal/domain"
+	"github.com/F3dosik/Shron/internal/server/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"

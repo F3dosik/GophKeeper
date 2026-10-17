@@ -1,4 +1,4 @@
-// Package command реализует CLI-команды клиента GophKeeper на базе Cobra.
+// Package command реализует CLI-команды клиента Shron на базе Cobra.
 // Пакет содержит определение корневой команды и её подкоманд (auth, secret, version),
 // а также вспомогательные фабрики сервисов, используемые при обработке команд.
 package command
@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/F3dosik/GophKeeper/internal/client/config"
-	"github.com/F3dosik/GophKeeper/internal/client/grpcclient"
-	"github.com/F3dosik/GophKeeper/internal/client/service"
-	"github.com/F3dosik/GophKeeper/internal/client/session"
-	"github.com/F3dosik/GophKeeper/internal/domain"
+	"github.com/F3dosik/Shron/internal/client/config"
+	"github.com/F3dosik/Shron/internal/client/grpcclient"
+	"github.com/F3dosik/Shron/internal/client/service"
+	"github.com/F3dosik/Shron/internal/client/session"
+	"github.com/F3dosik/Shron/internal/domain"
 	"github.com/spf13/cobra"
 )
 
@@ -58,7 +58,7 @@ func (c *Commands) newSecretService(ctx context.Context, login, password string)
 		return nil, ErrWrongMasterPassword
 	}
 	if errors.Is(err, domain.ErrPasswordChangeRequired) {
-		return nil, fmt.Errorf("пароль временный: выполните 'gophkeeper auth login %s' и задайте свой пароль", login)
+		return nil, fmt.Errorf("пароль временный: выполните 'shron auth login %s' и задайте свой пароль", login)
 	}
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func (c *Commands) newSecretService(ctx context.Context, login, password string)
 func (c *Commands) unlockSecretService(ctx context.Context) (service.SecretsService, error) {
 	sess, err := session.Load(c.cfg.SessionPath)
 	if err != nil {
-		return nil, fmt.Errorf("не выполнен вход, запустите 'gophkeeper auth login': %w", err)
+		return nil, fmt.Errorf("не выполнен вход, запустите 'shron auth login': %w", err)
 	}
 
 	password, err := promptPassword(promptMasterPassword)
@@ -106,9 +106,9 @@ func (c *Commands) newVersionCmd() *cobra.Command {
 // исполнение команды завершились неуспешно.
 func (c *Commands) Execute() error {
 	root := &cobra.Command{
-		Use:   "gophkeeper",
+		Use:   "shron",
 		Short: "Менеджер паролей",
-		Long:  "GophKeeper — безопасное хранилище паролей и приватных данных.",
+		Long:  "Shron — безопасное хранилище паролей и приватных данных.",
 	}
 	root.AddCommand(
 		c.newVersionCmd(),

@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/F3dosik/GophKeeper/internal/client/vault"
-	"github.com/F3dosik/GophKeeper/mobile"
+	"github.com/F3dosik/Shron/internal/client/vault"
+	"github.com/F3dosik/Shron/mobile"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

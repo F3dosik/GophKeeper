@@ -3,7 +3,7 @@ package logger_test
 import (
 	"testing"
 
-	"github.com/F3dosik/GophKeeper/internal/logger"
+	"github.com/F3dosik/Shron/internal/logger"
 	"github.com/stretchr/testify/assert"
 )
 

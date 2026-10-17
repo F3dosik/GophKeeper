@@ -9,7 +9,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/18/docker
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U gophkeeper"]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\""]
       interval: 5s
       retries: 5
       start_period: 10s
@@ -46,11 +46,11 @@ services:
       db:
         condition: service_healthy
 
-  gophkeeper:
+  shron:
     # Готовый образ из GHCR, собранный CI. Тег выбирает make docker-up по текущему коммиту
     # (релиз — X.Y.Z, иначе sha-<коммит>), чтобы образ совпадал с миграциями из этого каталога.
     # Собрать из исходников: make docker-up-local (docker-compose.build.yaml).
-    image: ${GOPHKEEPER_IMAGE:-ghcr.io/f3dosik/gophkeeper}:${GOPHKEEPER_TAG:-latest}
+    image: ${SHRON_IMAGE:-ghcr.io/f3dosik/shron}:${SHRON_TAG:-latest}
     env_file:
       - .env
     ports:
