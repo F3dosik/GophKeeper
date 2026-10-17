@@ -33,7 +33,9 @@ DESKTOP_DIR := desktop
 
 # Android-библиотека из пакета mobile (gomobile bind). Нужны Android SDK и NDK:
 # ANDROID_HOME и ANDROID_NDK_HOME (или NDK в $ANDROID_HOME/ndk). gomobile и gobind
-# собираются из версии, зафиксированной в go.mod (директива tool).
+# собираются из версии, зафиксированной в go.mod (директива tool). gomobile ищет javac
+# только в PATH, поэтому, если задан JAVA_HOME (например, JDK из Android Studio), его bin
+# добавляется в PATH.
 TOOLS_DIR   := $(BIN_DIR)/tools
 ANDROID_API ?= 24
 ANDROID_AAR ?= android/app/libs/shron.aar
@@ -195,7 +197,7 @@ desktop-build-windows:
 android-aar:
 	@mkdir -p $(TOOLS_DIR) $(dir $(ANDROID_AAR))
 	go build -o $(TOOLS_DIR)/ golang.org/x/mobile/cmd/gomobile golang.org/x/mobile/cmd/gobind
-	PATH="$(abspath $(TOOLS_DIR)):$$PATH" gomobile bind -target=android/arm64,android/amd64 \
+	PATH="$(abspath $(TOOLS_DIR))$(if $(JAVA_HOME),:$(JAVA_HOME)/bin):$$PATH" gomobile bind -target=android/arm64,android/amd64 \
 		-androidapi $(ANDROID_API) -javapkg=io.github.f3dosik.shron -trimpath -ldflags "-s -w" \
 		-o $(ANDROID_AAR) ./mobile
 

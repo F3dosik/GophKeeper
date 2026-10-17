@@ -1,0 +1,132 @@
+<resources>
+    <string name="app_name">Shron</string>
+
+    <!-- Общее -->
+    <string name="show_password">Показать</string>
+    <string name="hide_password">Скрыть</string>
+    <string name="cancel">Отмена</string>
+    <string name="save">Сохранить</string>
+    <string name="server_settings">Настройки сервера</string>
+    <string name="logout">Выйти из учётки</string>
+    <string name="generate">Сгенерировать</string>
+    <string name="password_strength">Стойкость: %1$s, %2$d бит</string>
+
+    <!-- Генератор паролей -->
+    <string name="generator_chars">Символы</string>
+    <string name="generator_passphrase">Фраза</string>
+    <string name="generator_length">Длина: %1$d</string>
+    <string name="generator_words">Слов: %1$d</string>
+    <string name="generator_lower">a–z</string>
+    <string name="generator_upper">A–Z</string>
+    <string name="generator_digits">0–9</string>
+    <string name="generator_symbols">!@#</string>
+    <string name="generator_no_ambiguous">Без 0/O, 1/l/I</string>
+    <string name="passwords_mismatch">Пароли не совпадают</string>
+    <string name="error_read_file">Не удалось прочитать файл</string>
+
+    <!-- Сервер -->
+    <string name="server_title">Сервер</string>
+    <string name="server_subtitle">Адрес сервера Shron и сертификат, которым подписан его TLS-сертификат (ca.crt).</string>
+    <string name="server_address">Адрес сервера</string>
+    <string name="server_address_hint">Например, 192.168.1.5 или keeper.example.com:50051</string>
+    <string name="server_ca">CA-сертификат</string>
+    <string name="server_ca_system">Системные сертификаты</string>
+    <string name="server_ca_saved">Сохранённый на устройстве</string>
+    <string name="server_ca_file">Файл: %1$s</string>
+    <string name="server_ca_pick">Выбрать файл</string>
+    <string name="server_ca_use_system">Системные</string>
+    <string name="server_ca_too_large">Файл слишком большой для сертификата</string>
+    <string name="server_auto_lock">Автоблокировка, минут</string>
+    <string name="server_auto_lock_hint">После бездействия; 0 — не блокировать</string>
+    <string name="server_auto_lock_invalid">Автоблокировка — число минут</string>
+    <string name="server_check">Проверить соединение</string>
+
+    <!-- Вход и регистрация -->
+    <string name="sign_in_title">Вход</string>
+    <string name="register_title">Регистрация</string>
+    <string name="server_label">Сервер: %1$s</string>
+    <string name="login">Логин</string>
+    <string name="master_password">Мастер-пароль</string>
+    <string name="master_password_repeat">Мастер-пароль ещё раз</string>
+    <string name="register_warning">Мастер-пароль нельзя восстановить: без него секреты не расшифровать.</string>
+    <string name="generate_master_password">Сгенерировать мастер-пароль</string>
+    <string name="generated_master_password_hint">Запишите этот пароль и храните в надёжном месте: восстановить его нельзя.</string>
+    <string name="sign_in">Войти</string>
+    <string name="register">Зарегистрироваться</string>
+    <string name="switch_to_sign_in">Уже есть учётка — войти</string>
+    <string name="switch_to_register">Создать учётку</string>
+    <string name="account_created">Учётка создана</string>
+
+    <!-- Разблокировка -->
+    <string name="unlock_title">Хранилище заблокировано</string>
+    <string name="locked_idle">Заблокировано после бездействия.</string>
+    <string name="locked_session_expired">Сессия истекла или отозвана.</string>
+    <string name="account_label">Учётка: %1$s</string>
+    <string name="unlock">Разблокировать</string>
+
+    <!-- Смена временного пароля -->
+    <string name="password_change_title">Новый мастер-пароль</string>
+    <string name="password_change_subtitle">Учётка %1$s вошла с временным паролем. Задайте свой, чтобы открыть хранилище.</string>
+    <string name="new_master_password">Новый мастер-пароль</string>
+    <string name="new_master_password_repeat">Новый мастер-пароль ещё раз</string>
+    <string name="password_change_save">Сохранить пароль</string>
+
+    <!-- Понижение параметров Argon2id -->
+    <string name="kdf_downgrade_title">Параметры защиты ослаблены</string>
+    <string name="kdf_downgrade_accept">Принять новые параметры</string>
+
+    <!-- Список секретов -->
+    <string name="action_add_secret">Добавить секрет</string>
+    <string name="action_lock">Заблокировать</string>
+    <string name="action_more">Ещё</string>
+    <string name="secrets_empty">Секретов пока нет. Нажмите ⊕, чтобы добавить первый.</string>
+
+    <!-- Типы секретов: полные названия — в списке, короткие — в переключателе формы -->
+    <string name="type_credentials">Логин и пароль</string>
+    <string name="type_text">Текст</string>
+    <string name="type_card">Карта</string>
+    <string name="type_binary">Файл</string>
+    <string name="type_credentials_short">Пароль</string>
+    <string name="type_text_short">Текст</string>
+    <string name="type_card_short">Карта</string>
+    <string name="type_binary_short">Файл</string>
+
+    <!-- Новый секрет -->
+    <string name="secret_new_title">Новый секрет</string>
+    <string name="secret_name">Название</string>
+    <string name="secret_name_hint">Например, почта или банк</string>
+    <string name="secret_metadata">Комментарий</string>
+    <string name="secret_metadata_hint">Необязательно; показывается в списке секретов</string>
+    <string name="secret_login">Логин</string>
+    <string name="secret_password">Пароль</string>
+    <string name="secret_text">Текст</string>
+    <string name="card_number">Номер карты</string>
+    <string name="card_holder">Держатель</string>
+    <string name="card_expiry">Срок действия (ММ/ГГ)</string>
+    <string name="card_cvv">CVV</string>
+    <string name="file_pick">Выбрать файл</string>
+    <string name="file_none">Файл не выбран</string>
+    <string name="file_selected">%1$s, %2$s</string>
+    <string name="file_too_large">Файл слишком большой</string>
+    <string name="file_current">Текущий файл, %1$s. Выберите новый, чтобы заменить.</string>
+
+    <!-- Изменение секрета -->
+    <string name="secret_edit_title">Изменить секрет</string>
+    <string name="secret_name_fixed">Название и тип изменить нельзя</string>
+
+    <!-- Просмотр секрета -->
+    <string name="back">Назад</string>
+    <string name="edit">Изменить</string>
+    <string name="delete">Удалить</string>
+    <string name="copy">Копировать</string>
+    <string name="retry">Повторить</string>
+    <string name="copied">%1$s: скопировано, буфер очистится через 30 секунд</string>
+    <string name="card_expiry_short">Срок действия</string>
+    <string name="file_save">Сохранить файл…</string>
+    <string name="file_saved">Файл сохранён</string>
+    <string name="error_write_file">Не удалось записать файл</string>
+    <string name="created_at">Создан: %1$s</string>
+    <string name="updated_at">Изменён: %1$s</string>
+    <string name="delete_secret_title">Удалить секрет?</string>
+    <string name="delete_secret_text">«%1$s» будет удалён безвозвратно.</string>
+</resources>

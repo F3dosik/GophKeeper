@@ -193,8 +193,20 @@ func (a *App) Register(login, password string) error {
 	if err := checkCredentials(login, password); err != nil {
 		return err
 	}
-	return toError(v.Register(context.Background(), strings.TrimSpace(login), password, domain.DefaultKDFParams))
+	return registrationError(v.Register(context.Background(), strings.TrimSpace(login), password, domain.DefaultKDFParams))
 }
+
+// registrationError переводит ошибку регистрации. Сервер отказывает с PermissionDenied,
+// когда регистрация на нём закрыта: учётки тогда создаёт администратор.
+func registrationError(err error) error {
+	if vault.ErrorCode(err) == vault.CodePermissionDenied {
+		return &Error{Code: CodePermissionDenied, Message: registrationClosedMessage}
+	}
+	return toError(err)
+}
+
+const registrationClosedMessage = "Регистрация на этом сервере закрыта. Обратитесь к администратору сервера: " +
+	"он может создать учётку и выдать временный пароль."
 
 // SignIn входит в учётку. Возвращает true, если пароль временный и его нужно сменить
 // (CompletePasswordChange); иначе хранилище разблокировано.
