@@ -87,6 +87,10 @@
     <string name="action_add_secret">Добавить секрет</string>
     <string name="action_lock">Заблокировать</string>
     <string name="action_more">Ещё</string>
+    <string name="search">Поиск</string>
+    <string name="search_clear">Очистить поиск</string>
+    <string name="search_nothing_found">Ничего не найдено</string>
+    <string name="filter_all">Все</string>
     <string name="secrets_empty">Секретов пока нет. Нажмите ⊕, чтобы добавить первый.</string>
 
     <!-- Типы секретов: полные названия — в списке, короткие — в переключателе формы -->

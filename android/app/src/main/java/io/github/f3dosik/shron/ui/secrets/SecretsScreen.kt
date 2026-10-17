@@ -2,23 +2,33 @@ package io.github.f3dosik.shron.ui.secrets
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -32,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import io.github.f3dosik.shron.R
 import io.github.f3dosik.shron.mobile.Mobile
@@ -92,21 +103,65 @@ fun SecretsScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            val items = vm.items
+            val all = vm.items
             val error = vm.error
             when {
-                error != null && items.isNullOrEmpty() -> Placeholder(error.message, isError = true)
-                items == null -> Unit
-                items.isEmpty() -> Placeholder(stringResource(R.string.secrets_empty))
+                error != null && all.isNullOrEmpty() -> Placeholder(error.message, isError = true)
+                all == null -> Unit
+                all.isEmpty() -> Placeholder(stringResource(R.string.secrets_empty))
                 else -> LazyColumn(Modifier.fillMaxSize()) {
+                    item { SearchBar(vm) }
                     if (error != null) {
                         item { Text(error.message, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp)) }
+                    }
+                    val items = filterSecrets(all, vm.query, vm.typeFilter)
+                    if (items.isEmpty()) {
+                        item {
+                            Text(
+                                stringResource(R.string.search_nothing_found),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(32.dp),
+                            )
+                        }
                     }
                     items(items, key = { it.type + "/" + it.name }) { item ->
                         SecretRow(item, onClick = { onOpen(SecretRef(item.name, item.type)) })
                         HorizontalDivider()
                     }
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SearchBar(vm: SecretsViewModel) {
+    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        OutlinedTextField(
+            value = vm.query,
+            onValueChange = { vm.query = it },
+            placeholder = { Text(stringResource(R.string.search)) },
+            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+            trailingIcon = if (vm.query.isNotEmpty()) {
+                { IconButton(onClick = { vm.query = "" }) { Icon(Icons.Filled.Clear, stringResource(R.string.search_clear)) } }
+            } else null,
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, imeAction = ImeAction.Search),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = vm.typeFilter == null,
+                onClick = { vm.typeFilter = null },
+                label = { Text(stringResource(R.string.filter_all)) },
+            )
+            listOf(Mobile.TypeCredentials, Mobile.TypeText, Mobile.TypeCard, Mobile.TypeBinary).forEach { type ->
+                FilterChip(
+                    selected = vm.typeFilter == type,
+                    onClick = { vm.typeFilter = if (vm.typeFilter == type) null else type },
+                    label = { Text(stringResource(typeLabel(type)!!)) },
+                )
             }
         }
     }
