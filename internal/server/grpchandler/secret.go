@@ -3,9 +3,9 @@ package grpchandler
 import (
 	"context"
 
-	"github.com/F3dosik/GophKeeper/internal/server/middleware"
-	"github.com/F3dosik/GophKeeper/internal/server/service"
-	pb "github.com/F3dosik/GophKeeper/proto/gen"
+	"github.com/F3dosik/Shron/internal/server/middleware"
+	"github.com/F3dosik/Shron/internal/server/service"
+	pb "github.com/F3dosik/Shron/proto/gen"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

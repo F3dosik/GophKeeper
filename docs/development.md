@@ -26,9 +26,9 @@
 CLI:
 
 ```bash
-make build-client       # для текущей ОС → bin/gophkeeper
-make build-client-all   # linux, darwin, windows → bin/gophkeeper-<ос>-<архитектура>
-./bin/gophkeeper version
+make build-client       # для текущей ОС → bin/shron
+make build-client-all   # linux, darwin, windows → bin/shron-<ос>-<архитектура>
+./bin/shron version
 ```
 
 Версия (`git describe`) и дата сборки встраиваются в бинарь.
@@ -40,7 +40,7 @@ go install github.com/wailsapp/wails/v2/cmd/wails@latest
 sudo apt install libgtk-3-dev libwebkit2gtk-4.1-dev    # Linux
 
 make desktop-dev             # режим разработки с горячей перезагрузкой
-make desktop-build           # для текущей ОС → desktop/build/bin/gophkeeper-desktop
+make desktop-build           # для текущей ОС → desktop/build/bin/shron-desktop
 make desktop-build-windows   # .exe для Windows, собирается на Linux
 ```
 
@@ -48,7 +48,7 @@ make desktop-build-windows   # .exe для Windows, собирается на Li
 
 Фронтенд встраивается в бинарь только с тегами `desktop` или `dev`, поэтому `go build ./...` и `go test ./...` работают без сборки фронтенда.
 
-Переменные для отладки приложения: `GOPHKEEPER_DESKTOP_DIR` — каталог данных (настройки, `ca.crt`, сессия), `GOPHKEEPER_DESKTOP_HIDDEN=1` — запуск без окна (для автотестов интерфейса).
+Переменные для отладки приложения: `SHRON_DESKTOP_DIR` — каталог данных (настройки, `ca.crt`, сессия), `SHRON_DESKTOP_HIDDEN=1` — запуск без окна (для автотестов интерфейса).
 
 ## Тесты
 

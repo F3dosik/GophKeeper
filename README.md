@@ -1,6 +1,6 @@
-# GophKeeper
+# Shron
 
-[![CI](https://github.com/F3dosik/GophKeeper/actions/workflows/ci.yml/badge.svg)](https://github.com/F3dosik/GophKeeper/actions/workflows/ci.yml)
+[![CI](https://github.com/F3dosik/Shron/actions/workflows/ci.yml/badge.svg)](https://github.com/F3dosik/Shron/actions/workflows/ci.yml)
 
 Менеджер паролей и приватных данных с собственным сервером. Секреты шифруются на устройстве пользователя: сервер и его база видят только шифротекст, а мастер-пароль никогда не покидает клиент.
 
@@ -25,7 +25,7 @@
 Нужны Docker с Compose и OpenSSL.
 
 ```bash
-git clone https://github.com/F3dosik/GophKeeper.git && cd GophKeeper
+git clone https://github.com/F3dosik/Shron.git && cd Shron
 cp .env_example .env        # заполнить: пароль БД, DATABASE_URL, JWT_SECRET (openssl rand -hex 32)
 
 # сертификат для всех адресов, по которым клиенты будут подключаться
@@ -38,18 +38,18 @@ make docker-up              # PostgreSQL, миграции, сервер, рез
 
 ### Клиент
 
-Готовые сборки — в [Releases](https://github.com/F3dosik/GophKeeper/releases): CLI `gophkeeper-<ос>-<архитектура>` и архивы приложения `gophkeeper-desktop-*`. Контрольные суммы — в `SHA256SUMS`. Собрать самому: `make build-client` и `make desktop-build`.
+Готовые сборки — в [Releases](https://github.com/F3dosik/Shron/releases): CLI `shron-<ос>-<архитектура>` и архивы приложения `shron-desktop-*`. Контрольные суммы — в `SHA256SUMS`. Собрать самому: `make build-client` и `make desktop-build`.
 
 На каждое устройство нужен файл `certs/ca.crt` с сервера.
 
 ```bash
-export GOPHKEEPER_SERVER=192.168.1.5          # порт по умолчанию 50051
-export GOPHKEEPER_TLS_CERT=/path/to/ca.crt
+export SHRON_SERVER=192.168.1.5          # порт по умолчанию 50051
+export SHRON_TLS_CERT=/path/to/ca.crt
 
-gophkeeper auth register alice
-gophkeeper auth login alice
-gophkeeper secret create --name github --type credentials --generate
-gophkeeper secret get --name github --type credentials
+shron auth register alice
+shron auth login alice
+shron secret create --name github --type credentials --generate
+shron secret get --name github --type credentials
 ```
 
 В приложении адрес сервера и `ca.crt` указываются при первом запуске.
@@ -62,40 +62,40 @@ gophkeeper secret get --name github --type credentials
 
 ```bash
 # учётка
-gophkeeper auth register alice
-gophkeeper auth login alice
-gophkeeper auth passwd                  # сменить мастер-пароль (все секреты перешифровываются)
-gophkeeper auth logout                  # выйти на этом устройстве
-gophkeeper auth logout --all            # выйти на всех устройствах (например, при потере телефона)
-gophkeeper auth delete-account          # удалить учётку со всеми секретами
+shron auth register alice
+shron auth login alice
+shron auth passwd                  # сменить мастер-пароль (все секреты перешифровываются)
+shron auth logout                  # выйти на этом устройстве
+shron auth logout --all            # выйти на всех устройствах (например, при потере телефона)
+shron auth delete-account          # удалить учётку со всеми секретами
 
 # секреты: --type credentials | text | card | binary
-gophkeeper secret create --name gmail --type credentials
-gophkeeper secret create --name gmail --type credentials --generate   # сгенерировать пароль
-gophkeeper secret get    --name gmail --type credentials [--json]
-gophkeeper secret get    --name key   --type binary --output ./key.bin
-gophkeeper secret update --name gmail --type credentials
-gophkeeper secret delete --name gmail --type credentials
-gophkeeper secret list [--type card]
+shron secret create --name gmail --type credentials
+shron secret create --name gmail --type credentials --generate   # сгенерировать пароль
+shron secret get    --name gmail --type credentials [--json]
+shron secret get    --name key   --type binary --output ./key.bin
+shron secret update --name gmail --type credentials
+shron secret delete --name gmail --type credentials
+shron secret list [--type card]
 
 # генератор (на клиенте, никуда не отправляется)
-gophkeeper generate                     # 20 символов
-gophkeeper generate --length 32 --no-symbols
-gophkeeper generate --words 6           # парольная фраза — удобна для мастер-пароля
+shron generate                     # 20 символов
+shron generate --length 32 --no-symbols
+shron generate --words 6           # парольная фраза — удобна для мастер-пароля
 
 # экспорт и импорт (файл зашифрован отдельным паролем экспорта)
-gophkeeper export -o vault.gkx
-gophkeeper import vault.gkx [--overwrite]
+shron export -o vault.gkx
+shron import vault.gkx [--overwrite]
 ```
 
 | Переменная | Описание | По умолчанию |
 | --- | --- | --- |
-| `GOPHKEEPER_SERVER` | Адрес сервера, порт необязателен | `localhost:50051` |
-| `GOPHKEEPER_TLS_CERT` | CA-сертификат сервера (`ca.crt`) | системные сертификаты |
-| `GOPHKEEPER_SESSION` | Файл сессии (логин и токен) | `~/.gophkeeper/session` |
-| `GOPHKEEPER_INSECURE` | `true` — без TLS, только для локальной разработки | `false` |
+| `SHRON_SERVER` | Адрес сервера, порт необязателен | `localhost:50051` |
+| `SHRON_TLS_CERT` | CA-сертификат сервера (`ca.crt`) | системные сертификаты |
+| `SHRON_SESSION` | Файл сессии (логин и токен) | `~/.shron/session` |
+| `SHRON_INSECURE` | `true` — без TLS, только для локальной разработки | `false` |
 
-Автодополнение для bash: `make install-completion`; для других оболочек — `gophkeeper completion --help`.
+Автодополнение для bash: `make install-completion`; для других оболочек — `shron completion --help`.
 
 ## Десктоп-приложение
 
@@ -105,7 +105,7 @@ gophkeeper import vault.gkx [--overwrite]
 - Пароли и CVV скрыты, пока их не показали. Скопированное значение стирается из буфера обмена через 30 секунд.
 - Подключённое к административному порту, приложение открывает панель администратора ([docs/deployment.md](docs/deployment.md#регистрация-и-администрирование)).
 
-Данные приложения хранятся в `~/.config/GophKeeper`, `%AppData%\GophKeeper` или `~/Library/Application Support/GophKeeper`; другой каталог задаёт `GOPHKEEPER_DESKTOP_DIR`.
+Данные приложения хранятся в `~/.config/Shron`, `%AppData%\Shron` или `~/Library/Application Support/Shron`; другой каталог задаёт `SHRON_DESKTOP_DIR`.
 
 ## Мобильный клиент (в разработке)
 

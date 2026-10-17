@@ -14,11 +14,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/F3dosik/GophKeeper/internal/domain"
-	"github.com/F3dosik/GophKeeper/pkg/crypto"
+	"github.com/F3dosik/Shron/internal/domain"
+	"github.com/F3dosik/Shron/pkg/crypto"
 )
 
-// Format и Version — идентификатор и версия формата файла.
+// Format и Version — идентификатор и версия формата файла. Идентификатор остался от
+// прежнего названия проекта и не меняется, чтобы файлы прежних версий импортировались,
+// а новые файлы — в прежних версиях клиента.
 const (
 	Format  = "gophkeeper-export"
 	Version = 1
@@ -29,10 +31,10 @@ const MinPasswordLength = 8
 
 // Ошибки экспорта и импорта.
 var (
-	// ErrNotExport — файл не является экспортом GophKeeper.
-	ErrNotExport = errors.New("файл не является экспортом GophKeeper")
+	// ErrNotExport — файл не является экспортом Shron.
+	ErrNotExport = errors.New("файл не является экспортом Shron")
 	// ErrUnsupportedVersion — экспорт создан более новой версией программы.
-	ErrUnsupportedVersion = errors.New("экспорт создан более новой версией GophKeeper — обновите программу")
+	ErrUnsupportedVersion = errors.New("экспорт создан более новой версией Shron — обновите программу")
 	// ErrWrongPassword — неверный пароль экспорта или файл повреждён (AES-GCM не различает эти случаи).
 	ErrWrongPassword = errors.New("неверный пароль экспорта или файл повреждён")
 	// ErrWeakPassword — слишком короткий пароль экспорта.

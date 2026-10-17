@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/F3dosik/GophKeeper/internal/client/export"
-	"github.com/F3dosik/GophKeeper/internal/client/vault"
-	"github.com/F3dosik/GophKeeper/internal/domain"
+	"github.com/F3dosik/Shron/internal/client/export"
+	"github.com/F3dosik/Shron/internal/client/vault"
+	"github.com/F3dosik/Shron/internal/domain"
 )
 
 // maxExportFileSize — ограничение на размер импортируемого файла.
@@ -64,7 +64,7 @@ func (a *App) ExportVault(password string) (string, error) {
 		return "", toUIError(err)
 	}
 
-	name := fmt.Sprintf("gophkeeper-%s-%s.gkx", v.CurrentLogin(), time.Now().Format("2006-01-02"))
+	name := fmt.Sprintf("shron-%s-%s.gkx", v.CurrentLogin(), time.Now().Format("2006-01-02"))
 	path, err := a.opts.UI.SaveFile("Экспорт хранилища", name)
 	if err != nil || path == "" {
 		return "", toUIError(err)
@@ -77,8 +77,8 @@ func (a *App) ExportVault(password string) (string, error) {
 
 // ChooseExportFile показывает диалог выбора файла экспорта; пустой путь — отмена.
 func (a *App) ChooseExportFile() (*ChosenFile, error) {
-	path, err := a.opts.UI.OpenFile("Файл экспорта GophKeeper", []FileFilter{
-		{DisplayName: "Экспорт GophKeeper (*.gkx)", Pattern: "*.gkx"},
+	path, err := a.opts.UI.OpenFile("Файл экспорта Shron", []FileFilter{
+		{DisplayName: "Экспорт Shron (*.gkx)", Pattern: "*.gkx"},
 	})
 	if err != nil || path == "" {
 		return &ChosenFile{}, toUIError(err)
@@ -102,7 +102,7 @@ func (a *App) ImportVault(path, password string, overwrite bool) (*ImportResult,
 		return nil, toUIError(err)
 	}
 	if info.Size() > maxExportFileSize {
-		return nil, validationError("Файл слишком большой для экспорта GophKeeper")
+		return nil, validationError("Файл слишком большой для экспорта Shron")
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {

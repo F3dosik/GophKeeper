@@ -884,7 +884,7 @@ const file_proto_admin_proto_rawDesc = "" +
 	"DeleteUser\x12\x18.admin.DeleteUserRequest\x1a\x19.admin.DeleteUserResponse\x12>\n" +
 	"\tListUsers\x12\x17.admin.ListUsersRequest\x1a\x18.admin.ListUsersResponse\x128\n" +
 	"\aGetUser\x12\x15.admin.GetUserRequest\x1a\x16.admin.GetUserResponse\x12M\n" +
-	"\x0eRevokeSessions\x12\x1c.admin.RevokeSessionsRequest\x1a\x1d.admin.RevokeSessionsResponseB)Z'github.com/F3dosik/GophKeeper/proto/genb\beditionsp\xe8\a"
+	"\x0eRevokeSessions\x12\x1c.admin.RevokeSessionsRequest\x1a\x1d.admin.RevokeSessionsResponseB$Z\"github.com/F3dosik/Shron/proto/genb\beditionsp\xe8\a"
 
 var file_proto_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_proto_admin_proto_goTypes = []any{

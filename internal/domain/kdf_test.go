@@ -3,7 +3,7 @@ package domain_test
 import (
 	"testing"
 
-	"github.com/F3dosik/GophKeeper/internal/domain"
+	"github.com/F3dosik/Shron/internal/domain"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -3,7 +3,7 @@ package middleware
 import (
 	"context"
 
-	"github.com/F3dosik/GophKeeper/internal/server/jwtutil"
+	"github.com/F3dosik/Shron/internal/server/jwtutil"
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/F3dosik/GophKeeper/internal/domain"
-	"github.com/F3dosik/GophKeeper/internal/server/jwtutil"
-	"github.com/F3dosik/GophKeeper/pkg/crypto"
+	"github.com/F3dosik/Shron/internal/domain"
+	"github.com/F3dosik/Shron/internal/server/jwtutil"
+	"github.com/F3dosik/Shron/pkg/crypto"
 	"github.com/google/uuid"
 )
 
@@ -49,7 +49,10 @@ type AuthService interface {
 	DeleteAccount(ctx context.Context, userID uuid.UUID, authKey []byte) error
 }
 
-// Контексты HKDF для ключей, выводимых из JWT_SECRET.
+// Контексты HKDF для ключей, выводимых из JWT_SECRET. Префикс «gophkeeper» остался от
+// прежнего названия проекта и не меняется: с другим контекстом сменились бы ключ подписи
+// (все токены стали бы недействительны) и фиктивные соли, а сравнение солей до и после
+// обновления выдало бы, какие логины существуют.
 const (
 	infoTokenSigning = "gophkeeper/jwt-signing"
 	infoFakeSalt     = "gophkeeper/fake-salt"

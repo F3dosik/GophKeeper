@@ -122,7 +122,7 @@ jobs:
         # Сборка с -debug или -devtools открыла бы в релизе инспектор WebView и контекстное меню.
         shell: bash
         run: |
-          bin=$(find desktop/build/bin -type f \( -name gophkeeper-desktop -o -name gophkeeper-desktop.exe \) | head -1)
+          bin=$(find desktop/build/bin -type f \( -name shron-desktop -o -name shron-desktop.exe \) | head -1)
           if [ "$RUNNER_OS" = macOS ]; then
             lipo "$bin" -thin arm64 -output "$RUNNER_TEMP/app" && bin="$RUNNER_TEMP/app"
           fi
@@ -154,7 +154,7 @@ jobs:
       - name: Имя образа
         id: name
         # Имена в GHCR — только в нижнем регистре.
-        run: echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/gophkeeper" >> "$GITHUB_OUTPUT"
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/shron" >> "$GITHUB_OUTPUT"
       - uses: docker/metadata-action@v6
         id: meta
         with:
@@ -201,7 +201,7 @@ jobs:
           cp cli/* release/
           for dir in desktop-*/; do
             name="${dir%/}"
-            (cd "$name" && zip -qr "../release/gophkeeper-${name}-${GITHUB_REF_NAME}.zip" .)
+            (cd "$name" && zip -qr "../release/shron-${name}-${GITHUB_REF_NAME}.zip" .)
           done
           (cd release && sha256sum * > SHA256SUMS)
           ls -la release

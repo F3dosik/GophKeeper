@@ -20,7 +20,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/F3dosik/GophKeeper/internal/domain"
+	"github.com/F3dosik/Shron/internal/domain"
 )
 
 // FileName — имя файла с параметрами; лежит рядом с файлом сессии.

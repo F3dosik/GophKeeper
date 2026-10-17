@@ -1,8 +1,8 @@
 package grpcclient
 
 import (
-	"github.com/F3dosik/GophKeeper/internal/domain"
-	pb "github.com/F3dosik/GophKeeper/proto/gen"
+	"github.com/F3dosik/Shron/internal/domain"
+	pb "github.com/F3dosik/Shron/proto/gen"
 )
 
 // tokenMetadataKey используется как ключ заголовка авторизации в gRPC metadata.

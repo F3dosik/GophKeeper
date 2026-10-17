@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// DefaultPort — порт сервера GophKeeper по умолчанию.
+// DefaultPort — порт сервера Shron по умолчанию.
 const DefaultPort = "50051"
 
 // ErrBadAddress возвращается для пустого или некорректного адреса сервера.

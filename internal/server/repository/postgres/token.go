@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/F3dosik/GophKeeper/internal/domain"
-	"github.com/F3dosik/GophKeeper/internal/server/repository"
+	"github.com/F3dosik/Shron/internal/domain"
+	"github.com/F3dosik/Shron/internal/server/repository"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"

@@ -1127,7 +1127,7 @@ const file_proto_secrets_proto_rawDesc = "" +
 	"\fCreateSecret\x12\x1c.secrets.CreateSecretRequest\x1a\x1d.secrets.CreateSecretResponse\x12K\n" +
 	"\fUpdateSecret\x12\x1c.secrets.UpdateSecretRequest\x1a\x1d.secrets.UpdateSecretResponse\x12B\n" +
 	"\tGetSecret\x12\x19.secrets.GetSecretRequest\x1a\x1a.secrets.GetSecretResponse\x12K\n" +
-	"\fDeleteSecret\x12\x1c.secrets.DeleteSecretRequest\x1a\x1d.secrets.DeleteSecretResponseB)Z'github.com/F3dosik/GophKeeper/proto/genb\beditionsp\xe8\a"
+	"\fDeleteSecret\x12\x1c.secrets.DeleteSecretRequest\x1a\x1d.secrets.DeleteSecretResponseB$Z\"github.com/F3dosik/Shron/proto/genb\beditionsp\xe8\a"
 
 var file_proto_secrets_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_proto_secrets_proto_goTypes = []any{

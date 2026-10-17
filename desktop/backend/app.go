@@ -1,4 +1,4 @@
-// Package backend — логика десктоп-приложения GophKeeper: методы, которые Wails
+// Package backend — логика десктоп-приложения Shron: методы, которые Wails
 // предоставляет интерфейсу. Работа с сервером и ключами — в internal/client/vault;
 // здесь настройки, преобразование данных для интерфейса, диалоги и буфер обмена.
 package backend
@@ -13,10 +13,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/F3dosik/GophKeeper/internal/client/grpcclient"
-	"github.com/F3dosik/GophKeeper/internal/client/vault"
-	"github.com/F3dosik/GophKeeper/internal/domain"
-	pb "github.com/F3dosik/GophKeeper/proto/gen"
+	"github.com/F3dosik/Shron/internal/client/config"
+	"github.com/F3dosik/Shron/internal/client/grpcclient"
+	"github.com/F3dosik/Shron/internal/client/vault"
+	"github.com/F3dosik/Shron/internal/domain"
+	pb "github.com/F3dosik/Shron/proto/gen"
 )
 
 // Значения по умолчанию для Options.
@@ -77,13 +78,18 @@ func NewApp(opts Options) *App {
 }
 
 // DefaultDir возвращает каталог данных приложения в профиле пользователя
-// (~/.config/GophKeeper, %AppData%\GophKeeper, ~/Library/Application Support/GophKeeper).
+// (~/.config/Shron, %AppData%\Shron, ~/Library/Application Support/Shron).
+// Каталог прежней версии (GophKeeper) переносится на новое место.
 func DefaultDir() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "GophKeeper"), nil
+	path := filepath.Join(dir, "Shron")
+	if err := config.MigrateDir(filepath.Join(dir, "GophKeeper"), path); err != nil {
+		return "", err
+	}
+	return path, nil
 }
 
 // Startup загружает настройки и, если сервер задан, подключается к нему.

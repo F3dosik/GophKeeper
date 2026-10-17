@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/F3dosik/GophKeeper/internal/domain"
+	"github.com/F3dosik/Shron/internal/domain"
 	"github.com/google/uuid"
 )
 

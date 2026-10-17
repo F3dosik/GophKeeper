@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/F3dosik/GophKeeper/internal/client/vault"
-	"github.com/F3dosik/GophKeeper/internal/domain"
+	"github.com/F3dosik/Shron/internal/client/vault"
+	"github.com/F3dosik/Shron/internal/domain"
 )
 
 // Коды ошибок (поле code в тексте исключения). Константы видны в Kotlin как Mobile.Code*.

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/F3dosik/GophKeeper/internal/domain"
+	"github.com/F3dosik/Shron/internal/domain"
 	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/hkdf"
 )

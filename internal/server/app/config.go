@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/F3dosik/GophKeeper/internal/logger"
+	"github.com/F3dosik/Shron/internal/logger"
 	"github.com/caarlos0/env/v11"
 )
 

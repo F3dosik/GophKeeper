@@ -1,6 +1,6 @@
 //go:build e2e
 
-// Package e2e содержит сквозные интеграционные тесты клиента и сервера GophKeeper.
+// Package e2e содержит сквозные интеграционные тесты клиента и сервера Shron.
 // Запуск: go test -tags=e2e ./tests/e2e/...
 // Требует установленного Docker (используется testcontainers-go для поднятия PostgreSQL).
 package e2e
@@ -14,12 +14,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/F3dosik/GophKeeper/internal/logger"
-	"github.com/F3dosik/GophKeeper/internal/server/grpchandler"
-	"github.com/F3dosik/GophKeeper/internal/server/middleware"
-	"github.com/F3dosik/GophKeeper/internal/server/repository/postgres"
-	"github.com/F3dosik/GophKeeper/internal/server/service"
-	pb "github.com/F3dosik/GophKeeper/proto/gen"
+	"github.com/F3dosik/Shron/internal/logger"
+	"github.com/F3dosik/Shron/internal/server/grpchandler"
+	"github.com/F3dosik/Shron/internal/server/middleware"
+	"github.com/F3dosik/Shron/internal/server/repository/postgres"
+	"github.com/F3dosik/Shron/internal/server/service"
+	pb "github.com/F3dosik/Shron/proto/gen"
 	"github.com/jackc/pgx/v5/pgxpool"
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"google.golang.org/grpc"
@@ -56,7 +56,7 @@ func run(m *testing.M) int {
 
 	pgContainer, err := tcpostgres.Run(ctx,
 		postgresImage(),
-		tcpostgres.WithDatabase("gophkeeper"),
+		tcpostgres.WithDatabase("shron"),
 		tcpostgres.WithUsername("test"),
 		tcpostgres.WithPassword("test"),
 		tcpostgres.WithInitScripts(migrationPaths...),

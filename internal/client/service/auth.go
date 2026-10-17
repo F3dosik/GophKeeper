@@ -1,4 +1,4 @@
-// Package service реализует бизнес-логику клиента GophKeeper.
+// Package service реализует бизнес-логику клиента Shron.
 // Обеспечивает аутентификацию пользователей, управление секретами,
 // а также шифрование и расшифровку данных на стороне клиента.
 package service
@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/F3dosik/GophKeeper/internal/client/grpcclient"
-	"github.com/F3dosik/GophKeeper/internal/client/kdfpin"
-	"github.com/F3dosik/GophKeeper/internal/client/session"
-	"github.com/F3dosik/GophKeeper/internal/domain"
-	"github.com/F3dosik/GophKeeper/pkg/crypto"
+	"github.com/F3dosik/Shron/internal/client/grpcclient"
+	"github.com/F3dosik/Shron/internal/client/kdfpin"
+	"github.com/F3dosik/Shron/internal/client/session"
+	"github.com/F3dosik/Shron/internal/domain"
+	"github.com/F3dosik/Shron/pkg/crypto"
 )
 
 // AuthService определяет интерфейс для аутентификации пользователя.

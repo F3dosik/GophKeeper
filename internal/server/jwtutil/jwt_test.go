@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/F3dosik/GophKeeper/internal/server/jwtutil"
+	"github.com/F3dosik/Shron/internal/server/jwtutil"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
