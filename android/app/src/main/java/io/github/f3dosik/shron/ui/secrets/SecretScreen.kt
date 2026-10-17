@@ -49,8 +49,6 @@ import io.github.f3dosik.shron.ui.common.rememberExternalActivity
 import java.text.DateFormat
 import java.util.Date
 
-private const val MASK = "••••••••••"
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SecretScreen(
@@ -217,11 +215,6 @@ private fun Field(
         }
     }
 }
-
-private fun formatCardNumber(number: String) = number.chunked(4).joinToString(" ")
-
-private fun maskCardNumber(number: String) =
-    if (number.length > 4) "•••• " + number.takeLast(4) else MASK
 
 private fun formatDate(millis: Long): String =
     DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(millis))
