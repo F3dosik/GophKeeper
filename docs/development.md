@@ -82,7 +82,14 @@ cd desktop/frontend && npm run check    # проверка типов Svelte и 
 cd android
 ./gradlew testDebugUnitTest             # JVM-тесты Kotlin
 ./gradlew connectedDebugAndroidTest     # на эмуляторе или устройстве, с настоящим Go-ядром
+
+./gradlew assembleRelease -Pshron.debugSignedRelease=true
+python3 scripts/release_smoke.py app/build/outputs/apk/release/app-release.apk   # release с R8
 ```
+
+Тесты на эмуляторе удаляют приложение с устройства вместе с его данными, smoke-тест тоже.
+
+Инструментальные тесты идут на debug-сборке, где R8 не работает, поэтому ошибки оптимизации ловит smoke-тест release-сборки: он проходит через интерфейс сценарий, задевающий Go-ядро (классы gomobile вызываются из нативного кода по именам, и R8 не должен их трогать — правила в `android/app/src/main/keepRules`). `-Pshron.debugSignedRelease=true` подписывает release отладочным ключом — только для такой проверки.
 
 Инструментальным тестам Android сервер не нужен. Каждый тест идёт в новом процессе с пустыми данными приложения (Test Orchestrator): Go-ядро одно на процесс и хранит настройки и сессию в `filesDir`.
 
@@ -110,7 +117,7 @@ go install github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc@latest
 
 - Go: `go vet`, unit-тесты с `-race`, e2e-тесты, `govulncheck`;
 - фронтенд: `svelte-check --fail-on-warnings` и сборка;
-- Android: `shron.aar`, сборка, lint и JVM-тесты; затем инструментальные тесты на эмуляторе. Отладочный APK лежит в артефактах запуска;
+- Android: `shron.aar`, сборка, lint и JVM-тесты; затем на эмуляторе инструментальные тесты и smoke-тест release-сборки с R8. Отладочный APK лежит в артефактах запуска;
 - сборки CLI для Linux, macOS и Windows и приложения на трёх ОС — результаты лежат в артефактах запуска;
 - образ сервера для amd64 и arm64. В PR он только собирается, после push в `main` и по тегу публикуется в GHCR (теги — в [docs/deployment.md](deployment.md#образ-сервера)).
 
