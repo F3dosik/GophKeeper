@@ -56,6 +56,7 @@ fun SecretsScreen(
     login: String,
     onAdd: () -> Unit,
     onOpen: (SecretRef) -> Unit,
+    onAccount: () -> Unit,
     onServerSettings: () -> Unit,
 ) {
     // Список загружается при каждом показе экрана (после разблокировки, после добавления
@@ -82,6 +83,10 @@ fun SecretsScreen(
                             Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.action_more))
                         }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.account)) },
+                                onClick = { menu = false; onAccount() },
+                            )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.server_settings)) },
                                 onClick = { menu = false; onServerSettings() },

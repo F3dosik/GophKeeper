@@ -83,6 +83,31 @@
     <string name="kdf_downgrade_title">Параметры защиты ослаблены</string>
     <string name="kdf_downgrade_accept">Принять новые параметры</string>
 
+    <!-- Учётка -->
+    <string name="account">Учётка</string>
+    <string name="change_password">Смена мастер-пароля</string>
+    <string name="current_master_password">Текущий мастер-пароль</string>
+    <string name="change_password_hint">Все секреты будут перешифрованы. На других устройствах потребуется войти заново.</string>
+    <string name="change_password_button">Сменить пароль</string>
+    <string name="change_password_busy">Перешифровка…</string>
+    <string name="password_changed">Мастер-пароль изменён</string>
+    <string name="kdf_show">▸ Параметры Argon2id</string>
+    <string name="kdf_hide">▾ Параметры Argon2id</string>
+    <string name="kdf_time">Проходов (1–10)</string>
+    <string name="kdf_memory">Память, MiB (19–1024)</string>
+    <string name="kdf_hint">Больше — дороже перебор пароля при утечке базы, но медленнее разблокировка на всех устройствах.</string>
+    <string name="kdf_invalid">Параметры Argon2id — числа</string>
+    <string name="sessions_section">Сеансы</string>
+    <string name="logout_everywhere">Выйти на всех устройствах</string>
+    <string name="logout_everywhere_short">Выйти везде</string>
+    <string name="logout_everywhere_hint">Завершает вход на всех устройствах, включая это, — например, если телефон или ноутбук потерян.</string>
+    <string name="logout_everywhere_confirm">Чтобы снова открыть хранилище на любом устройстве, понадобится войти с логином и мастер-паролем.</string>
+    <string name="delete_account">Удалить учётку</string>
+    <string name="delete_account_text">Учётка %1$s и все её секреты будут удалены без возможности восстановления.</string>
+    <string name="delete_account_type_login">Для подтверждения введите логин</string>
+    <string name="delete_account_login_mismatch">Логин не совпадает</string>
+    <string name="delete_account_confirm">Удалить навсегда</string>
+
     <!-- Список секретов -->
     <string name="action_add_secret">Добавить секрет</string>
     <string name="action_lock">Заблокировать</string>
