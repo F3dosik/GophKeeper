@@ -118,7 +118,7 @@
     <string name="autofill_no_logins">Логинов пока нет</string>
     <string name="autofill_nothing_found">Ничего не найдено — сотрите поиск, чтобы увидеть все логины</string>
     <string name="autofill_section">Автозаполнение</string>
-    <string name="autofill_hint">Shron предлагает логины в формах входа других приложений и браузеров. Значения подставляются только после того, как вы выберете логин.</string>
+    <string name="autofill_hint">Shron предлагает логины в формах входа других приложений и браузеров. Значения подставляются только после того, как вы выберете логин.\n\nChrome по умолчанию заполняет формы сам: включите в нём Настройки → Автозаполнение → «Использовать другую службу».</string>
     <string name="autofill_enabled">Shron выбран службой автозаполнения</string>
     <string name="autofill_enable">Выбрать Shron для автозаполнения</string>
 
