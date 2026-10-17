@@ -27,6 +27,7 @@
   let metadata = $state(start?.metadata ?? '')
   let login = $state(start?.login ?? '')
   let password = $state(start?.password ?? '')
+  let uris = $state(start?.uris ?? '')
   let text = $state(start?.text ?? '')
   let cardNumber = $state(start?.cardNumber ?? '')
   let cardHolder = $state(start?.cardHolder ?? '')
@@ -57,7 +58,7 @@
     try {
       await api.saveSecret(
         {
-          name, type, metadata, login, password, text,
+          name, type, metadata, login, password, uris, text,
           cardNumber, cardHolder, cardExpiry, cardCvv,
           filePath: file?.path ?? '',
         },
@@ -104,6 +105,11 @@
     {:else}
       <div><button type="button" class="link" onclick={() => (showGenerator = true)}>Сгенерировать пароль…</button></div>
     {/if}
+    <label>
+      <span>Сайты и приложения (необязательно)</span>
+      <textarea bind:value={uris} rows="2" placeholder="github.com&#10;androidapp://com.github.android" spellcheck="false"></textarea>
+    </label>
+    <p class="muted" style="margin: 0; font-size: 12px">По одному на строку. По ним Android-приложение подбирает логин при автозаполнении.</p>
   {:else if type === 'text'}
     <label><span>Текст</span><textarea bind:value={text}></textarea></label>
   {:else if type === 'card'}

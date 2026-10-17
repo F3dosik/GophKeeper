@@ -36,6 +36,8 @@ type Secret struct {
 	// credentials
 	Login    string `json:"login"`
 	Password string `json:"password"`
+	// URIs — сайты и приложения логина, по одному на строку.
+	URIs string `json:"uris"`
 	// text
 	Text string `json:"text"`
 	// card
@@ -56,7 +58,9 @@ type SecretInput struct {
 
 	Login    string `json:"login"`
 	Password string `json:"password"`
-	Text     string `json:"text"`
+	// URIs — сайты и приложения логина: по одному на строку, через запятую или пробел.
+	URIs string `json:"uris"`
+	Text string `json:"text"`
 
 	CardNumber string `json:"cardNumber"`
 	CardHolder string `json:"cardHolder"`
@@ -202,7 +206,7 @@ func (a *App) buildPayload(input SecretInput, update bool) (*domain.SecretPayloa
 		if input.Login == "" && input.Password == "" {
 			return nil, validationError("Укажите логин или пароль")
 		}
-		data = domain.CredentialsSecret{Login: input.Login, Password: input.Password}
+		data = domain.CredentialsSecret{Login: input.Login, Password: input.Password, URIs: domain.ParseURIs(input.URIs)}
 	case domain.SecretTypeText:
 		if input.Text == "" {
 			return nil, validationError("Введите текст")
@@ -285,7 +289,7 @@ func toSecret(info *domain.SecretInfo) (*Secret, error) {
 	case domain.SecretTypeCredentials:
 		var c domain.CredentialsSecret
 		err = json.Unmarshal(info.Data, &c)
-		s.Login, s.Password = c.Login, c.Password
+		s.Login, s.Password, s.URIs = c.Login, c.Password, strings.Join(c.URIs, "\n")
 	case domain.SecretTypeText:
 		var t domain.TextSecret
 		err = json.Unmarshal(info.Data, &t)

@@ -22,6 +22,7 @@ const (
 	// Промпты SecretTypeCredentials.
 	promptSecretCredLogin    = "Введите логин: "
 	promptSecretCredPassword = "Введите пароль: "
+	promptSecretCredURIs     = "Сайты и приложения через запятую (Enter — пропустить): "
 
 	// Промпты SecretTypeText.
 	promptSecretText = "Введите текст: "
@@ -125,7 +126,7 @@ func promptLine(prompt string) (string, error) {
 // promptSecretData интерактивно запрашивает у пользователя данные секрета в зависимости
 // от его типа и возвращает их в виде JSON-сериализованного payload.
 //
-// Для credentials запрашивается логин и пароль (скрытый ввод);
+// Для credentials запрашивается логин, пароль (скрытый ввод) и сайты с приложениями;
 // для text — одна строка текста;
 // для binary — путь к файлу, содержимое которого читается с диска;
 // для card — реквизиты карты; введённые данные валидируются через CardSecret.Validate.
@@ -144,7 +145,11 @@ func promptSecretData(t domain.SecretType, generatedPassword string) (json.RawMe
 				return nil, err
 			}
 		}
-		return json.Marshal(&domain.CredentialsSecret{Login: login, Password: password})
+		uris, err := promptLine(promptSecretCredURIs)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(&domain.CredentialsSecret{Login: login, Password: password, URIs: domain.ParseURIs(uris)})
 	case domain.SecretTypeText:
 		text, err := promptLine(promptSecretText)
 		if err != nil {

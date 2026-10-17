@@ -124,6 +124,7 @@ export namespace backend {
 	    updatedAt: string;
 	    login: string;
 	    password: string;
+	    uris: string;
 	    text: string;
 	    cardNumber: string;
 	    cardHolder: string;
@@ -144,6 +145,7 @@ export namespace backend {
 	        this.updatedAt = source["updatedAt"];
 	        this.login = source["login"];
 	        this.password = source["password"];
+	        this.uris = source["uris"];
 	        this.text = source["text"];
 	        this.cardNumber = source["cardNumber"];
 	        this.cardHolder = source["cardHolder"];
@@ -158,6 +160,7 @@ export namespace backend {
 	    metadata: string;
 	    login: string;
 	    password: string;
+	    uris: string;
 	    text: string;
 	    cardNumber: string;
 	    cardHolder: string;
@@ -176,6 +179,7 @@ export namespace backend {
 	        this.metadata = source["metadata"];
 	        this.login = source["login"];
 	        this.password = source["password"];
+	        this.uris = source["uris"];
 	        this.text = source["text"];
 	        this.cardNumber = source["cardNumber"];
 	        this.cardHolder = source["cardHolder"];

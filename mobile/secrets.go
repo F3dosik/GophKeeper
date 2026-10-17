@@ -63,6 +63,9 @@ type Secret struct {
 	// credentials
 	Login    string
 	Password string
+	// URIs — сайты и приложения логина, по одному на строку (gomobile не передаёт
+	// срезы строк). Приложения — с префиксом «androidapp://».
+	URIs string
 	// text
 	Text string
 	// card
@@ -84,7 +87,9 @@ type SecretInput struct {
 
 	Login    string
 	Password string
-	Text     string
+	// URIs — сайты и приложения логина: по одному на строку, через запятую или пробел.
+	URIs string
+	Text string
 
 	CardNumber string
 	CardHolder string
@@ -203,7 +208,7 @@ func (a *App) buildPayload(input *SecretInput, update bool) (*domain.SecretPaylo
 		if input.Login == "" && input.Password == "" {
 			return nil, validationError("Укажите логин или пароль")
 		}
-		data = domain.CredentialsSecret{Login: input.Login, Password: input.Password}
+		data = domain.CredentialsSecret{Login: input.Login, Password: input.Password, URIs: domain.ParseURIs(input.URIs)}
 	case domain.SecretTypeText:
 		if input.Text == "" {
 			return nil, validationError("Введите текст")
@@ -274,7 +279,7 @@ func toSecret(info *domain.SecretInfo) (*Secret, error) {
 	case domain.SecretTypeCredentials:
 		var c domain.CredentialsSecret
 		err = json.Unmarshal(info.Data, &c)
-		s.Login, s.Password = c.Login, c.Password
+		s.Login, s.Password, s.URIs = c.Login, c.Password, strings.Join(c.URIs, "\n")
 	case domain.SecretTypeText:
 		var t domain.TextSecret
 		err = json.Unmarshal(info.Data, &t)

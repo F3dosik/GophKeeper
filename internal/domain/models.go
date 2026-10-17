@@ -139,6 +139,12 @@ func ParseSecretType(s string) (SecretType, error) {
 type CredentialsSecret struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
+	// URIs — сайты и приложения, для которых этот логин: «github.com»,
+	// «https://github.com/login», «androidapp://com.github.android» (AndroidAppURIPrefix).
+	// По ним клиенты подбирают логин при автозаполнении. Поле появилось позже остальных:
+	// у старых секретов его нет, а клиент, который о нём не знает, при изменении секрета
+	// перезапишет данные без него.
+	URIs []string `json:"uris,omitempty"`
 }
 
 // TextSecret представляет секрет с произвольными текстовыми данными.
