@@ -16,6 +16,9 @@ coverage.out
 .env
 .env.local
 .env.*.local
+# Копии .env (.env_old, .env_backup и т.п.) содержат секреты; шаблон — .env_example.
+.env_*
+!.env_example
 
 # TLS сертификаты
 certs/*.pem
