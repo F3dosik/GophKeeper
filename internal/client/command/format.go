@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -102,6 +103,9 @@ func formatPretty(info *domain.SecretInfo) ([]byte, error) {
 		}
 		fmt.Fprintf(&buf, "Логин:    %s\n", c.Login)
 		fmt.Fprintf(&buf, "Пароль:   %s\n", c.Password)
+		if len(c.URIs) > 0 {
+			fmt.Fprintf(&buf, "Сайты:    %s\n", strings.Join(c.URIs, ", "))
+		}
 
 	case domain.SecretTypeText:
 		var t domain.TextSecret

@@ -127,3 +127,22 @@ func TestGenerate(t *testing.T) {
 	_, err = app.GeneratePassphrase(2)
 	assert.ErrorContains(t, err, "VALIDATION")
 }
+
+func TestCredentialURIs_RoundTrip(t *testing.T) {
+	app := &App{}
+	p, err := app.buildPayload(SecretInput{
+		Name: "github", Type: string(domain.SecretTypeCredentials), Login: "me", Password: "pw",
+		URIs: "github.com\n\nandroidapp://com.github.android",
+	}, false)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"login":"me","password":"pw","uris":["github.com","androidapp://com.github.android"]}`, string(p.Data))
+
+	s, err := toSecret(&domain.SecretInfo{SecretPayload: *p})
+	require.NoError(t, err)
+	assert.Equal(t, "github.com\nandroidapp://com.github.android", s.URIs)
+
+	// Без сайтов данные секрета не меняются по сравнению с прежним форматом.
+	p, err = app.buildPayload(SecretInput{Name: "x", Type: string(domain.SecretTypeCredentials), Login: "me", Password: "pw"}, false)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"login":"me","password":"pw"}`, string(p.Data))
+}

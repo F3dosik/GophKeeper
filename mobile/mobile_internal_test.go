@@ -152,6 +152,13 @@ func TestBuildPayload(t *testing.T) {
 	assert.Equal(t, "github", p.Name)
 	assert.JSONEq(t, `{"login":"me","password":"pw"}`, string(p.Data))
 
+	p, err = app.buildPayload(&SecretInput{
+		Name: "github", Type: TypeCredentials, Login: "me", Password: "pw",
+		URIs: "github.com\n androidapp://com.github.android, github.com",
+	}, false)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"login":"me","password":"pw","uris":["github.com","androidapp://com.github.android"]}`, string(p.Data))
+
 	p, err = app.buildPayload(&SecretInput{Name: "key", Type: TypeBinary, FileData: []byte{0, 255}}, false)
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"data":"AP8="}`, string(p.Data))
@@ -184,6 +191,13 @@ func TestToSecret(t *testing.T) {
 		Name: "visa", Type: TypeCard, Metadata: "m", CreatedAt: created.UnixMilli(),
 		CardNumber: "4111", CardHolder: "H", CardExpiry: "12/30", CardCVV: "123",
 	}, s)
+
+	s, err = toSecret(&domain.SecretInfo{SecretPayload: domain.SecretPayload{
+		Type: domain.SecretTypeCredentials,
+		Data: json.RawMessage(`{"login":"me","password":"pw","uris":["github.com","androidapp://com.github.android"]}`),
+	}})
+	require.NoError(t, err)
+	assert.Equal(t, "github.com\nandroidapp://com.github.android", s.URIs)
 
 	s, err = toSecret(&domain.SecretInfo{SecretPayload: domain.SecretPayload{
 		Type: domain.SecretTypeBinary, Data: json.RawMessage(`{"data":"AAEC"}`),

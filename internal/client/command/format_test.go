@@ -76,6 +76,24 @@ func TestWriteSecret_PrettyToFile(t *testing.T) {
 	assert.Contains(t, string(data), "s3cret")
 }
 
+func TestWriteSecret_PrettyShowsURIs(t *testing.T) {
+	info := credentialsInfo(t)
+	path := filepath.Join(t.TempDir(), "out.txt")
+	require.NoError(t, command.WriteSecret(info, command.OutputOptions{OutputPath: path}))
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.NotContains(t, string(data), "Сайты:", "no line for secrets without sites")
+
+	info.Data, err = json.Marshal(domain.CredentialsSecret{
+		Login: "ivan", Password: "s3cret", URIs: []string{"github.com", "androidapp://com.github.android"},
+	})
+	require.NoError(t, err)
+	require.NoError(t, command.WriteSecret(info, command.OutputOptions{OutputPath: path}))
+	data, err = os.ReadFile(path)
+	require.NoError(t, err)
+	assert.Contains(t, string(data), "Сайты:    github.com, androidapp://com.github.android")
+}
+
 func TestWriteSecret_BinaryRawToFile(t *testing.T) {
 	raw := []byte{0x00, 0x01, 0x02, 0x03, 0xff}
 	data, err := json.Marshal(domain.BinarySecret{Data: raw})

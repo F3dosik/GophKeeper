@@ -36,6 +36,9 @@ class SecretFormViewModel(app: ShronApplication, val existing: SecretDetails? = 
     var generator by mutableStateOf(GeneratorSettings())
         private set
 
+    /** Сайты и приложения: по одному на строку. */
+    var uris by mutableStateOf("")
+
     var text by mutableStateOf("")
 
     var cardNumber by mutableStateOf("")
@@ -53,6 +56,7 @@ class SecretFormViewModel(app: ShronApplication, val existing: SecretDetails? = 
             metadata = existing.metadata
             login = existing.login
             password = existing.password
+            uris = existing.uris
             text = existing.text
             cardNumber = existing.cardNumber
             cardHolder = existing.cardHolder
@@ -94,6 +98,7 @@ class SecretFormViewModel(app: ShronApplication, val existing: SecretDetails? = 
                 Mobile.TypeCredentials -> {
                     login = this@SecretFormViewModel.login
                     password = this@SecretFormViewModel.password
+                    urIs = this@SecretFormViewModel.uris // setURIs() из gomobile
                 }
                 Mobile.TypeText -> text = this@SecretFormViewModel.text
                 Mobile.TypeCard -> {

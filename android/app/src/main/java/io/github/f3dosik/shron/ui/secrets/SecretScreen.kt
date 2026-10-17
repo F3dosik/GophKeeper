@@ -142,6 +142,10 @@ private fun SecretFields(vm: SecretViewModel, secret: SecretDetails) {
         Mobile.TypeCredentials -> {
             Field(stringResource(R.string.secret_login), secret.login, vm)
             Field(stringResource(R.string.secret_password), secret.password, vm, hidden = true)
+            if (secret.uris.isNotBlank()) {
+                Text(stringResource(R.string.secret_uris), style = MaterialTheme.typography.labelMedium)
+                Text(secret.uris, style = MaterialTheme.typography.bodyMedium)
+            }
         }
         Mobile.TypeText -> Field(stringResource(R.string.secret_text), secret.text, vm, multiline = true)
         Mobile.TypeCard -> {

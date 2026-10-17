@@ -105,6 +105,12 @@
       {#if secret.type === 'credentials'}
         {@render field('Логин', secret.login, 'login')}
         {@render field('Пароль', secret.password, 'password', true)}
+        {#if secret.uris}
+          <div class="field">
+            <span class="label">Сайты и приложения</span>
+            <div class="uris">{secret.uris}</div>
+          </div>
+        {/if}
       {:else if secret.type === 'text'}
         <div class="field">
           <span class="label">Текст</span>
@@ -149,6 +155,7 @@
   .fields { display: flex; flex-direction: column; gap: 16px; }
   .field { display: flex; flex-direction: column; gap: 4px; }
   .label { font-size: 12px; color: var(--muted); }
+  .uris { white-space: pre-line; word-break: break-all; }
   .value-row { display: flex; align-items: center; gap: 8px; }
   code { padding: 6px 10px; background: var(--panel-2); border-radius: 6px; font-size: 14px; user-select: text; word-break: break-all; }
   code.masked { letter-spacing: 2px; color: var(--muted); }
