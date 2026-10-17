@@ -7,6 +7,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -18,11 +23,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.github.f3dosik.shron.R
+import io.github.f3dosik.shron.core.BackgroundLock
 import io.github.f3dosik.shron.ui.common.ErrorMessage
 import io.github.f3dosik.shron.ui.common.FormScreen
 import io.github.f3dosik.shron.ui.common.InfoMessage
 import io.github.f3dosik.shron.ui.common.PrimaryButton
 import io.github.f3dosik.shron.ui.common.TextInput
+import io.github.f3dosik.shron.ui.common.rememberExternalActivity
 
 /** Настройки сервера. [onClose] — null при первом запуске, когда возвращаться некуда. */
 @Composable
@@ -31,12 +38,14 @@ fun ServerScreen(vm: ServerViewModel, onSaved: () -> Unit, onClose: (() -> Unit)
     val pickCA = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) vm.loadCA(context.contentResolver, uri)
     }
+    val pauseLock = rememberExternalActivity()
     if (onClose != null) BackHandler(onBack = onClose)
 
     FormScreen(
         title = stringResource(R.string.server_title),
         subtitle = stringResource(R.string.server_subtitle),
     ) {
+        SectionTitle(stringResource(R.string.server_section))
         TextInput(
             value = vm.address,
             onValueChange = { vm.address = it },
@@ -58,7 +67,7 @@ fun ServerScreen(vm: ServerViewModel, onSaved: () -> Unit, onClose: (() -> Unit)
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { pickCA.launch(arrayOf("*/*")) }, enabled = !vm.busy) {
+                OutlinedButton(onClick = { pauseLock(); pickCA.launch(arrayOf("*/*")) }, enabled = !vm.busy) {
                     Text(stringResource(R.string.server_ca_pick))
                 }
                 if (vm.ca != CaSource.System) {
@@ -69,6 +78,7 @@ fun ServerScreen(vm: ServerViewModel, onSaved: () -> Unit, onClose: (() -> Unit)
             }
         }
 
+        SectionTitle(stringResource(R.string.lock_section))
         TextInput(
             value = vm.autoLockMinutes,
             onValueChange = { vm.autoLockMinutes = it.filter(Char::isDigit) },
@@ -77,6 +87,8 @@ fun ServerScreen(vm: ServerViewModel, onSaved: () -> Unit, onClose: (() -> Unit)
             keyboardType = KeyboardType.Number,
             enabled = !vm.busy,
         )
+
+        BackgroundLockChoice(vm.backgroundLockSeconds, { vm.backgroundLockSeconds = it }, enabled = !vm.busy)
 
         ErrorMessage(vm.error)
         InfoMessage(vm.checkResult)
@@ -87,6 +99,44 @@ fun ServerScreen(vm: ServerViewModel, onSaved: () -> Unit, onClose: (() -> Unit)
         }
         if (onClose != null) {
             TextButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.cancel)) }
+        }
+    }
+}
+
+@Composable
+private fun SectionTitle(text: String) {
+    Text(text, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BackgroundLockChoice(seconds: Int, onChange: (Int) -> Unit, enabled: Boolean) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(stringResource(R.string.background_lock), style = MaterialTheme.typography.titleSmall)
+        Text(
+            stringResource(R.string.background_lock_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        val options = BackgroundLock.DELAY_OPTIONS_SECONDS
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            options.forEachIndexed { index, option ->
+                SegmentedButton(
+                    selected = seconds == option,
+                    onClick = { onChange(option) },
+                    shape = SegmentedButtonDefaults.itemShape(index, options.size),
+                    enabled = enabled,
+                ) {
+                    Text(
+                        when {
+                            option == 0 -> stringResource(R.string.background_lock_now)
+                            option < 60 -> stringResource(R.string.background_lock_seconds, option)
+                            else -> stringResource(R.string.background_lock_minutes, option / 60)
+                        },
+                        maxLines = 1,
+                    )
+                }
+            }
         }
     }
 }

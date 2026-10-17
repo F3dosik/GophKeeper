@@ -32,6 +32,7 @@ import io.github.f3dosik.shron.ui.common.PasswordInput
 import io.github.f3dosik.shron.ui.common.PrimaryButton
 import io.github.f3dosik.shron.ui.common.StrengthMessage
 import io.github.f3dosik.shron.ui.common.TextInput
+import io.github.f3dosik.shron.ui.common.rememberExternalActivity
 
 private val types = listOf(
     Mobile.TypeCredentials to R.string.type_credentials_short,
@@ -162,6 +163,7 @@ private fun FileField(vm: SecretFormViewModel, enabled: Boolean) {
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) vm.pickFile(context.contentResolver, uri)
     }
+    val pauseLock = rememberExternalActivity()
     val file = vm.file
     val existing = vm.existing
     Text(
@@ -174,7 +176,7 @@ private fun FileField(vm: SecretFormViewModel, enabled: Boolean) {
         },
         style = MaterialTheme.typography.bodyMedium,
     )
-    OutlinedButton(onClick = { pick.launch(arrayOf("*/*")) }, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
+    OutlinedButton(onClick = { pauseLock(); pick.launch(arrayOf("*/*")) }, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
         Text(stringResource(R.string.file_pick))
     }
 }

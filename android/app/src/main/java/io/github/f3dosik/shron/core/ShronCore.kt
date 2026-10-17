@@ -104,10 +104,15 @@ class ShronCore(dataDir: File, insecure: Boolean) {
         }
     }
 
-    /** Блокирует хранилище, не дожидаясь корутины (Lock не ходит в сеть). */
-    fun lock() {
+    /**
+     * Блокирует хранилище, не дожидаясь корутины (Lock не ходит в сеть). [reason] —
+     * причина для экрана разблокировки; у уже заблокированного хранилища прежняя причина
+     * сохраняется.
+     */
+    fun lock(reason: String = Mobile.LockManual) {
+        val wasUnlocked = app.state.unlocked
         app.lock()
-        refresh()
+        refresh(lockReason = if (wasUnlocked) reason else _state.value.lockReason)
     }
 
     private fun refresh(lockReason: String? = _state.value.lockReason) {
