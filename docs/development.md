@@ -15,6 +15,8 @@
 | `internal/domain` | Модели и доменные ошибки |
 | `pkg/crypto` | Argon2id, HKDF, AES-GCM, blind index |
 | `desktop/` | Десктоп-приложение: `backend` (Go), `frontend` (Svelte 5 + TypeScript) |
+| `mobile/` | Клиент для Android на Go, собирается gomobile в `shron.aar` |
+| `android/` | Android-приложение (Kotlin, Jetpack Compose) поверх `shron.aar` |
 | `proto/` | Схемы gRPC, `proto/gen` — сгенерированный код |
 | `migrations/` | SQL-миграции (golang-migrate) |
 | `scripts/backup.sh` | Резервное копирование по расписанию |
@@ -50,6 +52,24 @@ make desktop-build-windows   # .exe для Windows, собирается на Li
 
 Переменные для отладки приложения: `SHRON_DESKTOP_DIR` — каталог данных (настройки, `ca.crt`, сессия), `SHRON_DESKTOP_HIDDEN=1` — запуск без окна (для автотестов интерфейса).
 
+### Android
+
+Нужны Android SDK с NDK и JDK 25 — проще всего поставить Android Studio, в ней есть и SDK Manager, и JDK. Сначала собирается Go-ядро, затем приложение:
+
+```bash
+export ANDROID_HOME=~/Android/Sdk                 # NDK ищется в $ANDROID_HOME/ndk
+export JAVA_HOME=/snap/android-studio/current/jbr # JDK из Android Studio; путь зависит от установки
+make android-aar                                  # → android/app/libs/shron.aar (arm64 и x86_64)
+
+cd android
+./gradlew assembleDebug                           # → app/build/outputs/apk/debug/app-debug.apk
+./gradlew installDebug                            # на подключённое устройство или эмулятор
+```
+
+`shron.aar` в репозиторий не попадает: после изменений в `mobile/` и после `git clone` его нужно пересобрать. В Android Studio открывается каталог `android/`, а не корень репозитория.
+
+`./gradlew assembleDebug -Pshron.insecure=true` собирает приложение без TLS — только для локальной разработки. Тексты интерфейса лежат в `android/app/src/main/res/values/strings.xml`.
+
 ## Тесты
 
 ```bash
@@ -58,7 +78,20 @@ make test-e2e     # интеграционные: сервер и PostgreSQL в 
 make test-cover   # покрытие без mocks/, proto/gen/, cmd/
 
 cd desktop/frontend && npm run check    # проверка типов Svelte и TypeScript
+
+cd android
+./gradlew testDebugUnitTest             # JVM-тесты Kotlin
+./gradlew connectedDebugAndroidTest     # на эмуляторе или устройстве, с настоящим Go-ядром
+
+./gradlew assembleRelease -Pshron.debugSignedRelease=true
+python3 scripts/release_smoke.py app/build/outputs/apk/release/app-release.apk   # release с R8
 ```
+
+Тесты на эмуляторе удаляют приложение с устройства вместе с его данными, smoke-тест тоже.
+
+Инструментальные тесты идут на debug-сборке, где R8 не работает, поэтому ошибки оптимизации ловит smoke-тест release-сборки: он проходит через интерфейс сценарий, задевающий Go-ядро (классы gomobile вызываются из нативного кода по именам, и R8 не должен их трогать — правила в `android/app/src/main/keepRules`). `-Pshron.debugSignedRelease=true` подписывает release отладочным ключом — только для такой проверки.
+
+Инструментальным тестам Android сервер не нужен. Каждый тест идёт в новом процессе с пустыми данными приложения (Test Orchestrator): Go-ядро одно на процесс и хранит настройки и сессию в `filesDir`.
 
 Образ PostgreSQL для e2e задаётся `E2E_POSTGRES_IMAGE` (по умолчанию `postgres:18-alpine`) — пригодится, если Docker Hub ограничивает скачивание.
 
@@ -84,6 +117,7 @@ go install github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc@latest
 
 - Go: `go vet`, unit-тесты с `-race`, e2e-тесты, `govulncheck`;
 - фронтенд: `svelte-check --fail-on-warnings` и сборка;
+- Android: `shron.aar`, сборка, lint и JVM-тесты; затем на эмуляторе инструментальные тесты и smoke-тест release-сборки с R8. Отладочный APK лежит в артефактах запуска;
 - сборки CLI для Linux, macOS и Windows и приложения на трёх ОС — результаты лежат в артефактах запуска;
 - образ сервера для amd64 и arm64. В PR он только собирается, после push в `main` и по тегу публикуется в GHCR (теги — в [docs/deployment.md](deployment.md#образ-сервера)).
 

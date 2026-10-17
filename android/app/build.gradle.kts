@@ -21,16 +21,30 @@ android {
         // Go-ядро одно на процесс и хранит настройки и сессию в filesDir.
         testInstrumentationRunnerArguments["clearPackageData"] = "true"
 
+        // Go-ядро собирается только для этих ABI (make android-aar): без фильтра APK ставился бы
+        // и на 32-битные устройства, где нет libgojni.so, и падал при запуске.
+        ndk {
+            abiFilters += listOf("arm64-v8a", "x86_64")
+        }
+
         // Соединение без TLS — только для разработки: ./gradlew -Pshron.insecure=true ...
         val insecure = providers.gradleProperty("shron.insecure").orNull == "true"
         buildConfigField("boolean", "SHRON_INSECURE", insecure.toString())
     }
 
+    // Release, подписанный отладочным ключом, — только для smoke-теста в CI
+    // (-Pshron.debugSignedRelease=true): настоящие релизы так не собираются.
+    val debugSignedRelease = providers.gradleProperty("shron.debugSignedRelease").orNull == "true"
+
     buildTypes {
         release {
+            if (debugSignedRelease) signingConfig = signingConfigs.getByName("debug")
+            // R8 для всего приложения. Ограничение packageScope из шаблона Studio ломало
+            // запуск: классы Kotlin внутри области переименовывались и закрывались, а код
+            // приложения вне её ссылался на них (IllegalAccessError в ShronApplication).
+            // Классы gomobile защищены правилами в src/main/keepRules.
             optimization {
                 enable = true
-                packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
             }
         }
     }

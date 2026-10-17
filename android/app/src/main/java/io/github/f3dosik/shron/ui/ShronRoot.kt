@@ -10,6 +10,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.f3dosik.shron.ShronApplication
+import io.github.f3dosik.shron.ui.account.AccountScreen
+import io.github.f3dosik.shron.ui.account.AccountViewModel
 import io.github.f3dosik.shron.ui.auth.AuthViewModel
 import io.github.f3dosik.shron.ui.auth.KdfDowngradeDialog
 import io.github.f3dosik.shron.ui.auth.PasswordChangeScreen
@@ -32,6 +34,7 @@ sealed interface VaultRoute {
     data object Add : VaultRoute
     data class View(val ref: SecretRef) : VaultRoute
     data class Edit(val secret: SecretDetails) : VaultRoute
+    data object Account : VaultRoute
 }
 
 /**
@@ -99,6 +102,7 @@ fun ShronRoot(app: ShronApplication) {
                     login = state.login,
                     onAdd = { nav.open(VaultRoute.Add) },
                     onOpen = { nav.open(VaultRoute.View(it)) },
+                    onAccount = { nav.open(VaultRoute.Account) },
                     onServerSettings = nav::openServerSettings,
                 )
             }
@@ -120,6 +124,11 @@ fun ShronRoot(app: ShronApplication) {
                     onEdit = { nav.open(VaultRoute.Edit(it)) },
                     onDeleted = { nav.open(VaultRoute.List) },
                 )
+            }
+
+            VaultRoute.Account -> {
+                val vm: AccountViewModel = viewModel(key = "account-$session") { AccountViewModel(app) }
+                AccountScreen(vm, state.login, onBack = { nav.open(VaultRoute.List) })
             }
 
             is VaultRoute.Edit -> {
