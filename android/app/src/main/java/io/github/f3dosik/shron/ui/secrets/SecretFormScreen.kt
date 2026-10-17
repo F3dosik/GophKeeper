@@ -122,6 +122,17 @@ private fun CredentialsFields(vm: SecretFormViewModel, enabled: Boolean) {
     if (vm.generated != null) {
         GeneratorPanel(vm.generator, vm::updateGenerator, onCommit = vm::generatePassword, enabled = enabled)
     }
+    OutlinedTextField(
+        value = vm.uris,
+        onValueChange = { vm.uris = it },
+        label = { Text(stringResource(R.string.secret_uris)) },
+        placeholder = { Text("github.com") },
+        supportingText = { Text(stringResource(R.string.secret_uris_hint)) },
+        enabled = enabled,
+        minLines = 2,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrectEnabled = false),
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 @Composable

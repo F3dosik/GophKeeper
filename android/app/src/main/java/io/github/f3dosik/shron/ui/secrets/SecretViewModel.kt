@@ -23,6 +23,8 @@ data class SecretDetails(
     val updatedAt: Long,
     val login: String = "",
     val password: String = "",
+    /** Сайты и приложения логина, по одному на строку. */
+    val uris: String = "",
     val text: String = "",
     val cardNumber: String = "",
     val cardHolder: String = "",
@@ -38,6 +40,7 @@ data class SecretDetails(
             updatedAt = s.updatedAt,
             login = s.login,
             password = s.password,
+            uris = s.urIs, // getURIs() из gomobile
             text = s.text,
             cardNumber = s.cardNumber,
             cardHolder = s.cardHolder,

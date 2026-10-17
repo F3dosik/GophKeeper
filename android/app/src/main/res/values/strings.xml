@@ -136,6 +136,8 @@
     <string name="secret_metadata_hint">Необязательно; показывается в списке секретов</string>
     <string name="secret_login">Логин</string>
     <string name="secret_password">Пароль</string>
+    <string name="secret_uris">Сайты и приложения</string>
+    <string name="secret_uris_hint">Необязательно. По одному на строку: github.com или androidapp://com.github.android. По ним подбирается логин при автозаполнении.</string>
     <string name="secret_text">Текст</string>
     <string name="card_number">Номер карты</string>
     <string name="card_holder">Держатель</string>
