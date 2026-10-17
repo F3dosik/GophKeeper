@@ -148,6 +148,54 @@ jobs:
             ./gradlew assembleRelease -Pshron.debugSignedRelease=true
             python3 scripts/release_smoke.py app/build/outputs/apk/release/app-release.apk
 
+  # APK для релиза: только по тегу. Подписывается ключом из секретов репозитория
+  # (ANDROID_KEYSTORE_BASE64 — хранилище PKCS12 в base64, ANDROID_KEYSTORE_PASSWORD), версия —
+  # из тега. Обновление на телефоне ставится поверх, только если ключ тот же, поэтому ключ
+  # нельзя менять между релизами.
+  android-release:
+    name: Android — подписанный APK
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [android, android-emulator]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/download-artifact@v8
+        with:
+          name: android-aar
+          path: android/app/libs
+      - name: Сборка и подпись
+        working-directory: android
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          SHRON_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          [ -n "$KEYSTORE_BASE64" ] || { echo "::error::нет секрета ANDROID_KEYSTORE_BASE64"; exit 1; }
+          export SHRON_KEYSTORE="$RUNNER_TEMP/release.jks"
+          echo "$KEYSTORE_BASE64" | base64 -d > "$SHRON_KEYSTORE"
+          version="${GITHUB_REF_NAME#v}"
+          IFS=. read -r major minor patch <<< "${version%%-*}"
+          code=$((major * 10000 + minor * 100 + patch))
+          ./gradlew assembleRelease -Pshron.versionName="$version" -Pshron.versionCode="$code"
+          rm -f "$SHRON_KEYSTORE"
+          mkdir -p "$RUNNER_TEMP/apk"
+          cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/apk/shron-android-${GITHUB_REF_NAME}.apk"
+      - name: Проверка подписи и версии
+        run: |
+          bt=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          apk="$RUNNER_TEMP/apk/shron-android-${GITHUB_REF_NAME}.apk"
+          "$bt/apksigner" verify --print-certs "$apk" | grep -E "DN|SHA-256"
+          "$bt/aapt2" dump badging "$apk" | head -1 | grep -F "versionName='${GITHUB_REF_NAME#v}'"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: android-apk
+          path: ${{ runner.temp }}/apk/
+          if-no-files-found: error
+
   desktop:
     name: Десктоп — ${{ matrix.name }}
     strategy:
@@ -253,7 +301,7 @@ jobs:
   release:
     name: Релиз
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [go, frontend, cli, desktop, image]
+    needs: [go, frontend, cli, desktop, image, android-release]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -265,8 +313,9 @@ jobs:
         working-directory: dist
         run: |
           mkdir release
-          # CLI — отдельными файлами, десктоп — архивами (на macOS это каталог .app).
+          # CLI и APK — отдельными файлами, десктоп — архивами (на macOS это каталог .app).
           cp cli/* release/
+          cp android-apk/*.apk release/
           for dir in desktop-*/; do
             name="${dir%/}"
             (cd "$name" && zip -qr "../release/shron-${name}-${GITHUB_REF_NAME}.zip" .)
