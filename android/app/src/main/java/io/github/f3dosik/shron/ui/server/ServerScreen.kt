@@ -1,5 +1,16 @@
 package io.github.f3dosik.shron.ui.server
 
+import android.content.Intent
+import android.os.Build
+import android.provider.Settings
+import android.view.autofill.AutofillManager
+import androidx.annotation.RequiresApi
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.core.net.toUri
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -90,6 +101,8 @@ fun ServerScreen(vm: ServerViewModel, onSaved: () -> Unit, onClose: (() -> Unit)
 
         BackgroundLockChoice(vm.backgroundLockSeconds, { vm.backgroundLockSeconds = it }, enabled = !vm.busy)
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) AutofillSection(onExternalActivity = pauseLock)
+
         ErrorMessage(vm.error)
         InfoMessage(vm.checkResult)
 
@@ -138,5 +151,39 @@ private fun BackgroundLockChoice(seconds: Int, onChange: (Int) -> Unit, enabled:
                 }
             }
         }
+    }
+}
+
+/** Служба автозаполнения выбирается в системных настройках; здесь — состояние и переход туда. */
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+private fun AutofillSection(onExternalActivity: () -> Unit) {
+    val context = LocalContext.current
+    val manager = remember(context) { context.getSystemService(AutofillManager::class.java) }
+    var enabled by remember { mutableStateOf(manager?.hasEnabledAutofillServices() == true) }
+    // После возвращения из системных настроек состояние могло измениться.
+    LifecycleResumeEffect(manager) {
+        enabled = manager?.hasEnabledAutofillServices() == true
+        onPauseOrDispose {}
+    }
+
+    SectionTitle(stringResource(R.string.autofill_section))
+    Text(
+        stringResource(R.string.autofill_hint),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    if (enabled) {
+        Text(stringResource(R.string.autofill_enabled), style = MaterialTheme.typography.bodyMedium)
+    } else if (manager?.isAutofillSupported == true) {
+        OutlinedButton(
+            onClick = {
+                onExternalActivity()
+                context.startActivity(
+                    Intent(Settings.ACTION_REQUEST_SET_AUTOFILL_SERVICE, "package:${context.packageName}".toUri()),
+                )
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text(stringResource(R.string.autofill_enable)) }
     }
 }
