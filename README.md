@@ -107,6 +107,10 @@ gophkeeper import vault.gkx [--overwrite]
 
 Данные приложения хранятся в `~/.config/GophKeeper`, `%AppData%\GophKeeper` или `~/Library/Application Support/GophKeeper`; другой каталог задаёт `GOPHKEEPER_DESKTOP_DIR`.
 
+## Мобильный клиент (в разработке)
+
+Пакет [mobile](mobile) — клиент для Android-приложения на Kotlin: та же логика, что у десктопа (разблокировка, автоблокировка, все типы секретов, генератор), в виде библиотеки gomobile. Сборка `make android-aar` (нужны Android SDK и NDK) кладёт `android/app/libs/shron.aar`. API описан в документации пакета: `go doc ./mobile`.
+
 ## Документация
 
 - [docs/deployment.md](docs/deployment.md) — установка и настройка сервера, TLS, регистрация и администрирование, резервные копии, обновление.

@@ -1,4 +1,4 @@
-.PHONY: help generate docs build-client build-client-all build-server test test-e2e test-cover docker-up docker-up-local docker-down backup restore certs ca-encrypt desktop-dev desktop-build desktop-build-windows clean
+.PHONY: help generate docs build-client build-client-all build-server test test-e2e test-cover docker-up docker-up-local docker-down backup restore certs ca-encrypt desktop-dev desktop-build desktop-build-windows android-aar clean
 
 # Версия и дата сборки — подставляются в бинарь клиента через -ldflags.
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -31,6 +31,13 @@ WAILS       ?= wails
 WAILS_TAGS  ?= webkit2_41
 DESKTOP_DIR := desktop
 
+# Android-библиотека из пакета mobile (gomobile bind). Нужны Android SDK и NDK:
+# ANDROID_HOME и ANDROID_NDK_HOME (или NDK в $ANDROID_HOME/ndk). gomobile и gobind
+# собираются из версии, зафиксированной в go.mod (директива tool).
+TOOLS_DIR   := $(BIN_DIR)/tools
+ANDROID_API ?= 24
+ANDROID_AAR ?= android/app/libs/shron.aar
+
 COMPLETION_FILE := $(HOME)/.gophkeeper_completion
 
 # TLS: каталог с сертификатами и список имён/IP, по которым клиенты обращаются к серверу.
@@ -60,6 +67,7 @@ help:
 	@echo "  desktop-dev       — десктоп-клиент в режиме разработки (горячая перезагрузка)"
 	@echo "  desktop-build     — десктоп-клиент для текущей ОС → desktop/build/bin"
 	@echo "  desktop-build-windows — десктоп-клиент для Windows (кросс-сборка)"
+	@echo "  android-aar       — Android-библиотека клиента (gomobile) → $(ANDROID_AAR)"
 	@echo "  clean             — удалить bin/"
 
 # Кодогенерация из .proto файлов
@@ -182,6 +190,14 @@ desktop-build:
 
 desktop-build-windows:
 	cd $(DESKTOP_DIR) && $(WAILS) build -platform windows/amd64
+
+# arm64 — телефоны, amd64 — эмулятор на x86-компьютере.
+android-aar:
+	@mkdir -p $(TOOLS_DIR) $(dir $(ANDROID_AAR))
+	go build -o $(TOOLS_DIR)/ golang.org/x/mobile/cmd/gomobile golang.org/x/mobile/cmd/gobind
+	PATH="$(abspath $(TOOLS_DIR)):$$PATH" gomobile bind -target=android/arm64,android/amd64 \
+		-androidapi $(ANDROID_API) -javapkg=io.github.f3dosik.shron -trimpath -ldflags "-s -w" \
+		-o $(ANDROID_AAR) ./mobile
 
 docker-up:
 	@mkdir -p $(BACKUP_DIR)
