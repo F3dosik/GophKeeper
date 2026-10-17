@@ -87,6 +87,9 @@ require (
 	go.opentelemetry.io/otel/metric v1.44.0 // indirect
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
+	golang.org/x/mobile v0.0.0-20261011034528-197770444867 // indirect
+	golang.org/x/mod v0.42.0 // indirect
+	golang.org/x/tools v0.52.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
@@ -105,4 +108,9 @@ require (
 	golang.org/x/term v0.47.0
 	golang.org/x/text v0.43.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260706201446-f0a921348800 // indirect
+)
+
+tool (
+	golang.org/x/mobile/cmd/gobind
+	golang.org/x/mobile/cmd/gomobile
 )
