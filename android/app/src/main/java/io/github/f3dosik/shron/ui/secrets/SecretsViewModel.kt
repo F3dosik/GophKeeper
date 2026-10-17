@@ -14,10 +14,24 @@ data class SecretItem(
     val updatedAt: Long,
 )
 
+/**
+ * Поиск как на десктопе: [query] — подстрока названия или комментария без учёта регистра,
+ * [type] — тип секрета (null — все).
+ */
+fun filterSecrets(items: List<SecretItem>, query: String, type: String?): List<SecretItem> {
+    val q = query.trim()
+    return items.filter { item ->
+        (type == null || item.type == type) &&
+            (q.isEmpty() || item.name.contains(q, ignoreCase = true) || item.metadata.contains(q, ignoreCase = true))
+    }
+}
+
 class SecretsViewModel(app: ShronApplication) : CoreViewModel(app) {
 
     var items by mutableStateOf<List<SecretItem>?>(null)
         private set
+    var query by mutableStateOf("")
+    var typeFilter by mutableStateOf<String?>(null)
 
     fun load() = run {
         items = core.listSecrets()
@@ -28,6 +42,8 @@ class SecretsViewModel(app: ShronApplication) : CoreViewModel(app) {
     /** Забывает список, когда хранилище блокируется. */
     fun forget() {
         items = null
+        query = ""
+        typeFilter = null
         dismissError()
     }
 
