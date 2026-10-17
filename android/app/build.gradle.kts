@@ -13,8 +13,10 @@ android {
         applicationId = "io.github.f3dosik.shron"
         minSdk = 24
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        // Версию задаёт CI из тега релиза (vX.Y.Z → -Pshron.versionName=X.Y.Z и
+        // versionCode = X·10000 + Y·100 + Z); локальные сборки — «dev».
+        versionCode = providers.gradleProperty("shron.versionCode").orNull?.toInt() ?: 1
+        versionName = providers.gradleProperty("shron.versionName").orNull ?: "dev"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Каждый инструментальный тест — в новом процессе с пустыми данными приложения:
@@ -36,9 +38,28 @@ android {
     // (-Pshron.debugSignedRelease=true): настоящие релизы так не собираются.
     val debugSignedRelease = providers.gradleProperty("shron.debugSignedRelease").orNull == "true"
 
+    // Ключ релизов — из переменных окружения: в CI из секретов, локально — путь к своему
+    // хранилищу ключей. Без них release-сборка остаётся неподписанной.
+    val releaseKeystore = System.getenv("SHRON_KEYSTORE")?.takeIf { it.isNotBlank() }
+    signingConfigs {
+        if (releaseKeystore != null) {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                storePassword = System.getenv("SHRON_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("SHRON_KEY_ALIAS") ?: "shron"
+                // В PKCS12 пароль ключа совпадает с паролем хранилища.
+                keyPassword = System.getenv("SHRON_KEYSTORE_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            if (debugSignedRelease) signingConfig = signingConfigs.getByName("debug")
+            signingConfig = when {
+                debugSignedRelease -> signingConfigs.getByName("debug")
+                releaseKeystore != null -> signingConfigs.getByName("release")
+                else -> null
+            }
             // R8 для всего приложения. Ограничение packageScope из шаблона Studio ломало
             // запуск: классы Kotlin внутри области переименовывались и закрывались, а код
             // приложения вне её ссылался на них (IllegalAccessError в ShronApplication).

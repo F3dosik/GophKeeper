@@ -123,8 +123,17 @@ go install github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc@latest
 
 `govulncheck.yml` раз в неделю проверяет `main`: уязвимости в зависимостях публикуются постоянно, и код может стать уязвимым без единого коммита.
 
-Релиз выпускается по тегу. CI собирает всё заново, публикует образ сервера с тегами версии и `latest` и GitHub Release с бинарями CLI, архивами приложения и `SHA256SUMS`:
+Релиз выпускается по тегу. CI собирает всё заново, публикует образ сервера с тегами версии и `latest` и GitHub Release с бинарями CLI, архивами приложения, APK для Android и `SHA256SUMS`:
 
 ```bash
 git tag v1.1.0 && git push origin v1.1.0
+```
+
+APK подписывается ключом релизов из секретов репозитория: `ANDROID_KEYSTORE_BASE64` — хранилище ключей PKCS12 в base64, `ANDROID_KEYSTORE_PASSWORD` — его пароль (псевдоним ключа — `shron`). Версия берётся из тега: `v1.3.0` → `versionName` 1.3.0, `versionCode` 10300. Android ставит обновление поверх установленного приложения, только если оно подписано тем же ключом, поэтому ключ один на все релизы и хранится в резервной копии вне репозитория: без него следующую версию придётся ставить с удалением предыдущей.
+
+Подписанный APK можно собрать и локально:
+
+```bash
+export SHRON_KEYSTORE=~/.android/shron-release.jks SHRON_KEYSTORE_PASSWORD=...
+./gradlew assembleRelease -Pshron.versionName=1.3.0 -Pshron.versionCode=10300
 ```
