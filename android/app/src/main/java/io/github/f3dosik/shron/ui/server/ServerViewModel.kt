@@ -3,6 +3,7 @@ package io.github.f3dosik.shron.ui.server
 import android.content.ContentResolver
 import android.net.Uri
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.github.f3dosik.shron.R
@@ -26,6 +27,7 @@ class ServerViewModel(app: ShronApplication) : CoreViewModel(app) {
 
     var address by mutableStateOf("")
     var autoLockMinutes by mutableStateOf("")
+    var backgroundLockSeconds by mutableIntStateOf(app.preferences.backgroundLockSeconds)
     var ca by mutableStateOf<CaSource>(CaSource.System)
         private set
     var checkResult by mutableStateOf<String?>(null)
@@ -58,6 +60,7 @@ class ServerViewModel(app: ShronApplication) : CoreViewModel(app) {
     fun save(onSaved: () -> Unit) = run {
         val minutes = autoLockMinutes.trim().toLongOrNull() ?: throw validation(R.string.server_auto_lock_invalid)
         core.call { it.saveSettings(address, caPem(), ca == CaSource.Saved, minutes) }
+        app.preferences.backgroundLockSeconds = backgroundLockSeconds
         onSaved()
     }
 

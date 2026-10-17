@@ -6,7 +6,7 @@
     <string name="hide_password">Скрыть</string>
     <string name="cancel">Отмена</string>
     <string name="save">Сохранить</string>
-    <string name="server_settings">Настройки сервера</string>
+    <string name="server_settings">Настройки</string>
     <string name="logout">Выйти из учётки</string>
     <string name="generate">Сгенерировать</string>
     <string name="password_strength">Стойкость: %1$s, %2$d бит</string>
@@ -25,8 +25,10 @@
     <string name="error_read_file">Не удалось прочитать файл</string>
 
     <!-- Сервер -->
-    <string name="server_title">Сервер</string>
+    <string name="server_title">Настройки</string>
     <string name="server_subtitle">Адрес сервера Shron и сертификат, которым подписан его TLS-сертификат (ca.crt).</string>
+    <string name="server_section">Сервер</string>
+    <string name="lock_section">Блокировка</string>
     <string name="server_address">Адрес сервера</string>
     <string name="server_address_hint">Например, 192.168.1.5 или keeper.example.com:50051</string>
     <string name="server_ca">CA-сертификат</string>
@@ -40,6 +42,11 @@
     <string name="server_auto_lock_hint">После бездействия; 0 — не блокировать</string>
     <string name="server_auto_lock_invalid">Автоблокировка — число минут</string>
     <string name="server_check">Проверить соединение</string>
+    <string name="background_lock">Когда приложение свёрнуто</string>
+    <string name="background_lock_hint">Через сколько блокировать хранилище после того, как приложение свернули, переключились на другое или выключили экран</string>
+    <string name="background_lock_now">Сразу</string>
+    <string name="background_lock_seconds">%1$d с</string>
+    <string name="background_lock_minutes">%1$d мин</string>
 
     <!-- Вход и регистрация -->
     <string name="sign_in_title">Вход</string>
@@ -61,6 +68,7 @@
     <string name="unlock_title">Хранилище заблокировано</string>
     <string name="locked_idle">Заблокировано после бездействия.</string>
     <string name="locked_session_expired">Сессия истекла или отозвана.</string>
+    <string name="locked_background">Заблокировано, пока приложение было свёрнуто.</string>
     <string name="account_label">Учётка: %1$s</string>
     <string name="unlock">Разблокировать</string>
 

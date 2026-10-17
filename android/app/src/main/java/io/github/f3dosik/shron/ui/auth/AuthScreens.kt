@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import io.github.f3dosik.shron.R
+import io.github.f3dosik.shron.core.BackgroundLock
 import io.github.f3dosik.shron.mobile.Mobile
 import io.github.f3dosik.shron.ui.common.ErrorMessage
 import io.github.f3dosik.shron.ui.common.FormScreen
@@ -86,6 +87,7 @@ fun UnlockScreen(vm: AuthViewModel, login: String, lockReason: String?, onServer
     val reason = when (lockReason) {
         Mobile.LockIdle -> stringResource(R.string.locked_idle)
         Mobile.LockSessionExpired -> stringResource(R.string.locked_session_expired)
+        BackgroundLock.LOCK_REASON -> stringResource(R.string.locked_background)
         else -> null
     }
     FormScreen(

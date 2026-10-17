@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import io.github.f3dosik.shron.R
 import io.github.f3dosik.shron.mobile.Mobile
 import io.github.f3dosik.shron.ui.common.ErrorMessage
+import io.github.f3dosik.shron.ui.common.rememberExternalActivity
 import java.text.DateFormat
 import java.util.Date
 
@@ -130,6 +131,7 @@ fun SecretScreen(
 @Composable
 private fun SecretFields(vm: SecretViewModel, secret: SecretDetails) {
     val context = LocalContext.current
+    val pauseLock = rememberExternalActivity()
     val saveFile = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/octet-stream"),
     ) { uri -> if (uri != null) vm.saveFile(context.contentResolver, uri) }
@@ -157,7 +159,10 @@ private fun SecretFields(vm: SecretViewModel, secret: SecretDetails) {
             Text(stringResource(R.string.type_binary), style = MaterialTheme.typography.labelMedium)
             Text(Formatter.formatShortFileSize(context, secret.fileSize), style = MaterialTheme.typography.bodyLarge)
             OutlinedButton(
-                onClick = { saveFile.launch(secret.ref.name) },
+                onClick = {
+                    pauseLock()
+                    saveFile.launch(secret.ref.name)
+                },
                 enabled = !vm.busy,
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(stringResource(R.string.file_save)) }
