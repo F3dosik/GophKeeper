@@ -117,6 +117,16 @@ func TestToError(t *testing.T) {
 	assert.Same(t, original, toError(original), "already converted errors pass through")
 }
 
+func TestRegistrationError(t *testing.T) {
+	assert.NoError(t, registrationError(nil))
+
+	e := decodeError(t, registrationError(fmt.Errorf("%w: registration is disabled", domain.ErrPermissionDenied)))
+	assert.Equal(t, CodePermissionDenied, e.Code)
+	assert.Equal(t, registrationClosedMessage, e.Message)
+
+	assert.Equal(t, CodeAlreadyExists, decodeError(t, registrationError(domain.ErrAlreadyExists)).Code)
+}
+
 func TestValidators(t *testing.T) {
 	assert.Error(t, checkCredentials(" ", "long-enough"))
 	assert.Error(t, checkCredentials("user", "short"))
