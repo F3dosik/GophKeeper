@@ -69,15 +69,35 @@ def check_alive():
         sys.exit(f"Приложение упало:\n{crash}")
 
 
+def swipe(down):
+    """Прокручивает экран на полстраницы: на маленьком экране элементы бывают за краем."""
+    size = re.search(r"(\d+)x(\d+)", adb("shell", "wm", "size"))
+    width, height = (int(size.group(1)), int(size.group(2))) if size else (1080, 1920)
+    x = str(width // 2)
+    start, end = (height * 3 // 4, height // 4) if down else (height // 4, height * 3 // 4)
+    adb("shell", "input", "swipe", x, str(start), x, str(end), "300")
+
+
+def visible_texts():
+    return [n.get("text") for n in nodes() if n.get("text")]
+
+
 def wait(text, substring=False, timeout=30):
+    """Ждёт элемент. Если его нет на экране, листает вниз до конца, затем вверх: экран
+    может быть прокручен так, что элемент за нижним или за верхним краем."""
     deadline = time.time() + timeout
+    down = True
     while time.time() < deadline:
         check_alive()
         node = find(text, substring)
         if node is not None:
             print(f"  есть «{text}»")
             return node
+        before = visible_texts()
+        swipe(down)
         time.sleep(1)
+        if visible_texts() == before:
+            down = not down  # дошли до края — листаем обратно
     visible = [n.get("text") for n in nodes() if n.get("text")]
     sys.exit(f"Не дождались «{text}» за {timeout} с. На экране: {visible}")
 
