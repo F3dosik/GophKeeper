@@ -18,12 +18,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/F3dosik/GophKeeper/internal/client/grpcclient"
-	"github.com/F3dosik/GophKeeper/internal/client/kdfpin"
-	"github.com/F3dosik/GophKeeper/internal/client/service"
-	"github.com/F3dosik/GophKeeper/internal/client/session"
-	"github.com/F3dosik/GophKeeper/internal/domain"
-	pb "github.com/F3dosik/GophKeeper/proto/gen"
+	"github.com/F3dosik/Shron/internal/client/grpcclient"
+	"github.com/F3dosik/Shron/internal/client/kdfpin"
+	"github.com/F3dosik/Shron/internal/client/service"
+	"github.com/F3dosik/Shron/internal/client/session"
+	"github.com/F3dosik/Shron/internal/domain"
+	pb "github.com/F3dosik/Shron/proto/gen"
 	"github.com/golang-jwt/jwt/v5"
 	"google.golang.org/grpc"
 )

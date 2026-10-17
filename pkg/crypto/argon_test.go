@@ -4,8 +4,8 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/F3dosik/GophKeeper/internal/domain"
-	"github.com/F3dosik/GophKeeper/pkg/crypto"
+	"github.com/F3dosik/Shron/internal/domain"
+	"github.com/F3dosik/Shron/pkg/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

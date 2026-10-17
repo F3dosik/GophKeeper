@@ -66,7 +66,7 @@
   <form class="card stack" onsubmit={save}>
     <div>
       <h1>{initial.configured ? 'Настройки' : 'Подключение к серверу'}</h1>
-      <p class="lead">Адрес сервера GophKeeper и его корневой сертификат (ca.crt).</p>
+      <p class="lead">Адрес сервера Shron и его корневой сертификат (ca.crt).</p>
     </div>
 
     <label>

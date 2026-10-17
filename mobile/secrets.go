@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/F3dosik/GophKeeper/internal/domain"
+	"github.com/F3dosik/Shron/internal/domain"
 )
 
 // Типы секретов.

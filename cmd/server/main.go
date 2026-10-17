@@ -1,4 +1,4 @@
-// Package main — точка входа сервера GophKeeper.
+// Package main — точка входа сервера Shron.
 package main
 
 import (
@@ -8,8 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/F3dosik/GophKeeper/internal/logger"
-	"github.com/F3dosik/GophKeeper/internal/server/app"
+	"github.com/F3dosik/Shron/internal/logger"
+	"github.com/F3dosik/Shron/internal/server/app"
 )
 
 func main() {

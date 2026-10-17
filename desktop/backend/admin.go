@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/F3dosik/GophKeeper/internal/client/grpcclient"
-	"github.com/F3dosik/GophKeeper/internal/client/service"
-	"github.com/F3dosik/GophKeeper/internal/domain"
-	pb "github.com/F3dosik/GophKeeper/proto/gen"
+	"github.com/F3dosik/Shron/internal/client/grpcclient"
+	"github.com/F3dosik/Shron/internal/client/service"
+	"github.com/F3dosik/Shron/internal/domain"
+	pb "github.com/F3dosik/Shron/proto/gen"
 	"google.golang.org/grpc"
 )
 

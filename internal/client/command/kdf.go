@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/F3dosik/GophKeeper/internal/domain"
+	"github.com/F3dosik/Shron/internal/domain"
 )
 
 // withKDFCheck выполняет op. Если сервер прислал более слабые параметры Argon2id, чем
@@ -29,7 +29,7 @@ func (c *Commands) withKDFCheck(login string, op func() error) error {
 не отправлен.
 
 Продолжайте, только если вы сами сменили пароль с этими параметрами на другом
-устройстве (gophkeeper auth passwd --kdf-time/--kdf-memory). Иначе сообщите
+устройстве (shron auth passwd --kdf-time/--kdf-memory). Иначе сообщите
 администратору сервера.
 
 `, login, downgrade.Known, downgrade.Received)

@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/F3dosik/GophKeeper/desktop/backend"
-	"github.com/F3dosik/GophKeeper/internal/client/vault"
-	"github.com/F3dosik/GophKeeper/internal/domain"
+	"github.com/F3dosik/Shron/desktop/backend"
+	"github.com/F3dosik/Shron/internal/client/vault"
+	"github.com/F3dosik/Shron/internal/domain"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

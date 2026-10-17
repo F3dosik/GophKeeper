@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/F3dosik/GophKeeper/internal/client/export"
-	"github.com/F3dosik/GophKeeper/internal/client/session"
-	"github.com/F3dosik/GophKeeper/internal/domain"
+	"github.com/F3dosik/Shron/internal/client/export"
+	"github.com/F3dosik/Shron/internal/client/session"
+	"github.com/F3dosik/Shron/internal/domain"
 	"github.com/spf13/cobra"
 )
 
@@ -28,8 +28,8 @@ func (c *Commands) newExportCmd() *cobra.Command {
 		Short: "Экспорт всех секретов в зашифрованный файл",
 		Long: "Сохраняет все секреты в файл, зашифрованный отдельным паролем экспорта\n" +
 			"(Argon2id + AES-256-GCM). Файл не зависит от сервера и мастер-пароля: его можно\n" +
-			"хранить где угодно и импортировать в любую учётку командой `gophkeeper import`.\n\n" +
-			"Стойкий пароль экспорта: `gophkeeper generate --words 6`.",
+			"хранить где угодно и импортировать в любую учётку командой `shron import`.\n\n" +
+			"Стойкий пароль экспорта: `shron generate --words 6`.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !force {
@@ -40,7 +40,7 @@ func (c *Commands) newExportCmd() *cobra.Command {
 
 			sess, err := session.Load(c.cfg.SessionPath)
 			if err != nil {
-				return fmt.Errorf("не выполнен вход, запустите 'gophkeeper auth login': %w", err)
+				return fmt.Errorf("не выполнен вход, запустите 'shron auth login': %w", err)
 			}
 			secretSvc, err := c.unlockSecretService(cmd.Context())
 			if err != nil {
@@ -85,7 +85,7 @@ func (c *Commands) newImportCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "import <файл>",
 		Short: "Импорт секретов из файла экспорта",
-		Long: "Добавляет в текущую учётку секреты из файла, созданного `gophkeeper export`.\n" +
+		Long: "Добавляет в текущую учётку секреты из файла, созданного `shron export`.\n" +
 			"Секреты с тем же именем и типом, что уже есть в хранилище, по умолчанию\n" +
 			"пропускаются; с --overwrite — перезаписываются.",
 		Args: cobra.ExactArgs(1),

@@ -7,19 +7,19 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/F3dosik/GophKeeper/internal/domain"
+	"github.com/F3dosik/Shron/internal/domain"
 	"github.com/spf13/cobra"
 )
 
 // newAdminCmd создаёт группу административных команд. Они работают только через
-// административный порт сервера (GOPHKEEPER_SERVER=localhost:<ADMIN_PORT>).
+// административный порт сервера (SHRON_SERVER=localhost:<ADMIN_PORT>).
 func (c *Commands) newAdminCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "admin",
 		Short: "Администрирование сервера (через административный порт)",
 		Long: "Административные команды. Работают только при подключении к административному\n" +
 			"порту сервера (ADMIN_PORT), который доступен лишь с машины сервера:\n\n" +
-			"  GOPHKEEPER_SERVER=localhost:50052 gophkeeper admin delete-user bob",
+			"  SHRON_SERVER=localhost:50052 shron admin delete-user bob",
 	}
 	cmd.AddCommand(
 		c.newListUsersCmd(),
@@ -149,4 +149,4 @@ func adminError(err error, login string) error {
 
 // errNotAdminPort — административная команда отправлена на публичный порт.
 var errNotAdminPort = errors.New("сервер не принимает административные команды на этом порту: " +
-	"подключитесь к ADMIN_PORT (например, GOPHKEEPER_SERVER=localhost:50052)")
+	"подключитесь к ADMIN_PORT (например, SHRON_SERVER=localhost:50052)")

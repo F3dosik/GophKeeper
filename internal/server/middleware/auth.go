@@ -5,9 +5,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/F3dosik/GophKeeper/internal/domain"
-	"github.com/F3dosik/GophKeeper/internal/server/jwtutil"
-	pb "github.com/F3dosik/GophKeeper/proto/gen"
+	"github.com/F3dosik/Shron/internal/domain"
+	"github.com/F3dosik/Shron/internal/server/jwtutil"
+	pb "github.com/F3dosik/Shron/proto/gen"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

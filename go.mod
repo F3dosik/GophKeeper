@@ -1,4 +1,4 @@
-module github.com/F3dosik/GophKeeper
+module github.com/F3dosik/Shron
 
 go 1.26.9
 

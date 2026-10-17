@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/F3dosik/GophKeeper/internal/domain"
+	"github.com/F3dosik/Shron/internal/domain"
 )
 
 // Saver сохраняет секреты в хранилище; реализуется service.SecretsService и vault.Vault.

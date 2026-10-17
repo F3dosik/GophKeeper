@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/F3dosik/GophKeeper/internal/client/grpcclient"
-	"github.com/F3dosik/GophKeeper/internal/domain"
-	"github.com/F3dosik/GophKeeper/pkg/crypto"
+	"github.com/F3dosik/Shron/internal/client/grpcclient"
+	"github.com/F3dosik/Shron/internal/domain"
+	"github.com/F3dosik/Shron/pkg/crypto"
 )
 
 // ErrIntegrity возвращается, если расшифрованный секрет не соответствует записи, под которой

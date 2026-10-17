@@ -1,4 +1,4 @@
-// Package main — точка входа клиента GophKeeper. Загружает конфигурацию,
+// Package main — точка входа клиента Shron. Загружает конфигурацию,
 // устанавливает gRPC-соединение с сервером и запускает CLI-команды.
 package main
 
@@ -8,13 +8,13 @@ import (
 	"log"
 	"os"
 
-	"github.com/F3dosik/GophKeeper/internal/client/command"
-	"github.com/F3dosik/GophKeeper/internal/client/config"
-	"github.com/F3dosik/GophKeeper/internal/client/grpcclient"
-	"github.com/F3dosik/GophKeeper/internal/client/kdfpin"
-	"github.com/F3dosik/GophKeeper/internal/client/service"
-	"github.com/F3dosik/GophKeeper/internal/client/session"
-	pb "github.com/F3dosik/GophKeeper/proto/gen"
+	"github.com/F3dosik/Shron/internal/client/command"
+	"github.com/F3dosik/Shron/internal/client/config"
+	"github.com/F3dosik/Shron/internal/client/grpcclient"
+	"github.com/F3dosik/Shron/internal/client/kdfpin"
+	"github.com/F3dosik/Shron/internal/client/service"
+	"github.com/F3dosik/Shron/internal/client/session"
+	pb "github.com/F3dosik/Shron/proto/gen"
 )
 
 func main() {
@@ -40,7 +40,7 @@ func main() {
 	defer conn.Close()
 
 	if cfg.Insecure {
-		fmt.Fprintln(os.Stderr, "ВНИМАНИЕ: TLS отключён (GOPHKEEPER_INSECURE), данные передаются открытым текстом")
+		fmt.Fprintln(os.Stderr, "ВНИМАНИЕ: TLS отключён (SHRON_INSECURE), данные передаются открытым текстом")
 	}
 
 	authClient := grpcclient.NewAuthClient(pb.NewAuthClient(conn))
